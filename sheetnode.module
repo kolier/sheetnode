@@ -94,11 +94,15 @@ EOS;
 }
 
 function sheetnode_insert($node) {
-  _sheetnode_save($node->nid, $node->save);
+  if ($node->save) {
+    _sheetnode_save($node->nid, $node->save);
+  }
 }
 
 function sheetnode_update($node) {
-  _sheetnode_save($node->nid, $node->save);
+  if ($node->save) {
+    _sheetnode_save($node->nid, $node->save);
+  }
 }
 
 function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
