@@ -23,8 +23,8 @@ Drupal.sheetnode.absoluteShowHide = function(tab) {
 }
 
 Drupal.sheetnode.startUp = function() {
-  SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imageprefix;
-  SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imageprefix +"-commentbg.gif);"
+  SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
+  SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"-commentbg.gif);"
   SocialCalc.Constants.TCendcapClass = 
   SocialCalc.Constants.TCpanesliderClass = 
   SocialCalc.Constants.TClessbuttonClass = 
@@ -33,6 +33,10 @@ Drupal.sheetnode.startUp = function() {
   SocialCalc.Constants.TCthumbClass = "absolute";
 
   this.sheet = new SocialCalc.SpreadsheetControl();
+  if (!Drupal.settings.sheetnode.showTabs) {
+    this.sheet.tabbackground="display:none;";
+    this.sheet.toolbarbackground="display:none;";
+  }
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.edit);
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.sort);
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.comment);
