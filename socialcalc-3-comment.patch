@@ -1,0 +1,12 @@
+Index: socialcalc-3.js
+===================================================================
+--- socialcalc-3.js	(revision 65)
++++ socialcalc-3.js	(working copy)
+@@ -3327,6 +3327,7 @@
+    if (num) stylestr+="border-left:"+sheetobj.borderstyles[num]+";";
+ 
+    if (cell.comment) {
++      result.title = cell.comment;
+       if (context.showGrid) {
+          if (context.commentClassName) {
+             result.className = (result.className ? result.className+" " : "") + context.commentClassName;
