@@ -25,6 +25,7 @@ Drupal.sheetnode.absoluteShowHide = function(tab) {
 Drupal.sheetnode.startUp = function() {
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"-commentbg.gif);"
+  SocialCalc.Constants.defaultCommentClass = "tooltip";
   SocialCalc.Constants.TCendcapClass = 
   SocialCalc.Constants.TCpanesliderClass = 
   SocialCalc.Constants.TClessbuttonClass = 
@@ -44,6 +45,8 @@ Drupal.sheetnode.startUp = function() {
   this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element);
   this.sheet.currentTab = this.sheet.tabnums.edit;
+
+  Drupal.sheetnode.tooltip();
 }
 
 Drupal.sheetnode.resize = function() {
@@ -51,6 +54,37 @@ Drupal.sheetnode.resize = function() {
     this.sheet.editor.ResizeTableEditor(this.sheet.width, this.sheet.height-
       (this.sheet.spreadsheetDiv.firstChild.offsetHeight + this.sheet.formulabarDiv.offsetHeight));
   }
+}
+
+/*
+ * Taken from: Easiest Tooltip and Image Preview Using jQuery by Alen Grakalic
+ * http://cssglobe.com/post/1695/easiest-tooltip-and-image-preview-using-jquery
+ */
+Drupal.sheetnode.tooltip = function() {
+  /* CONFIG */     
+  xOffset = 10;
+  yOffset = 20;
+  // these 2 variable determine popup's distance from the cursor
+  // you might want to adjust to get the right result   
+  /* END CONFIG */
+  $(".tooltip").hover(function(e) {
+    this.t = this.title;
+    this.title = "";     
+    $("body").append("<p id='tooltip'>"+ this.t +"</p>");
+    $("#tooltip")
+      .css("top",(e.pageY - xOffset) + "px")
+      .css("left",(e.pageX + yOffset) + "px")
+      .fadeIn("fast");
+  },
+  function() {
+    this.title = this.t;
+    $("#tooltip").remove();
+  });
+  $(".tooltip").mousemove(function(e) {
+    $("#tooltip")
+      .css("top",(e.pageY - xOffset) + "px")
+      .css("left",(e.pageX + yOffset) + "px");
+  });
 }
 
 $(document).ready(function() {
