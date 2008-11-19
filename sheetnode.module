@@ -56,15 +56,18 @@ function sheetnode_form(&$node) {
   $form['body_filter']['filter'] = filter_form($node->format);
 
   // SocialCalc sheet.
-  if ($node->nid) {
+  if (isset($_POST['sheetsave'])) {
+    $value = $_POST['sheetsave'];
+  }
+  else if ($node->nid) {
     $value = _sheetnode_load($node->nid);
   }
   else {
     $value = '';
   }
   $output = _sheetnode_inject($value, TRUE);
-  $form['sheet']['view']['#value'] = $output; 
-  $form['sheet']['save'] = array('#type' => 'hidden');
+  $form['sheet']['sheetview']['#value'] = $output; 
+  $form['sheet']['sheetsave'] = array('#type' => 'hidden');
   return $form;
 }
 
@@ -95,14 +98,14 @@ EOS;
 }
 
 function sheetnode_insert($node) {
-  if ($node->save) {
-    _sheetnode_save($node->nid, $node->save);
+  if ($node->sheetsave) {
+    _sheetnode_save($node->nid, $node->sheetsave);
   }
 }
 
 function sheetnode_update($node) {
-  if ($node->save) {
-    _sheetnode_save($node->nid, $node->save);
+  if ($node->sheetsave) {
+    _sheetnode_save($node->nid, $node->sheetsave);
   }
 }
 

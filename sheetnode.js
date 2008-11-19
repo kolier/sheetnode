@@ -90,7 +90,7 @@ Drupal.sheetnode.tooltip = function() {
 
 $(document).ready(function() {
   $('#edit-submit').click(function() {
-    $('#edit-save').val(Drupal.sheetnode.sheet.CreateSheetSave());
+    $('#edit-sheetsave').val(Drupal.sheetnode.sheet.CreateSheetSave());
   });
   $(window).resize(function() {
     Drupal.sheetnode.resize();
