@@ -81,7 +81,7 @@ function _sheetnode_inject($value, $edit) {
   drupal_add_js(array('sheetnode' => array('value' => $value, 
                                            'imagePrefix' => url(drupal_get_path('module', 'sheetnode').'/socialcalc/images/sc', NULL, NULL, TRUE),
                                            'element' => 'sheetview',
-                                           'showTabs' => $edit ? true : false,
+                                           'editMode' => $edit ? true : false,
                                           )), 'setting');
   return <<<EOS
 <div class="sheetview" id="sheetview">

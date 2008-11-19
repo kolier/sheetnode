@@ -34,7 +34,7 @@ Drupal.sheetnode.startUp = function() {
   SocialCalc.Constants.TCthumbClass = "absolute";
 
   this.sheet = new SocialCalc.SpreadsheetControl();
-  if (!Drupal.settings.sheetnode.showTabs) {
+  if (!Drupal.settings.sheetnode.editMode) {
     this.sheet.tabbackground="display:none;";
     this.sheet.toolbarbackground="display:none;";
   }
@@ -43,7 +43,7 @@ Drupal.sheetnode.startUp = function() {
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.comment);
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.names);
   this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
-  this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element);
+  this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
   this.sheet.currentTab = this.sheet.tabnums.edit;
 
   Drupal.sheetnode.tooltip();
