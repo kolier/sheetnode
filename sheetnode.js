@@ -43,6 +43,7 @@ Drupal.sheetnode.startUp = function() {
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.comment);
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.names);
   this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
+  this.sheet.context.PrecomputeSheetFontsAndLayouts(); // Needed to remember formatting info
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
   this.sheet.currentTab = this.sheet.tabnums.edit;
 
