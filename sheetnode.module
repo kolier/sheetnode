@@ -68,7 +68,14 @@ function sheetnode_form(&$node) {
   $output = _sheetnode_inject($value, TRUE);
   $form['sheet']['sheetview']['#value'] = $output; 
   $form['sheet']['sheetsave'] = array('#type' => 'hidden');
+
   return $form;
+}
+
+function sheetnode_form_alter($form_id, &$form) {
+  if (isset($form['type']) && $form['type']['#value'] == 'sheetnode') {
+    $form['submit']['#attributes'] = array('class' => 'sheetnode-submit');
+  }
 }
 
 function _sheetnode_inject($value, $edit) {

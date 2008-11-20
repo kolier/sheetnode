@@ -64,7 +64,7 @@ Drupal.sheetnode.resize = function() {
 }
 
 $(document).ready(function() {
-  $('#edit-submit').click(function() {
+  $('.sheetnode-submit').click(function() {
     $('#edit-sheetsave').val(Drupal.sheetnode.sheet.CreateSheetSave());
   });
   $(window).resize(function() {
