@@ -46,8 +46,14 @@ Drupal.sheetnode.startUp = function() {
   this.sheet.context.PrecomputeSheetFontsAndLayouts(); // Needed to remember formatting info
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
   this.sheet.currentTab = this.sheet.tabnums.edit;
-
-  Drupal.sheetnode.tooltip();
+  
+  // TODO: Temporary workaround until we figure out the focus problem within SocialCalc.
+  $("#edit-title").focus(function(e) {
+    SocialCalc.CmdGotFocus(this);
+  });
+  $("#edit-body").focus(function(e) {
+    SocialCalc.CmdGotFocus(this);
+  });
 }
 
 Drupal.sheetnode.resize = function() {
@@ -55,37 +61,6 @@ Drupal.sheetnode.resize = function() {
     this.sheet.editor.ResizeTableEditor(this.sheet.width, this.sheet.height-
       (this.sheet.spreadsheetDiv.firstChild.offsetHeight + this.sheet.formulabarDiv.offsetHeight));
   }
-}
-
-/*
- * Taken from: Easiest Tooltip and Image Preview Using jQuery by Alen Grakalic
- * http://cssglobe.com/post/1695/easiest-tooltip-and-image-preview-using-jquery
- */
-Drupal.sheetnode.tooltip = function() {
-  /* CONFIG */     
-  xOffset = 10;
-  yOffset = 20;
-  // these 2 variable determine popup's distance from the cursor
-  // you might want to adjust to get the right result   
-  /* END CONFIG */
-  $(".tooltip").hover(function(e) {
-    this.t = this.title;
-    this.title = "";     
-    $("body").append("<p id='tooltip'>"+ this.t +"</p>");
-    $("#tooltip")
-      .css("top",(e.pageY - xOffset) + "px")
-      .css("left",(e.pageX + yOffset) + "px")
-      .fadeIn("fast");
-  },
-  function() {
-    this.title = this.t;
-    $("#tooltip").remove();
-  });
-  $(".tooltip").mousemove(function(e) {
-    $("#tooltip")
-      .css("top",(e.pageY - xOffset) + "px")
-      .css("left",(e.pageX + yOffset) + "px");
-  });
 }
 
 $(document).ready(function() {
