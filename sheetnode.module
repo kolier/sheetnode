@@ -79,6 +79,7 @@ function sheetnode_form_alter($form_id, &$form) {
 }
 
 function _sheetnode_inject($value, $edit) {
+  global $base_url;
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcconstants.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc-3.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalctableeditor.js');
@@ -89,7 +90,7 @@ function _sheetnode_inject($value, $edit) {
   drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
   drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
   drupal_add_js(array('sheetnode' => array('value' => $value, 
-                                           'imagePrefix' => url(drupal_get_path('module', 'sheetnode').'/socialcalc/images/sc', NULL, NULL, TRUE),
+                                           'imagePrefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc',
                                            'element' => 'sheetview',
                                            'editMode' => $edit ? true : false,
                                           )), 'setting');
