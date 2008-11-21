@@ -1,0 +1,5 @@
+; $Id$
+name = Sheetnode XLS downloader
+description = "Provides link to download sheetnodes as XLS format."
+package = Other
+dependencies = sheetnode
