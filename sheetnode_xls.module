@@ -17,7 +17,7 @@ function sheetnode_xls_menu($may_cache) {
   if ($may_cache) {
     $items[] = array(
       'path' => 'sheetnode/xls',
-      'title' => t('Download as XLS'),
+      'title' => t('XLS version'),
       'access' => user_access('access content'),
       'callback' => '_sheetnode_xls',
       'type' => MENU_CALLBACK,
