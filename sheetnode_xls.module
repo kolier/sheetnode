@@ -5,7 +5,7 @@ function sheetnode_xls_link($type, $node = NULL, $teaser = FALSE) {
   if ($type != 'node' || $node->type != 'sheetnode') return array();
 
   $links['xls'] = array(
-    'title' => t('Download as XLS'),
+    'title' => t('XLS version'),
     'href' => 'sheetnode/xls/'. $node->nid,
   );
 
