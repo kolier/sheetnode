@@ -35,7 +35,7 @@ function _sheetnode_xls($nid) {
 
   // Create the Excel sheet.
   $workbook =& new Spreadsheet_Excel_Writer();
-  $workbook->send($node->title. '.xls');
+  $workbook->send(_sheetnode_sanitize_filename($node->title, 'xls', 'spreadsheet'));
   $worksheet =& $workbook->addWorksheet($node->title);
 
   $sheet = socialcalc_parse(_sheetnode_load($nid));
