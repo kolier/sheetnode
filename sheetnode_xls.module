@@ -68,15 +68,26 @@ function _sheetnode_xls_format($cell, $sheet, &$workbook) {
   
   // Return if no formatting set.
   $f = array_filter(array(
-    $cell['bt'], $cell['br'], $cell['bb'], $cell['bl'],
-    $cell['layout'], $cell['font'], $cell['color'], $cell['bgcolor'],
-    $cell['cellformat'], $cell['nontextvalueformat'], $cell['textvalueformat'],
-    $cell['colspan'], $cell['rowspan'], $cell['cssc'], $cell['csss']
+    $cell['bt'] ? 'bt:'. $cell['bt'] : NULL, 
+    $cell['br'] ? 'br:'. $cell['br'] : NULL, 
+    $cell['bb'] ? 'bb:'. $cell['bb'] : NULL, 
+    $cell['bl'] ? 'bl:'. $cell['bl'] : NULL,
+    $cell['layout'] ? 'l:'. $cell['layout'] : NULL, 
+    $cell['font'] ? 'f:'. $cell['font'] : NULL, 
+    $cell['color'] ? 'c:'. $cell['color'] : NULL, 
+    $cell['bgcolor'] ? 'bg:'. $cell['bgcolor'] : NULL,
+    $cell['cellformat'] ? 'cf:'. $cell['cellformat'] : NULL, 
+    $cell['nontextvalueformat'] ? 'ntvf:'. $cell['nontextvalueformat'] : NULL, 
+    $cell['textvalueformat'] ? 'tvf:'. $cell['textvalueformat'] : NULL,
+    $cell['colspan'] ? 'cs:'. $cell['colspan'] : NULL, 
+    $cell['rowspan'] ? 'rs:'. $cell['rowspan'] : NULL, 
+    $cell['cssc'] ? 'cssc:'. $cell['cssc'] : NULL, 
+    $cell['csss'] ? 'csss:'. $cell['csss'] : NULL,
   ));
   if (empty($f)) return NULL;
   
   // Find cached format.
-  $h = md5(implode(':', $f));
+  $h = md5(implode(',', $f));
   if (isset($formats[$h])) return $formats[$h];
   
   // Create new format.
