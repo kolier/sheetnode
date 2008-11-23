@@ -15,15 +15,13 @@ function sheetnode_perm() {
   return array('create sheetnode', 'edit own sheetnode');
 }
 
-function sheetnode_access($op, $node) {
-  global $user;
-
+function sheetnode_access($op, $node, $account) {
   if ($op == 'create') {
-    return user_access('create sheetnode');
+    return user_access('create sheetnode', $account);
   }
 
   if ($op == 'update' || $op == 'delete') {
-    return user_access('edit own sheetnode') && ($user->uid == $node->uid);
+    return user_access('edit own sheetnode', $account) && ($account->uid == $node->uid);
   }
 }
 
@@ -72,9 +70,9 @@ function sheetnode_form(&$node) {
   return $form;
 }
 
-function sheetnode_form_alter($form_id, &$form) {
+function sheetnode_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && $form['type']['#value'] == 'sheetnode') {
-    $form['submit']['#attributes'] = array('class' => 'sheetnode-submit');
+    $form['buttons']['submit']['#attributes'] = array('class' => 'sheetnode-submit');
   }
 }
 
@@ -128,18 +126,6 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   }
 
   return $node;
-}
-
-function sheetnode_menu($may_cache) {
-  $items = array();
-  if ($may_cache) {
-    $items[] = array(
-      'path' => 'node/add/sheetnode',
-      'title' => t('Sheetnode'),
-      'access' => user_access('create sheetnode'),
-    );
-  }
-  return $items;
 }
 
 function _sheetnode_load($nid) {

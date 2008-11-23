@@ -1,5 +1,6 @@
 ; $Id$
 name = Sheetnode XLS
-description = "Provides link to download sheetnodes as XLS format."
+description = Provides link to download sheetnodes as XLS format.
 package = Other
-dependencies = sheetnode
+dependencies[] = sheetnode
+core = 6.x

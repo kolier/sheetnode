@@ -12,17 +12,16 @@ function sheetnode_xls_link($type, $node = NULL, $teaser = FALSE) {
   return $links;
 }
 
-function sheetnode_xls_menu($may_cache) {
+function sheetnode_xls_menu() {
   $items = array();
-  if ($may_cache) {
-    $items[] = array(
-      'path' => 'sheetnode/xls',
-      'title' => t('XLS version'),
-      'access' => user_access('access content'),
-      'callback' => '_sheetnode_xls',
-      'type' => MENU_CALLBACK,
-    );
-  }
+    
+  $items['sheetnode/xls'] = array(
+    'title' => 'XLS version',
+    'access arguments' => array('access content'),
+    'page callback' => '_sheetnode_xls',
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
 }
 
@@ -39,7 +38,7 @@ function _sheetnode_xls($nid) {
   $worksheet =& $workbook->addWorksheet($node->title);
 
   $sheet = socialcalc_parse(_sheetnode_load($nid));
-  foreach ($sheet['cells'] as $cell) {
+  if ($sheet['cells']) foreach ($sheet['cells'] as $cell) {
     $format = _sheetnode_xls_format($cell, $sheet, $workbook);
     $row = $cell['pos'][1]-1;
     $col = $cell['pos'][0]-1;
@@ -53,7 +52,7 @@ function _sheetnode_xls($nid) {
       $worksheet->writeNote($row, $col, trim($cell['comment']));
     }  
   }
-  foreach ($sheet['colattribs']['width'] as $col => $width) {
+  if ($sheet['colattribs'] && $sheet['colattribs']['width']) foreach ($sheet['colattribs']['width'] as $col => $width) {
     // @see http://pear.php.net/manual/en/package.fileformats.spreadsheet-excel-writer.spreadsheet-excel-writer-worksheet.setcolumn.php#6454
     // The factor 8.0 is used here as an approximation for 8 pixels width per character.
     $worksheet->setColumn($col-1, $col-1, floatval($width) / 8.0); 
