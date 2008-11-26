@@ -167,6 +167,118 @@ function socialcalc_parse($data) {
   return $sheet;
 }
 
+function socialcalc_save($sc) {
+  $sheet = array();
+  $sheet[] = 'version:1.5';
+  if ($sc['cells']) foreach ($sc['cells'] as $cell) {
+    $sheet[] = socialcalc_save_cell($cell);
+  }
+  if ($sc['colattribs']) {
+    if ($sc['colattribs']['width']) foreach ($sc['colattribs']['width'] as $col => $width) {
+      $coord = socialcalc_cr_to_coord($col, 1);
+      $sheet[] = 'col:'. substr($coord, 0, -1) . ':w:'. $width;
+    }
+  }
+  if ($sc['rowattribs']) {
+    if ($sc['rowattribs']['height']) foreach ($sc['rowattribs']['height'] as $row => $height) {
+      $sheet[] = 'row:'. $row .':h:'. $height;
+    }
+  }
+  if ($sc['fonts']) foreach ($sc['fonts'] as $fid => $font) {
+    $sheet[] = 'font:'. $fid .':'. $font;
+  }
+  if ($sc['borderstyles']) foreach ($sc['borderstyles'] as $bsid => $borderstyle) {
+    $sheet[] = 'border:'. $bsid .':'. $borderstyle;
+  }
+  if ($sc['cellformats']) foreach ($sc['cellformats'] as $cfid => $cellformat) {
+    $sheet[] = 'cellformat:'. $cfid .':'. $cellformat;
+  }
+
+  $sheetfields = array(
+    'lastcol' => 'c', 
+    'lastrow' => 'r', 
+    'defaultcolwidth' => 'w', 
+    'defaultrowheight' => 'h',
+    'defaulttextformat' => 'tf', 
+    'defaultnontextformat' => 'ntf', 
+    'defaulttextvalueformat' => 'tvf', 
+    'defaultnontextvalueformat' => 'ntvf',
+    'defaultlayout' => 'layout', 
+    'defaultfont' => 'font', 
+    'defaultcolor' => 'color', 
+    'defaultbgcolor' => 'bgcolor',
+    'circularreferencecell' => 'circularreferencecell', 
+    'recalc' => 'recalc', 
+    'needsrecalc' => 'needsrecalc'
+  );
+  $sheetattribs = array();
+  foreach ($sheetfields as $key => $attrib) {
+    if (isset($sc['attribs'][$key])) {
+      $sheetattribs[] = $attrib .':'. $sc['attribs'][$key];
+    }
+  }
+  if ($sheetattribs) {
+    $sheet[] = 'sheet:'. implode(':', $sheetattribs);
+  }
+
+  $sheetsave = implode($sheet, "\n") ."\n";
+//  var_dump($sheetsave);
+  return $sheetsave;
+}
+
+function socialcalc_save_cell($cell) {
+  $line = 'cell:'. socialcalc_cr_to_coord($cell['pos'][0], $cell['pos'][1]);
+  $value = socialcalc_encode_value($cell['datavalue']);
+  if ($cell['datatype']=='v') {
+    if ($cell['valuetype']=='n') $line .= ':v:'. $value;
+    else $line .= ':vt:'. $cell['valuetype'] .':' .$value;
+  }
+  else if ($cell['datatype']=='t') {
+    if ($cell['valuetype']=='t') $line .= ':t:'. $value;
+    else $line .= ':vt:'. $cell['valuetype'] .':' .$value;
+  }
+  else {
+    $formula = socialcalc_encode_value($cell['formula']);
+    if ($cell['datatype']=='f')
+      $line .= ':vtf:'. $cell['valuetype'] .':'. $value .':'. $formula;
+    else if ($cell['datatype']=='c')
+      $line .= ':vtc:'. $cell['valuetype'] .':'. $value .':'. $formula;
+  }
+  if ($cell['errors']) {
+    $line .= ':e:'. socialcalc_encode_value($cell['errors']);
+  }
+  $t = $cell['bt'] || '';
+  $r = $cell['br'] || '';
+  $b = $cell['bb'] || '';
+  $l = $cell['bl'] || '';
+  if ($t || $r || $b || $l)
+    $line .= ':b:'. $t .':'. $r .':'. $b .':'. $l;
+  if ($cell['layout']) $line .= ':l:'. $cell['layout'];
+  if ($cell['font']) $line .= ':f:'. $cell['font'];
+  if ($cell['color']) $line .= ':c:'. $cell['color'];
+  if ($cell['bgcolor']) $line .= ':bg:'. $cell['bgcolor'];
+  if ($cell['cellformat']) $line .= ':cf:'. $cell['cellformat'];
+  if ($cell['textvalueformat']) $line .= ':tvf:'. $cell['textvalueformat'];
+  if ($cell['nontextvalueformat']) $line .= ':ntvf:'. $cell['nontextvalueformat'];
+  if ($cell['colspan']) $line .= ':colspan:'. $cell['colspan'];
+  if ($cell['rowspan']) $line .= ':rowspan:'. $cell['rowspan'];
+  if ($cell['cssc']) $line .= ':cssc:' .$cell['cssc'];
+  if ($cell['csss']) $line .= ':csss:' .socialcalc_encode_value($cell['csss']);
+  if ($cell['mod']) $line .= ':mod:'. $cell['mod'];
+  if ($cell['comment']) $line .= ':comment:'. socialcalc_encode_value($cell['comment']);
+
+  return $line;
+}
+
+function socialcalc_encode_value($s) {
+  if (!is_string($s)) return $s;
+  return str_replace(
+    array('\\', ':', "\n"),
+    array('\\b', '\\c', '\\n'),
+    $s
+  );
+}
+
 function socialcalc_parse_cell($parts, $j) {
   $cell = array();
   while ($t = $parts[$j++]) {
@@ -265,6 +377,24 @@ function socialcalc_coord_to_cr($coord) {
   }
   $coord_to_cr[$coord] = array($c, $r);
   return $coord_to_cr[$coord];
+}
+
+
+function socialcalc_cr_to_coord($c, $r) {
+  $letters = array( "A","B","C","D","E","F","G","H","I","J","K","L","M",
+                    "N","O","P","Q","R","S","T","U","V","W","X","Y","Z" );
+  if ($c < 1) $c = 1;
+  if ($c > 702) $c = 702; // maximum number of columns - ZZ
+  if ($r < 1) $r = 1;
+  $collow = ($c - 1) % 26;
+  $colhigh = floor(($c - 1) / 26);
+  if ($colhigh) {
+    $result = $letters[$colhigh-1] . $letters[$collow] . $r;
+  }
+  else {
+    $result = $letters[$collow] . $r;
+  }
+  return $result;
 }
 
 function socialcalc_decode_value($s) {

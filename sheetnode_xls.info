@@ -1,6 +1,6 @@
 ; $Id$
 name = Sheetnode XLS
-description = Provides link to download sheetnodes as XLS format.
+description = Provides XLS import/export support for Sheetnode.
 package = Other
 dependencies[] = sheetnode
 core = 6.x

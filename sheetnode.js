@@ -43,7 +43,7 @@ Drupal.sheetnode.startUp = function() {
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.comment);
   Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.names);
   this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
-  this.sheet.context.PrecomputeSheetFontsAndLayouts(); // Needed to remember formatting info
+  this.sheet.FullRefreshAndRender();
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
   this.sheet.currentTab = this.sheet.tabnums.edit;
   
@@ -63,9 +63,21 @@ Drupal.sheetnode.resize = function() {
   }
 }
 
+Drupal.sheetnode.save = function() {
+  $('#edit-sheetsave').val(Drupal.sheetnode.sheet.CreateSheetSave());
+  log = $('#edit-log').val();
+  audit = Drupal.sheetnode.sheet.sheet.CreateAuditString();
+  if (!log.length) {
+    $('#edit-log').val(audit);
+  }
+  else {
+    $('#edit-log').val(log + '\n' + audit);
+  }
+}
+
 $(document).ready(function() {
   $('.sheetnode-submit').click(function() {
-    $('#edit-sheetsave').val(Drupal.sheetnode.sheet.CreateSheetSave());
+    Drupal.sheetnode.save();
   });
   $(window).resize(function() {
     Drupal.sheetnode.resize();
