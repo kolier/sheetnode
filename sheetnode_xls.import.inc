@@ -87,9 +87,11 @@ function _sheetnode_xls_import_do($file) {
   // Default values.
   $sc['attribs']['defaultcolwidth'] = round(java_values($sheet->getDefaultColumnWidth()) * WIDTH_CHAR_TO_PX, 2); // width in chars * factor
   $sc['attribs']['defaultrowheight'] = round(java_values($sheet->getDefaultRowHeightInPoints()), 2);
+  $sc['attribs']['lastrow'] = java_values($sheet->getLastRowNum())+1;
+  $sc['attribs']['lastcol'] = 1; // POI doesn't tell us last col, so we'll compute it
 
   // Fonts
-  for ($i=0; $i < java_values($wb->getNumberOfFonts()); $i++) {
+  for ($i=0; $i <= java_values($wb->getNumberOfFonts()); $i++) { // notice the <= 
     _sheetnode_xls_import_font($wb, $wb->getFontAt($i), $sc);
   }
 
@@ -116,8 +118,11 @@ function _sheetnode_xls_import_do($file) {
       if ($width != $sc['attribs']['defaultcolwidth']) {
         $sc['colattribs']['width'][$colNum+1] = $width;
       }
+      
+      // Last column
+      if ($colNum >= $sc['attribs']['lastcol']) $sc['attribs']['lastcol'] = $colNum+1;
 
-      _sheetnode_xls_import_cell($cell, $sc);
+      _sheetnode_xls_import_cell($wb, $cell, $sc);
     }
   }
 
@@ -135,9 +140,8 @@ function _sheetnode_xls_import_do($file) {
   return socialcalc_save($sc);
 }
 
-function _sheetnode_xls_import_cell($cell, &$sc) {
+function _sheetnode_xls_import_cell($wb, $cell, &$sc) {
   $type = java_values($cell->getCellType());
-  if ($type == java_values(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_BLANK)) return;
   $c = array(); // output cell
   
   // Position
@@ -186,6 +190,8 @@ function _sheetnode_xls_import_cell($cell, &$sc) {
   case java_values(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_ERROR):
     $c['errors'] = java_values(org_apache_poi_hssf_usermodel_FormulaError::forInt(java_values($cell->getErrorCellValue()))->getString());
     break;
+  case java_values(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_BLANK):
+    break;
   }
 
   // Comment
@@ -196,6 +202,51 @@ function _sheetnode_xls_import_cell($cell, &$sc) {
 
   // Style
   $cellstyle = $cell->getCellStyle();
+  if (!java_is_null($cellstyle)) { 
+
+    // Font
+    $font = $cellstyle->getFont($wb);
+    $fonthash = $sc['fonthash'][_sheetnode_xls_get_font($font)];
+    if ($fonthash != $sc['attribs']['defaultfont']) $c['font'] = $fonthash;
+    
+    // Borders
+    $bt = _sheetnode_xls_get_borderstyle($wb, $cellstyle, 'Top');
+    if ($bt) $c['bt'] = $sc['borderstylehash'][$bt];
+    $bl = _sheetnode_xls_get_borderstyle($wb, $cellstyle, 'Left');
+    if ($bl) $c['bl'] = $sc['borderstylehash'][$bl];
+    $bb = _sheetnode_xls_get_borderstyle($wb, $cellstyle, 'Bottom');
+    if ($bb) $c['bb'] = $sc['borderstylehash'][$bb];
+    $br = _sheetnode_xls_get_borderstyle($wb, $cellstyle, 'Right');
+    if ($br) $c['br'] = $sc['borderstylehash'][$br];
+
+    // Cell format (horizontal alignment)
+    $c['cf'] = $sc['cellformathash'][_sheetnode_xls_get_cellformat($cellstyle)];
+
+    // Layout (padding + vertical alignment)
+    $layouthash = $sc['layouthash'][_sheetnode_xls_get_layout($cellstyle)];
+    if ($layouthash != $sc['attribs']['defaultlayout']) $c['layout'] = $layouthash;
+
+    // Color
+    $color = _sheetnode_xls_get_color($wb, java_values($font->getColor()));
+    if ($color) {
+      $colorhash = $sc['colorhash'][$color];
+      if ($colorhash != $sc['attribs']['defaultcolor']) $c['color'] = $colorhash;
+    }
+
+    // Background color
+    $bgcolor = _sheetnode_xls_get_color($wb, java_values($cellstyle->getFillForegroundColor()));
+    if ($bgcolor) {
+      $bgcolorhash = $sc['colorhash'][$bgcolor];
+      if ($bgcolorhash != $sc['attribs']['defaultbgcolor']) $c['bgcolor'] = $bgcolorhash;
+    }
+    
+    // Non-text value format
+    $ntvf = _sheetnode_xls_get_valueformat(java_values($cellstyle->getDataFormatString()));
+    if ($ntvf) {
+      $ntvfhash = $sc['valueformathash'][$ntvf];
+      if ($ntvfhash != $sc['attribs']['defaultnontextvalueformat']) $c['nontextvalueformat'] = $ntvfhash;
+    }
+  }
 
   $sc['cells'][socialcalc_cr_to_coord($pos[0],$pos[1])] = $c;
 }
@@ -206,6 +257,16 @@ function _sheetnode_xls_import_font($wb, $font, &$sc) {
     $index = count($sc['fonts'])+1;
     $sc['fonts'][$index] = $fontstyle;
     $sc['fonthash'][$fontstyle] = $index;
+
+    // Default font
+    if (!isset($sc['attribs']['defaultfont'])) $sc['attribs']['defaultfont'] = $index;
+  }
+  
+  $color = _sheetnode_xls_get_color($wb, java_values($font->getColor()));
+  if ($color && !isset($sc['colorhash'][$color])) {
+    $index = count($sc['colors'])+1;
+    $sc['colors'][$index] = $color;
+    $sc['colorhash'][$color] = $index;
   }
 }
 
@@ -216,18 +277,45 @@ function _sheetnode_xls_import_cellstyle($wb, $style, &$sc) {
   _sheetnode_xls_import_borderstyle($wb, $style, 'Left', $sc);
   _sheetnode_xls_import_borderstyle($wb, $style, 'Bottom', $sc);
 
-  // Alignment
-  $alignment = _sheetnode_xls_get_alignment($style);
-  if (!isset($sc['cellformathash'][$alignment])) {
+  // Cell format (horizontal alignment)
+  $cellformat = _sheetnode_xls_get_cellformat($style);
+  if (!isset($sc['cellformathash'][$cellformat])) {
     $index = count($sc['cellformats'])+1;
-    $sc['cellformats'][$index] = $alignment;
-    $sc['cellformathash'][$alignment] = $index;
+    $sc['cellformats'][$index] = $cellformat;
+    $sc['cellformathash'][$cellformat] = $index;
+  }
+
+  // Layout (padding + vertical alignment)
+  $layout = _sheetnode_xls_get_layout($style);
+  if (!isset($sc['layouthash'][$layout])) {
+    $index = count($sc['layouts'])+1;
+    $sc['layouts'][$index] = $layout;
+    $sc['layouthash'][$layout] = $index;
+
+    // Default layout
+    if (!isset($sc['attribs']['defaultlayout'])) $sc['attribs']['defaultlayout'] = $index;
+  }
+
+  // Background color
+  $bgcolor = _sheetnode_xls_get_color($wb, java_values($style->getFillForegroundColor()));
+  if ($bgcolor && !isset($sc['colorhash'][$bgcolor])) {
+    $index = count($sc['colorhash'])+1;
+    $sc['colors'][$index] = $bgcolor;
+    $sc['colorhash'][$bgcolor] = $index;
+  }
+
+  // Value format
+  $valueformat = _sheetnode_xls_get_valueformat(java_values($style->getDataFormatString()));
+  if ($valueformat && !isset($sc['valueformathash'][$valueformat])) {
+    $index = count($sc['valueformats'])+1;
+    $sc['valueformats'][$index] = $valueformat;
+    $sc['valueformathash'][$valueformat] = $index;
   }
 }
 
 function _sheetnode_xls_import_borderstyle($wb, $style, $pos, &$sc) {
   $borderstyle = _sheetnode_xls_get_borderstyle($wb, $style, $pos);
-  if (!isset($sc['borderstylehash'][$borderstyle])) {
+  if ($borderstyle && !isset($sc['borderstylehash'][$borderstyle])) {
     $index = count($sc['borderstyles'])+1;
     $sc['borderstyles'][$index] = $borderstyle;
     $sc['borderstylehash'][$borderstyle] = $index;
@@ -243,7 +331,7 @@ function _sheetnode_xls_get_font($font) {
 
 function _sheetnode_xls_get_borderstyle($wb, $style, $pos) {
   $borderstyles = array(
-    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_NONE) => 'none', 
+    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_NONE) => FALSE, // TODO: is it?
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_THIN) => 'thin solid', 
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_MEDIUM) => 'medium solid', 
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DASHED) => 'thin dashed', 
@@ -260,13 +348,14 @@ function _sheetnode_xls_get_borderstyle($wb, $style, $pos) {
   );
   $getstyle = "getBorder{$pos}";
   $borderstyle = $borderstyles[java_values($style->$getstyle())];
+  if (!$borderstyle) return FALSE;
   $getcolor = "get{$pos}BorderColor";
   $bordercolor = _sheetnode_xls_get_color($wb, java_values($style->$getcolor()));
-  return trim($borderstyle .' '. $bordercolor);
+  return $borderstyle .' '. $bordercolor;
 }
 
-function _sheetnode_xls_get_alignment($style) {
-  $alignments = array(
+function _sheetnode_xls_get_cellformat($style) {
+  $cellformats = array(
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_GENERAL) => 'left', // TODO: is it?
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_LEFT) => 'left',
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_CENTER) => 'center',
@@ -275,11 +364,30 @@ function _sheetnode_xls_get_alignment($style) {
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_JUSTIFY) => 'justify',
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_CENTER_SELECTION) => 'center', // TODO: is it?
   );
-  return $alignments[java_values($style->getAlignment())];
+  return $cellformats[java_values($style->getAlignment())];
+}
+
+function _sheetnode_xls_get_layout($style) {
+  $valignments = array(
+    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_TOP) => 'top',
+    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_CENTER) => 'middle',
+    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_BOTTOM) => 'bottom', 
+    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_JUSTIFY) => 'middle', // TODO: is it?
+  );
+  $valignment = $valignments[java_values($style->getVerticalAlignment())];
+  $padding_left = java_values($style->getIndention()) * WIDTH_CHAR_TO_PX; // simulate indentation with padding
+  return 'padding:* * * '. $padding_left .'px;vertical-align:'. $valignment .';';
+}
+
+function _sheetnode_xls_get_valueformat($dataformat) {
+  if (strtolower($dataformat) == 'general') return FALSE;
+  return $dataformat;
 }
 
 function _sheetnode_xls_get_color($wb, $index) {
-  if (!$index) return '';
+  if ($index == java_values(org_apache_poi_hssf_usermodel_HSSFFont::type()->COLOR_NORMAL)) return FALSE;
+  $automatic = new java_class('org.apache.poi.hssf.util.HSSFColor$AUTOMATIC');
+  if ($index == java_values($automatic->index)) return FALSE;
   $palette = $wb->getCustomPalette();
   $color = $palette->getColor($index);
   $triplet = java_values($color->getTriplet());

@@ -191,7 +191,16 @@ function socialcalc_save($sc) {
     $sheet[] = 'border:'. $bsid .':'. $borderstyle;
   }
   if ($sc['cellformats']) foreach ($sc['cellformats'] as $cfid => $cellformat) {
-    $sheet[] = 'cellformat:'. $cfid .':'. $cellformat;
+    $sheet[] = 'cellformat:'. $cfid .':'. socialcalc_encode_value($cellformat);
+  }
+  if ($sc['layouts']) foreach ($sc['layouts'] as $lid => $layout) {
+    $sheet[] = 'layout:'. $lid .':'. $layout;
+  }
+  if ($sc['colors']) foreach ($sc['colors'] as $cid => $color) {
+    $sheet[] = 'color:'. $cid .':'. $color;
+  }
+  if ($sc['valueformats']) foreach ($sc['valueformats'] as $vfid => $valueformat) {
+    $sheet[] = 'valueformat:'. $vfid .':'. socialcalc_encode_value($valueformat);
   }
 
   $sheetfields = array(
