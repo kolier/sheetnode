@@ -22,6 +22,16 @@ Drupal.sheetnode.absoluteShowHide = function(tab) {
   }
 }
 
+Drupal.sheetnode.focusSetup = function() {
+  $("input[type='text'],textarea,select").each(function() {
+    if (this.id.length > 0 && -1 == this.id.indexOf('SocialCalc')) {
+      this.focus(function(e) {
+        SocialCalc.CmdGotFocus(this);
+      });
+    }
+  });
+}
+
 Drupal.sheetnode.startUp = function() {
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"-commentbg.gif);"
@@ -46,14 +56,8 @@ Drupal.sheetnode.startUp = function() {
   this.sheet.FullRefreshAndRender();
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
   this.sheet.currentTab = this.sheet.tabnums.edit;
-  
-  // TODO: Temporary workaround until we figure out the focus problem within SocialCalc.
-  $("#edit-title").focus(function(e) {
-    SocialCalc.CmdGotFocus(this);
-  });
-  $("#edit-body").focus(function(e) {
-    SocialCalc.CmdGotFocus(this);
-  });
+
+  Drupal.sheetnode.focusSetup();
 }
 
 Drupal.sheetnode.resize = function() {
