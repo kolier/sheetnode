@@ -25,7 +25,7 @@ Drupal.sheetnode.absoluteShowHide = function(tab) {
 Drupal.sheetnode.focusSetup = function() {
   $("input[type='text'],textarea,select").each(function() {
     if (this.id.length > 0 && -1 == this.id.indexOf('SocialCalc')) {
-      this.focus(function(e) {
+      $(this).focus(function(e) {
         SocialCalc.CmdGotFocus(this);
       });
     }
