@@ -45,7 +45,7 @@ function socialcalc_parse($data) {
           $sheet['rowattribs']['height'][$coord] = intval($parts[$j++]);
           break;
         case "hide":
-          $sheet['rowlattribs']['hide'][$coord] = $parts[$j++];
+          $sheet['rowattribs']['hide'][$coord] = $parts[$j++];
           break;
         }
       }
@@ -177,12 +177,19 @@ function socialcalc_save($sc) {
   if ($sc['colattribs']) {
     if ($sc['colattribs']['width']) foreach ($sc['colattribs']['width'] as $col => $width) {
       $coord = socialcalc_cr_to_coord($col, 1);
-      $sheet[] = 'col:'. substr($coord, 0, -1) . ':w:'. $width;
+      $sheet[] = 'col:'. substr($coord, 0, -1) .':w:'. $width;
+    }
+    if ($sc['colattribs']['hide']) foreach ($sc['colattribs']['hide'] as $col => $hide) {
+      $coord = socialcalc_cr_to_coord($col, 1);
+      $sheet[] = 'col:'. substr($coord, 0, -1) .':hide:'. $hide;
     }
   }
   if ($sc['rowattribs']) {
     if ($sc['rowattribs']['height']) foreach ($sc['rowattribs']['height'] as $row => $height) {
       $sheet[] = 'row:'. $row .':h:'. $height;
+    }
+    if ($sc['rowattribs']['hide']) foreach ($sc['rowattribs']['hide'] as $row => $hide) {
+      $sheet[] = 'row:'. $row .':hide:'. $hide;
     }
   }
   if ($sc['fonts']) foreach ($sc['fonts'] as $fid => $font) {

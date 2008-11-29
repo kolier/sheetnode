@@ -81,6 +81,17 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
 
   // Cellstyle
   _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc);
+
+  // Merged regions
+  if ($c['colspan'] > 1 || $c['rowspan'] > 1) {
+    $cellrange = new org_apache_poi_hssf_util_CellRangeAddress(
+      java_values($cell->getRowIndex()), 
+      java_values($cell->getRowIndex()) + max($c['rowspan'] - 1, 0),
+      java_values($cell->getColumnIndex()), 
+      java_values($cell->getColumnIndex()) + max($c['colspan'] - 1, 0)
+    );
+    $sheet->addMergedRegion($cellrange);
+  }
 }
 
 function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {

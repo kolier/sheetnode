@@ -118,6 +118,9 @@ function _sheetnode_xls_import_do($file) {
       if ($width != $sc['attribs']['defaultcolwidth']) {
         $sc['colattribs']['width'][$colNum+1] = $width;
       }
+      if (java_is_true($sheet->isColumnHidden($colNum))) {
+        $sc['colattribs']['hide'][$colNum+1] = 'yes';
+      }
       
       // Last column
       if ($colNum >= $sc['attribs']['lastcol']) $sc['attribs']['lastcol'] = $colNum+1;
