@@ -10,6 +10,7 @@ function socialcalc_parse($data) {
   $line = strtok($data, "\n");
   $sheet = array();
   while ($line !== FALSE) {
+    $line = rtrim($line);
     $parts = explode(':', $line);
     switch ($parts[0]) {
     case 'cell':
@@ -231,7 +232,6 @@ function socialcalc_save($sc) {
   }
 
   $sheetsave = implode($sheet, "\n") ."\n";
-//  var_dump($sheetsave);
   return $sheetsave;
 }
 
@@ -433,9 +433,38 @@ function socialcalc_cellformat_parsecolor($cell, $sheet, $color) {
   $parts = array();
   preg_match('/^rgb\((\d+?),(\d+?),(\d+?)\)\s*$/', $sheet['colors'][$cell[$color]], $parts);
   return array(
-    'r' => $parts[1],
-    'g' => $parts[2],
-    'b' => $parts[3],
+    'r' => intval($parts[1]),
+    'g' => intval($parts[2]),
+    'b' => intval($parts[3]),
   );
+}
+
+function socialcalc_cellformat_parselayout($cell, $sheet) {
+  if (!isset($cell['layout'])) return FALSE;
+  $parts = array();
+  preg_match('/^padding:\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+);vertical-align:\s*(\S+);$/', $sheet['layouts'][$cell['layout']], $parts);
+  $layout = array();
+  if ($parts[1] != '*') $layout['padtop'] = str_replace('px', '', $parts[1]);
+  if ($parts[2] != '*') $layout['padright'] = str_replace('px', '', $parts[2]);
+  if ($parts[3] != '*') $layout['padbottom'] = str_replace('px', '', $parts[3]);
+  if ($parts[4] != '*') $layout['padleft'] = str_replace('px', '', $parts[4]);
+  if ($parts[5] != '*') $layout['alignvert'] = $parts[5];
+  return $layout;
+}
+
+function socialcalc_cellformat_parseborder($cell, $sheet, $attrib) {
+  if (!isset($cell[$attrib])) return FALSE;
+  $parts = array();
+  preg_match('/^(\S+)\s+(\S+)\s+(\S.+)$/', $sheet['borderstyles'][$cell[$attrib]], $parts);
+  $border['thickness'] = $parts[1];
+  $border['style'] = $parts[2];
+  $color = array();
+  preg_match('/^rgb\((\d+?),(\d+?),(\d+?)\)\s*$/', $parts[3], $color);
+  $border['color'] = array(
+    'r' => intval($color[1]),
+    'g' => intval($color[2]),
+    'b' => intval($color[3]),
+  );
+  return $border;
 }
 

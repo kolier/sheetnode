@@ -338,7 +338,7 @@ function _sheetnode_xls_get_borderstyle($wb, $style, $pos) {
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DOTTED) => 'thin dotted', 
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_THICK) => 'thick solid', 
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DOUBLE) => 'thin double', 
-    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_HAIR) => 'thin solid',  // TODO: is it?
+    java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_HAIR) => 'thin dotted',  // TODO: is it?
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_MEDIUM_DASHED) => 'medium dashed', 
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DASH_DOT) => 'thin dashed', // TODO: is it?
     java_values(org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_MEDIUM_DASH_DOT) => 'medium dashed', //TODO: is it?

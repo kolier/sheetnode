@@ -2,127 +2,282 @@
 // $Id$
 
 require_once('socialcalc.inc');
-require_once('Spreadsheet/Excel/Writer.php');
+$JAVA_BASE = drupal_get_path('module', 'sheetnode').'/META-INF/java';
+require_once('META-INF/java/Java.inc');
+java_autoload(drupal_get_path('module', 'sheetnode').'/poi-3.2-FINAL-20081019.jar');
 
 function _sheetnode_xls_export($nid) {
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
 
-  // Create the Excel sheet.
-  $workbook =& new Spreadsheet_Excel_Writer();
-  $workbook->send(_sheetnode_sanitize_filename($node->title, 'xls', 'spreadsheet'));
-  $worksheet =& $workbook->addWorksheet($node->title);
+  header('Content-type: application/vnd.ms-excel');
+  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($node->title, 'xls'));
 
-  $sheet = socialcalc_parse(_sheetnode_load($nid));
-  if ($sheet['cells']) foreach ($sheet['cells'] as $cell) {
-    $format = _sheetnode_xls_format($cell, $sheet, $workbook);
-    $row = $cell['pos'][1]-1;
-    $col = $cell['pos'][0]-1;
-    if (isset($cell['formula'])) {
-      $worksheet->writeFormula($row, $col, '='. $cell['formula'], $format !== FALSE ? $format : NULL);
+  // Create the Excel sheet
+  $workbook = new org_apache_poi_hssf_usermodel_HSSFWorkbook();
+  $sheet = $workbook->createSheet($node->title);
+  $patriarch = $sheet->createDrawingPatriarch();
+
+  $sc = socialcalc_parse(_sheetnode_load($nid));
+  if ($sc['cells']) foreach ($sc['cells'] as $c) {
+    // Rows
+    $row = $sheet->getRow($c['pos'][1]-1);
+    if (java_is_null($row)) {
+      $row = $sheet->createRow($c['pos'][1]-1);
+      if (isset($sc['rowattribs']) && isset($sc['rowattribs']['height']) && isset($sc['rowattribs']['height'][$c['pos'][1]])) {
+        $row->setHeightInPoints($sc['rowattribs']['height'][$c['pos'][1]]);
+      }
     }
-    else {
-      $worksheet->write($row, $col, trim($cell['datavalue']), $format !== FALSE ? $format : NULL);
-    }
-    if (isset($cell['comment'])) {
-      $worksheet->writeNote($row, $col, trim($cell['comment']));
-    }  
-  }
-  if ($sheet['colattribs'] && $sheet['colattribs']['width']) foreach ($sheet['colattribs']['width'] as $col => $width) {
-    // @see http://pear.php.net/manual/en/package.fileformats.spreadsheet-excel-writer.spreadsheet-excel-writer-worksheet.setcolumn.php#6454
-    $worksheet->setColumn($col-1, $col-1, floatval($width) / WIDTH_CHAR_TO_PX); 
+
+    // Cells
+    $cell = $row->createCell($c['pos'][0]-1);
+    _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $sc); 
   }
 
-  $workbook->close();
+  // Columns
+  if (isset($sc['colattribs']) && isset($sc['colattribs']['width'])) {
+    foreach ($sc['colattribs']['width'] as $col => $width) {
+      $sheet->setColumnWidth($col-1, $width * 256 / WIDTH_CHAR_TO_PX);
+    }
+  }
+
+  // Write and return the excel sheet to the client
+  $memoryStream = new java_io_ByteArrayOutputStream();
+  $workbook->write($memoryStream);
+  $memoryStream->close();
+  echo java_values($memoryStream->toByteArray());
   exit();
 }
 
-function _sheetnode_xls_format($cell, $sheet, &$workbook) {
-  static $formats = array();
-  
-  // Return if no formatting set.
-  $f = array_filter(array(
-    $cell['bt'] ? 'bt:'. $cell['bt'] : NULL, 
-    $cell['br'] ? 'br:'. $cell['br'] : NULL, 
-    $cell['bb'] ? 'bb:'. $cell['bb'] : NULL, 
-    $cell['bl'] ? 'bl:'. $cell['bl'] : NULL,
-    $cell['layout'] ? 'l:'. $cell['layout'] : NULL, 
-    $cell['font'] ? 'f:'. $cell['font'] : NULL, 
-    $cell['color'] ? 'c:'. $cell['color'] : NULL, 
-    $cell['bgcolor'] ? 'bg:'. $cell['bgcolor'] : NULL,
-    $cell['cellformat'] ? 'cf:'. $cell['cellformat'] : NULL, 
-    $cell['nontextvalueformat'] ? 'ntvf:'. $cell['nontextvalueformat'] : NULL, 
-    $cell['textvalueformat'] ? 'tvf:'. $cell['textvalueformat'] : NULL,
-    $cell['colspan'] ? 'cs:'. $cell['colspan'] : NULL, 
-    $cell['rowspan'] ? 'rs:'. $cell['rowspan'] : NULL, 
-    $cell['cssc'] ? 'cssc:'. $cell['cssc'] : NULL, 
-    $cell['csss'] ? 'csss:'. $cell['csss'] : NULL,
-  ));
-  if (empty($f)) return NULL;
-  
-  // Find cached format.
-  $h = md5(implode(',', $f));
-  if (isset($formats[$h])) return $formats[$h];
-  
-  // Create new format.
-  $format =& $workbook->addFormat();
-  $formats[$h] = $format;
-  
-  $font = socialcalc_cellformat_parsefont($cell, $sheet);
-  if ($font['family']) $format->setFontFamily($font['family']);
-  if ($font['size']) $format->setSize($font['size']);
-  if ($font['bold']) $format->setBold();
-  if ($font['italic']) $format->setItalic();
-
-  $bgcolor = socialcalc_cellformat_parsecolor($cell, $sheet, 'bgcolor');
-  if ($bgcolor) {
-    $c = _sheetnode_xls_color($cell, $sheet, $workbook, $bgcolor);
-    $format->setPattern(1); // solid color
-    $format->setFgColor($c);
+function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $sc) {
+  // Cell data
+  switch ($c['datatype']) {
+  case 't':
+    $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_STRING);
+    $cell->setCellValue($c['datavalue']);
+    break;
+  case 'v':
+    $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_NUMERIC);
+    $cell->setCellValue($c['datavalue']);
+    break;
+  case 'f':
+    $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_FORMULA);
+    $cell->setCellFormula($c['formula']);
+    break;
   }
 
-  $color = socialcalc_cellformat_parsecolor($cell, $sheet, 'color');
-  if ($color) {
-    $c = _sheetnode_xls_color($cell, $sheet, $workbook, $color);
-    $format->setColor($c);
+  // Comment
+  if ($c['comment']) {
+    $comment = $patriarch->createComment(
+      new org_apache_poi_hssf_usermodel_HSSFClientAnchor(0, 0, 0, 0, 
+        java_values($cell->getColumnIndex())+1, 
+        java_values($cell->getRowIndex())+1, 
+        java_values($cell->getColumnIndex())+4, 
+        java_values($cell->getRowIndex())+4));
+    $string = new org_apache_poi_hssf_usermodel_HSSFRichTextString($c['comment']);
+    $comment->setString($string);
+    $cell->setCellComment($comment);
   }
 
-  return $format;
+  // Cellstyle
+  _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc);
 }
 
-function _sheetnode_xls_color($cell, $sheet, &$workbook, $color) {
-  /*
-  static $colors = array();
-
-  $h = md5(implode(':',$color));
-  if (isset($colors[$h])) {
-    $c = $colors[$h];
-  }
-  else {
-    $c = 16 + count($colors); // http://pear.php.net/manual/en/package.fileformats.spreadsheet-excel-writer.spreadsheet-excel-writer-workbook.setcustomcolor.php
-    $c = $workbook->setCustomColor($c, $color['r'], $color['g'], $color['b']);
-    $colors[$h] = $c;
-  }
-  */
+function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
+  static $cellstyles = array();
   
-  $c = 0; // index of closest color
-  $d = 500; // closest distance, start off at sqrt(255^2 + 255^2 + 255^2) which is largest distance
-  foreach ($workbook->_palette as $i => $entry) {
-    if ($color['r'] == $entry[0] && 
-        $color['g'] == $entry[1] &&
-        $color['b'] == $entry[2]) { // exact match: we found our color
-      return $i+8;
+  // Return if no formatting set.
+  $cs = array_filter(array(
+    $c['font'] ? 'f:'. $c['font'] : NULL, 
+    $c['color'] ? 'c:'. $c['color'] : NULL, 
+    $c['bt'] ? 'bt:'. $c['bt'] : NULL, 
+    $c['br'] ? 'br:'. $c['br'] : NULL, 
+    $c['bb'] ? 'bb:'. $c['bb'] : NULL, 
+    $c['bl'] ? 'bl:'. $c['bl'] : NULL,
+    $c['layout'] ? 'l:'. $c['layout'] : NULL, 
+    $c['bgcolor'] ? 'bg:'. $c['bgcolor'] : NULL,
+    $c['cellformat'] ? 'cf:'. $c['cellformat'] : NULL, 
+    $c['nontextvalueformat'] ? 'ntvf:'. $c['nontextvalueformat'] : NULL, 
+    $c['textvalueformat'] ? 'tvf:'. $c['textvalueformat'] : NULL,
+  ));
+  if (empty($cs)) return;
+  
+  // Find cached cellstyle.
+  $h = md5(implode(',', $cs));
+  if (isset($cellstyles[$h])) {
+    $cell->setCellStyle($cellstyles[$h]);
+    return;
+  }
+  
+  // Create new cellstyle.
+  $cellstyle = $workbook->createCellStyle();
+  $cellstyles[$h] = $cellstyle;
+
+  // Font and color
+  _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $sc);
+  
+  // Background color
+  $bg = socialcalc_cellformat_parsecolor($c, $sc, 'bgcolor');
+  if ($bg) {
+    $color = _sheetnode_xls_export_color($cell, $sheet, $workbook, $bg);
+    $cellstyle->setFillPattern(1); // solid color
+    $cellstyle->setFillForegroundColor($color);
+  }
+
+  // Horizontal alignment
+  if ($c['cellformat']) {
+    $alignments = array(
+      'left' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_LEFT,
+      'right' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_RIGHT,
+      'center' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_CENTER,
+    );
+    $alignment = $alignments[$sc['cellformats'][$c['cellformat']]];
+    if (!$alignment) $alignment = org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_GENERAL;
+    $cellstyle->setAlignment($alignment);
+  }
+
+  // Vertical alignment and padding
+  $layout = socialcalc_cellformat_parselayout($c, $sc);
+  if ($layout) {
+    if ($layout['padleft']) {
+      $indent = intval(ceil($layout['padleft'] / WIDTH_CHAR_TO_PX)); 
+      $cellstyle->setIndention($indent);
     }
-    
-    // minimize distance
-    $d1 = sqrt( pow($color['r'] - $entry[0], 2) + 
-                pow($color['g'] - $entry[1], 2) +
-                pow($color['b'] - $entry[2], 2) );
-    if ($d1 < $d) { // this color is closer than the current one
-      $d = $d1;
-      $c = $i;
+    if ($layout['alignvert']) {
+      $valignments = array(
+        'top' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_TOP,
+        'bottom' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_BOTTOM,
+        'middle' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_CENTER,
+      );
+      $valignment = $valignments[$layout['alignvert']];
+      if (!$valignment) $valignment = org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_JUSTIFY;
+      $cellstyle->setVerticalAlignment($valignment);
     }
   }
-  return $c+8;
+
+  // Borders
+  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Top');
+  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Right');
+  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Left');
+  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Bottom');
+
+  // Data format
+  if ($c['nontextvalueformat']) {
+    $dataformat = $workbook->createDataFormat();
+    $format = $dataformat->getFormat($sc['valueformats'][$c['nontextvalueformat']]);
+    $cellstyle->setDataFormat($format);
+  }
+
+  $cell->setCellStyle($cellstyle);
+}
+
+function _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $sc) {
+  static $fonts = array();
+
+  // Return if no font set. 
+  $f = array(
+    $c['font'] ? 'f:'. $c['font'] : NULL, 
+    $c['color'] ? 'c:'. $c['color'] : NULL, 
+  );
+  if (empty($f)) return;
+
+  // Find cached font.
+  $h = md5(implode(',', $f));
+  if (isset($fonts[$h])) {
+    $cellstyle->setFont($fonts[$h]);
+    return;
+  }
+
+  // Create new font.
+  $font = $workbook->createFont();
+  $fonts[$h] = $font;
+
+  $ff = socialcalc_cellformat_parsefont($c, $sc);
+  if ($ff['family']) $font->setFontName($ff['family']);
+  if ($ff['size']) $font->setFontHeightInPoints(intval($ff['size']));
+  if ($ff['bold']) $font->setBoldweight(org_apache_poi_hssf_usermodel_HSSFFont::type()->BOLDWEIGHT_BOLD);
+  if ($ff['italic']) $font->setItalic(true);
+
+  $fc = socialcalc_cellformat_parsecolor($c, $sc, 'color');
+  if ($fc) {
+    $color = _sheetnode_xls_export_color($cell, $sheet, $workbook, $fc);
+    $font->setColor($color);
+  }
+
+  $cellstyle->setFont($font);
+}
+
+function _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, $pos) {
+  $attribs = array(
+    'Top' => 'bt',
+    'Right' => 'br',
+    'Bottom' => 'bb',
+    'Left' => 'bl',
+  );
+  $border = socialcalc_cellformat_parseborder($c, $sc, $attribs[$pos]);
+  if ($border) {
+    if ($border['thickness'] || $border['style']) {
+      $thickness = str_replace('px', '', $border['thickness']);
+      if ($thickness > 0 && $thickness < 7) {
+        $thickness = 'thin';
+      }
+      else if ($thickness > 7 && $thickness < 15) {
+        $thickness = 'medium';
+      }
+      else if ($thickness > 15) {
+        $thickness = 'thick';
+      }
+      $borderstyles = array(
+        'thin' => array(
+          'solid' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_THIN,
+          'dashed' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DASHED,
+          'dotted' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DOTTED,
+          'double' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DOUBLE,
+        ),
+        'medium' => array(
+          'solid' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_MEDIUM,
+          'dashed' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_MEDIUM_DASHED,
+        ),
+        'thick' => array(
+          'solid' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_THICK,
+        ),
+      );
+      $borderstyle = $borderstyles[$thickness][$border['style']];
+      if (!$borderstyle) $borderstyle = org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_NONE;
+      $setstyle = "setBorder{$pos}";
+      $cellstyle->$setstyle($borderstyle);
+    }
+    if ($border['color']) {
+      $color = _sheetnode_xls_export_color($cell, $sheet, $workbook, $border['color']);
+      $setcolor = "set{$pos}BorderColor";
+      $cellstyle->$setcolor($color);
+    }
+  }
+}
+
+function _sheetnode_xls_export_color($cell, $sheet, $workbook, $c) {
+  static $used_palette = array();
+
+  $palette = $workbook->getCustomPalette();
+  $color = $palette->findColor($c['r'], $c['g'], $c['b']);
+  if (java_is_null($color)) {
+    // Replace an unused existing color with the new one.
+    for ($i=0x8; $i<0x40; $i++) {
+      if ($used_palette[$i]) continue;
+      $palette->setColorAtIndex($i, $c['r'], $c['g'], $c['b']);
+      $used_palette[$i] = true;
+      return $i;
+    }
+
+    // Could not find an empty slot: find closest color.
+    $color = $palette->findSimilarColor($c['r'], $c['g'], $c['b']);
+    if (java_is_null($color)) {
+      // Could not even find a close color: return default color.
+      return org_apache_poi_hssf_usermodel_HSSFFont::type()->COLOR_NORMAL;
+     }
+  }
+
+  $used_palette[java_values($color->getIndex())] = true;
+  return $color->getIndex();
 }
 
