@@ -2,26 +2,6 @@
 
 Drupal.sheetnode = {};
 
-Drupal.sheetnode.onclicks = [];
-Drupal.sheetnode.onunclicks = [];
-
-Drupal.sheetnode.absoluteShowHide = function(tab) {
-  this.onclicks[this.sheet.tabs[tab].name] = this.sheet.tabs[tab].onclick;
-  this.sheet.tabs[tab].onclick = function(s, t) {
-    if (Drupal.sheetnode.onclicks[t]) {
-      Drupal.sheetnode.onclicks[t](s, t);
-    }
-    $(".absolute").show();
-  }
-  this.onunclicks[this.sheet.tabs[tab].name] = this.sheet.tabs[tab].onunclick;
-  this.sheet.tabs[tab].onunclick = function(s, t) {
-    if (Drupal.sheetnode.onunclicks[t]) {
-      Drupal.sheetnode.onunclicks[t](s, t);
-    }
-    $(".absolute").hide();
-  }
-}
-
 Drupal.sheetnode.focusSetup = function() {
   $(".form-text,.form-textarea,.form-select").focus(function(e) {
     SocialCalc.CmdGotFocus(this);
@@ -44,10 +24,7 @@ Drupal.sheetnode.startUp = function() {
     this.sheet.tabbackground="display:none;";
     this.sheet.toolbarbackground="display:none;";
   }
-  Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.edit);
-  Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.sort);
-  Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.comment);
-  Drupal.sheetnode.absoluteShowHide(this.sheet.tabnums.names);
+  
   this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
   this.sheet.FullRefreshAndRender();
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
