@@ -5,7 +5,7 @@ INSTALLATION
 You need the SocialCalc JavaScript spreadsheet first.
 
 To get the latest SocialCalc code, checkout from the SVN repo:
-$ svn co https://repo.socialtext.net:8999/svn/socialcalc/trunk socialcalc
+$ svn co -r 65 https://repo.socialtext.net:8999/svn/socialcalc/trunk socialcalc
 
 Apply the patches inside the socialcalc folder:
 $ cd socialcalc
