@@ -15,7 +15,8 @@ function _sheetnode_xls_export($nid) {
 
   // Create the Excel sheet
   $workbook = new org_apache_poi_hssf_usermodel_HSSFWorkbook();
-  $sheet = $workbook->createSheet($node->title);
+  $sheetname = $node->title;
+  $sheet = $workbook->createSheet($sheetname);
   $patriarch = $sheet->createDrawingPatriarch();
   $sc = socialcalc_parse(_sheetnode_load($nid));
   
@@ -23,9 +24,14 @@ function _sheetnode_xls_export($nid) {
   if (isset($sc['names'])) foreach ($sc['names'] as $n => $info) {
     $name = $workbook->createName();
     $name->setNameName($n);
+    // Add sheet reference to keep POI happy.
     $definition = $info['definition'];
-    if (strncmp('=', $definition, 1) == 0) {
+    if (strncmp('=', $definition, 1) == 0) { // formula
       $definition = substr($definition, 1);
+      $definition = str_replace('(', "('$sheetname'!", $definition);
+    }
+    else {
+      $definition = "'$sheetname'!". $definition;
     }
     try { // Not 100% safe
       $name->setReference($definition);
