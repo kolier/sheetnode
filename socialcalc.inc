@@ -210,6 +210,9 @@ function socialcalc_save($sc) {
   if ($sc['valueformats']) foreach ($sc['valueformats'] as $vfid => $valueformat) {
     $sheet[] = 'valueformat:'. $vfid .':'. socialcalc_encode_value($valueformat);
   }
+  if ($sc['names']) foreach ($sc['names'] as $name => $nameinfo) {
+    $sheet[] = 'name:'. socialcalc_encode_value($name) .':'. socialcalc_encode_value($nameinfo['desc']) .':'. socialcalc_encode_value($nameinfo['definition']);
+  }
 
   $sheetfields = array(
     'lastcol' => 'c', 

@@ -140,6 +140,15 @@ function _sheetnode_xls_import_do($file) {
     $sc['cells'][$coord]['rowspan'] = java_values($range->getLastRow()) - java_values($range->getFirstRow()) + 1;
   }
 
+  // Names
+  for ($i=0; $i < java_values($wb->getNumberOfNames()); $i++) {
+    $name = $wb->getNameAt($i);
+    $sc['names'][java_values($name->getNameName())] = array(
+      'desc' => '',
+      'definition' => (java_is_true($name->isFunctionName()) ? '=' : ''). java_values($name->getReference()),
+    );
+  }
+
   return socialcalc_save($sc);
 }
 

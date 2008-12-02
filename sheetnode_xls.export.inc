@@ -17,8 +17,27 @@ function _sheetnode_xls_export($nid) {
   $workbook = new org_apache_poi_hssf_usermodel_HSSFWorkbook();
   $sheet = $workbook->createSheet($node->title);
   $patriarch = $sheet->createDrawingPatriarch();
-
   $sc = socialcalc_parse(_sheetnode_load($nid));
+  
+  // Names
+  if (isset($sc['names'])) foreach ($sc['names'] as $n => $info) {
+    $name = $workbook->createName();
+    $name->setNameName($n);
+    $definition = $info['definition'];
+    if (strncmp('=', $definition, 1) == 0) {
+      $definition = substr($definition, 1);
+    }
+    try { // Not 100% safe
+      $name->setReference($definition);
+    }
+    catch (Exception $e) {
+      $msg = 'Failed to export name %name with definition %definition: %error';
+      $arg = array('%name' => $n, '%definition' => $definition, '%error' => $e->getMessage());
+      drupal_set_message(t($msg, $arg), 'error');
+      watchdog('sheetnode', $msg, $arg, $WATCHDOG_WARNING);
+    }
+  }
+
   if ($sc['cells']) foreach ($sc['cells'] as $c) {
     // Rows
     $row = $sheet->getRow($c['pos'][1]-1);
@@ -62,7 +81,15 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
     break;
   case 'f':
     $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_FORMULA);
-    $cell->setCellFormula($c['formula']);
+    try { // Not 100% safe
+      $cell->setCellFormula($c['formula']);
+    }
+    catch (Exception $e) {
+      $msg = 'Failed to export formula %formula: %error';
+      $arg = array('%formula' => $c['formula'], '%error' => $e->getMessage());
+      drupal_set_message(t($msg, $arg), 'error');
+      watchdog('sheetnode', $msg, $arg, $WATCHDOG_WARNING);
+    }
     break;
   }
 
