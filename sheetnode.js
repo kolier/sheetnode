@@ -2,6 +2,41 @@
 
 Drupal.sheetnode = {};
 
+Drupal.sheetnode.functionsSetup = function() {
+  SocialCalc.Formula.FunctionList["SUMPRODUCT"] = [Drupal.sheetnode.functionSumProduct, -1];
+}
+
+Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) {
+  var range, products = [], sum = 0;
+  var scf = SocialCalc.Formula;
+
+  var PushOperand = function(t, v) {operand.push({type: t, value: v});};
+
+  while (foperand.length > 0) {
+    range = scf.TopOfStackValueAndType(sheet, foperand);
+    if (range.type != "range") {
+      PushOperand("e#VALUE!", 0);
+      return;
+    }
+    rangeinfo = scf.DecodeRangeParts(sheet, range.value);
+    for (i=0; i<rangeinfo.ncols; i++) {
+      for (j=0; j<rangeinfo.nrows; j++) {
+        k = i * rangeinfo.nrows + j;
+        cellcr = SocialCalc.crToCoord(rangeinfo.col1num + i, rangeinfo.row1num + j);
+        cell = rangeinfo.sheetdata.GetAssuredCell(cellcr);
+        value = cell.valuetype == "n" ? cell.datavalue : 0;
+        products[k] = (products[k] || 1) * value;
+      }
+    }
+  }
+  for (i=0; i<products.length; i++) {
+    sum += products[i];
+  }
+  PushOperand("n", sum);
+
+  return;
+}
+
 Drupal.sheetnode.focusSetup = function() {
   $(".form-text,.form-textarea,.form-select").focus(function(e) {
     SocialCalc.CmdGotFocus(this);
@@ -31,6 +66,7 @@ Drupal.sheetnode.startUp = function() {
   this.sheet.currentTab = this.sheet.tabnums.edit;
 
   Drupal.sheetnode.focusSetup();
+  Drupal.sheetnode.functionsSetup();
 }
 
 Drupal.sheetnode.resize = function() {
