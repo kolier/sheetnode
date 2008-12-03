@@ -40,7 +40,7 @@ Index: socialcalcspreadsheetcontrol.js
 +' <img id="%id.button_cut" src="'+SocialCalc.Constants.defaultImagePrefix+'-cut.gif" style="vertical-align:bottom;">'+
 +' <img id="%id.button_paste" src="'+SocialCalc.Constants.defaultImagePrefix+'-paste.gif" style="vertical-align:bottom;">'+
 +' &nbsp;<img src="'+SocialCalc.Constants.defaultImagePrefix+'-divider1.gif" style="vertical-align:bottom;">&nbsp; '+
-+'<img id="%id.button_delete" src="'+SocialCalc.Constants.defaultImagePrefix+'delete.gif" style="vertical-align:bottom;">'+
++'<img id="%id.button_delete" src="'+SocialCalc.Constants.defaultImagePrefix+'-delete.gif" style="vertical-align:bottom;">'+
 +' <img id="%id.button_pasteformats" src="'+SocialCalc.Constants.defaultImagePrefix+'-pasteformats.gif" style="vertical-align:bottom;">'+
 +' &nbsp;<img src="'+SocialCalc.Constants.defaultImagePrefix+'-divider1.gif" style="vertical-align:bottom;">&nbsp; '+
 +'<img id="%id.button_filldown" src="'+SocialCalc.Constants.defaultImagePrefix+'-filldown.gif" style="vertical-align:bottom;">'+
