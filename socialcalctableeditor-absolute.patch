@@ -226,7 +226,7 @@ Index: socialcalc-3.js
 +   var e = element;
 +   var offsetLeft = 0, offsetTop = 0;
 +   while (e) {
-+      if (SocialCalc.GetComputedStyle(e, 'position')=='relative') {
++      if (e.nodeType==Node.ELEMENT && SocialCalc.GetComputedStyle(e, 'position')=='relative') {
 +         offset = SocialCalc.GetElementPosition(e);
 +         offsetLeft += offset.left;
 +         offsetTop  += offset.top;
