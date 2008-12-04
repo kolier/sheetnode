@@ -180,9 +180,29 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc) {
     $c['valuetype'] = 'n';
     break;
   case java_values(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_STRING):
-    $c['datavalue'] = java_values($cell->getStringCellValue());
+    $rtf = $cell->getRichStringCellValue();
+    $runs = java_values($rtf->numFormattingRuns());
+    if ($runs > 1) {
+      $c['datavalue'] = '';
+      $text = java_values($rtf->getString());
+      $i = 0;
+      for ($r=0; $r < $runs; $r++) {
+        $j = java_values($rtf->getIndexOfFormattingRun($r));
+        $font = $workbook->getFontAt(java_values($rtf->getFontOfFormattingRun($r)));
+        $fontstyle = 'font:'. _sheetnode_xls_get_font($font) .';';
+        $color = _sheetnode_xls_get_color($workbook, java_values($font->getColor()), true);
+        $colorstyle = $color ? 'color:'. $color .';': '';
+        $c['datavalue'] .= "<span style=\"$fontstyle$colorstyle\">". substr($text, $i, $j-$i) .'</span>';
+        $i = $j;
+      }
+      $c['datavalue'] .= substr($text, $i);
+      $c['valuetype'] = 'th';
+    }
+    else {
+      $c['datavalue'] = java_values($cell->getStringCellValue());
+      $c['valuetype'] = 't';
+    }
     $c['datatype'] = 't';
-    $c['valuetype'] = 't';
     break;
   case java_values(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_FORMULA):
     $c['formula'] = java_values($cell->getCellFormula());
@@ -403,13 +423,15 @@ function _sheetnode_xls_get_valueformat($dataformat) {
   return $dataformat;
 }
 
-function _sheetnode_xls_get_color($workbook, $index) {
+function _sheetnode_xls_get_color($workbook, $index, $hex = FALSE) {
   if ($index == java_values(org_apache_poi_hssf_usermodel_HSSFFont::type()->COLOR_NORMAL)) return FALSE;
   $automatic = new java_class('org.apache.poi.hssf.util.HSSFColor$AUTOMATIC');
   if ($index == java_values($automatic->index)) return FALSE;
   $palette = $workbook->getCustomPalette();
   $color = $palette->getColor($index);
   $triplet = java_values($color->getTriplet());
-  return 'rgb('. $triplet[0] .','. $triplet[1] .','. $triplet[2] .')';
+  return $hex ? 
+    sprintf('#%02X%02X%02X', $triplet[0], $triplet[1], $triplet[2]) : 
+    'rgb('. $triplet[0] .','. $triplet[1] .','. $triplet[2] .')';
 }
 
