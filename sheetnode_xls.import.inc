@@ -182,7 +182,7 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc) {
   case java_values(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_STRING):
     $rtf = $cell->getRichStringCellValue();
     $runs = java_values($rtf->numFormattingRuns());
-    if ($runs > 1) {
+    if ($runs > 1) { // it is rich text
       $c['datavalue'] = '';
       $text = java_values($rtf->getString());
       $i = 0;
@@ -197,8 +197,17 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc) {
       }
       $c['datavalue'] .= substr($text, $i);
       $c['valuetype'] = 'th';
+
+      // Add text-html format
+      $valueformat = 'text-html';
+      if (!($index = $sc['valueformathash'][$valueformat])) {
+        $index = count($sc['valueformats'])+1;
+        $sc['valueformats'][$index] = $valueformat;
+        $sc['valueformathash'][$valueformat] = $index;
+      }
+      $c['textvalueformat'] = $index;
     }
-    else {
+    else { // it is plain text
       $c['datavalue'] = java_values($cell->getStringCellValue());
       $c['valuetype'] = 't';
     }
