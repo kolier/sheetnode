@@ -9,6 +9,7 @@ Drupal.sheetnode.functionsSetup = function() {
 Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) {
   var range, products = [], sum = 0;
   var scf = SocialCalc.Formula;
+  var ncols = 0, nrows = 0;
 
   var PushOperand = function(t, v) {operand.push({type: t, value: v});};
 
@@ -19,6 +20,16 @@ Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) 
       return;
     }
     rangeinfo = scf.DecodeRangeParts(sheet, range.value);
+    if (!ncols) ncols = rangeinfo.ncols;
+    else if (ncols != rangeinfo.ncols) {
+      PushOperand("e#VALUE!", 0);
+      return;
+    }
+    if (!nrows) nrows = rangeinfo.nrows;
+    else if (nrows != rangeinfo.nrows) {
+      PushOperand("e#VALUE!", 0);
+      return;
+    }
     for (i=0; i<rangeinfo.ncols; i++) {
       for (j=0; j<rangeinfo.nrows; j++) {
         k = i * rangeinfo.nrows + j;
