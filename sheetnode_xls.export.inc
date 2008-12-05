@@ -28,10 +28,6 @@ function _sheetnode_xls_export($nid) {
     $definition = $info['definition'];
     if (strncmp('=', $definition, 1) == 0) { // formula
       $definition = substr($definition, 1);
-      $definition = str_replace('(', "('$sheetname'!", $definition);
-    }
-    else {
-      $definition = "'$sheetname'!". $definition;
     }
     try { // Not 100% safe
       $name->setReference($definition);
