@@ -2,9 +2,9 @@
 // $Id$
 
 require_once('socialcalc.inc');
-$JAVA_BASE = drupal_get_path('module', 'sheetnode').'/META-INF/java';
-require_once('META-INF/java/Java.inc');
-java_autoload(drupal_get_path('module', 'sheetnode').'/poi-3.2-FINAL-20081019.jar');
+$JAVA_BASE = drupal_get_path('module', 'sheetnode_xls').'/META-INF/java';
+require_once("$JAVA_BASE/Java.inc");
+java_autoload(variable_get('sheetnode_xls_poi', NULL));
 
 function _sheetnode_xls_export($nid) {
   $node = node_load($nid);
