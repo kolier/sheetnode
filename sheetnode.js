@@ -106,7 +106,9 @@ $(document).ready(function() {
   });
   $('.collapsed').each(function() {
     this.addEventListener('DOMAttrModified', function(e) {
-      Drupal.sheetnode.sheet.editor.SchedulePositionCalculations();
+      if (Drupal.sheetnode.sheet) {
+        Drupal.sheetnode.sheet.editor.SchedulePositionCalculations();
+      }
     }, false);
   });
   $(window).resize(function() {
