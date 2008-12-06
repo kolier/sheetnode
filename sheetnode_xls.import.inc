@@ -186,16 +186,25 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc) {
       $c['datavalue'] = '';
       $text = java_values($rtf->getString());
       $i = 0;
-      for ($r=0; $r < $runs; $r++) {
-        $j = java_values($rtf->getIndexOfFormattingRun($r));
-        $font = $workbook->getFontAt(java_values($rtf->getFontOfFormattingRun($r)));
+      for ($r=0; $r <= $runs; $r++) {
+        if ($r < $runs) { 
+          $j = java_values($rtf->getIndexOfFormattingRun($r));
+        }
+        else {
+          $j = strlen($text);
+        }
+        if ($r == 0) {
+          $font = $cell->getCellStyle()->getFont($workbook);
+        }
+        else {
+          $font = $workbook->getFontAt(java_values($rtf->getFontOfFormattingRun($r-1)));
+        }
         $fontstyle = 'font:'. _sheetnode_xls_get_font($font) .';';
         $color = _sheetnode_xls_get_color($workbook, java_values($font->getColor()), true);
         $colorstyle = $color ? 'color:'. $color .';': '';
         $c['datavalue'] .= "<span style=\"$fontstyle$colorstyle\">". substr($text, $i, $j-$i) .'</span>';
         $i = $j;
       }
-      $c['datavalue'] .= substr($text, $i);
       $c['valuetype'] = 'th';
 
       // Add text-html format
