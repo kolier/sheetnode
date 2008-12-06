@@ -100,8 +100,14 @@ Drupal.sheetnode.save = function() {
 }
 
 $(document).ready(function() {
-  $('.sheetnode-submit').click(function() {
+  $('.sheetnode-submit').parents('form').submit(function() {
     Drupal.sheetnode.save();
+    return true;
+  });
+  $('.collapsed').each(function() {
+    this.addEventListener('DOMAttrModified', function(e) {
+      Drupal.sheetnode.sheet.editor.SchedulePositionCalculations();
+    }, false);
   });
   $(window).resize(function() {
     Drupal.sheetnode.resize();
