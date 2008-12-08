@@ -24,7 +24,6 @@ function _sheetnode_xls_export($nid) {
   if (isset($sc['names'])) foreach ($sc['names'] as $n => $info) {
     $name = $workbook->createName();
     $name->setNameName($n);
-    // Add sheet reference to keep POI happy.
     $definition = $info['definition'];
     if (strncmp('=', $definition, 1) == 0) { // formula
       $definition = substr($definition, 1);
@@ -74,8 +73,13 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
   // Cell data
   switch ($c['datatype']) {
   case 't':
+    if ($c['valuetype'] == 'th') { // text-html
+      $cell->setCellValue(strip_tags($c['datavalue']));
+    }
+    else {
+      $cell->setCellValue($c['datavalue']);
+    }
     $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_STRING);
-    $cell->setCellValue($c['datavalue']);
     break;
   case 'v':
     $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_NUMERIC);
@@ -171,8 +175,7 @@ function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
       'right' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_RIGHT,
       'center' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_CENTER,
     );
-    $alignment = $alignments[$sc['cellformats'][$c['cellformat']]];
-    if (!$alignment) $alignment = org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_GENERAL;
+    $alignment = $alignments[$sc['cellformats'][$c['cellformat']]] | org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_GENERAL;
     $cellstyle->setAlignment($alignment);
   }
 
@@ -189,8 +192,7 @@ function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
         'bottom' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_BOTTOM,
         'middle' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_CENTER,
       );
-      $valignment = $valignments[$layout['alignvert']];
-      if (!$valignment) $valignment = org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_JUSTIFY;
+      $valignment = $valignments[$layout['alignvert']] | org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_JUSTIFY;
       $cellstyle->setVerticalAlignment($valignment);
     }
   }
@@ -282,8 +284,7 @@ function _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, 
           'solid' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_THICK,
         ),
       );
-      $borderstyle = $borderstyles[$thickness][$border['style']];
-      if (!$borderstyle) $borderstyle = org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_NONE;
+      $borderstyle = $borderstyles[$thickness][$border['style']] | org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_NONE;
       $setstyle = "setBorder{$pos}";
       $cellstyle->$setstyle($borderstyle);
     }
