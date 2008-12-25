@@ -55,6 +55,15 @@ Index: socialcalctableeditor.js
           }
        inputecho.main.style.display = "block";
        if (inputecho.interval) window.clearInterval(inputecho.interval); // just in case
+@@ -2774,7 +2780,7 @@
+ 
+    var control = bobj.functionobj.control;
+    var bposition = SocialCalc.GetElementPosition(bobj.element);
+-   var clickpos = control.vertical ? buttoninfo.clientY : buttoninfo.clientX;
++   var clickpos = control.vertical ? buttoninfo.clientY - control.editor.relativeoffset.top : buttoninfo.clientX - control.editor.relativeoffset.left;
+ 
+    control.editor.PageRelative(control.vertical, clickpos > control.thumbpos ? 1 : -1);
+ 
 @@ -2847,26 +2853,27 @@
  SocialCalc.ComputeTableControlPositions = function(control) {
  
