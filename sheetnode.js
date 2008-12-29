@@ -48,6 +48,19 @@ Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) 
   return;
 }
 
+Drupal.sheetnode.loadsheetSetup = function() {
+  SocialCalc.Formula.SheetCache.loadsheet = function(sheetname) {
+    data = $.ajax({
+      type: 'POST',
+      url: Drupal.settings.basePath+'sheetnode/load',
+      data: 'sheetname='+escape(sheetname),
+      datatype: 'text',
+      async: false
+    }).responseText;
+    return data;
+  }
+}
+
 Drupal.sheetnode.focusSetup = function() {
   $(".form-text,.form-textarea,.form-select").focus(function(e) {
     SocialCalc.CmdGotFocus(this);
@@ -57,27 +70,24 @@ Drupal.sheetnode.focusSetup = function() {
 Drupal.sheetnode.startUp = function() {
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"-commentbg.gif);"
-  SocialCalc.Constants.defaultCommentClass = "tooltip";
-  SocialCalc.Constants.TCendcapClass = 
-  SocialCalc.Constants.TCpanesliderClass = 
-  SocialCalc.Constants.TClessbuttonClass = 
-  SocialCalc.Constants.TCmorebuttonClass = 
-  SocialCalc.Constants.TCscrollareaClass = 
-  SocialCalc.Constants.TCthumbClass = "absolute";
+  SocialCalc.Constants.s_TCTDFthumbstatusPrefixv = "Row&nbsp;";
+  SocialCalc.Constants.s_TCTDFthumbstatusPrefixh = "Col&nbsp;";
 
   this.sheet = new SocialCalc.SpreadsheetControl();
   if (!Drupal.settings.sheetnode.editMode) {
     this.sheet.tabbackground="display:none;";
     this.sheet.toolbarbackground="display:none;";
   }
-  
   this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
   this.sheet.FullRefreshAndRender();
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
   this.sheet.currentTab = this.sheet.tabnums.edit;
-
+  
   Drupal.sheetnode.focusSetup();
   Drupal.sheetnode.functionsSetup();
+  Drupal.sheetnode.loadsheetSetup();
+
+  this.sheet.editor.recalcFunction(this.sheet.editor);
 }
 
 Drupal.sheetnode.resize = function() {
@@ -105,7 +115,11 @@ $(document).ready(function() {
     return true;
   });
   $('.collapsed').each(function() {
-    this.addEventListener('DOMAttrModified', function(e) {
+    var ev = 'DOMAttrModified';
+    if ($.browser.msie) {
+      ev = 'propertychange';
+    }
+    $(this).bind(ev, function(e) {
       if (Drupal.sheetnode.sheet) {
         Drupal.sheetnode.sheet.editor.SchedulePositionCalculations();
       }
