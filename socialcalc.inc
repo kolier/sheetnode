@@ -3,7 +3,7 @@
 
 /**
  * @file SocialCalc manipulation functions
- * Translated from socialcalc-3.js
+ * Translated from socialcalc-3.js and companion files
  */
 
 function socialcalc_parse($data) {
@@ -166,6 +166,50 @@ function socialcalc_parse($data) {
     $line = strtok("\n");
   }
   return $sheet;
+}
+
+function socialcalc_parse_values($data) {
+  $line = strtok($data, "\n");
+  $sheet = array();
+  while ($line !== FALSE) {
+    $line = rtrim($line);
+    $parts = explode(':', $line);
+    if ($parts[0] == 'cell') {
+      $coord = $parts[1];
+      $cell = isset($sheet['cells'][$coord]) ? $sheet['cells'][$coord] : array();
+      $cell += socialcalc_parse_cell_value($parts, 2);
+      $sheet['cells'][$coord] = $cell;
+    }
+    $line = strtok("\n");
+  }
+  return $sheet;
+}
+
+function socialcalc_parse_cell_value($parts, $j) {
+  $cell = array();
+  while ($t = $parts[$j++]) {
+    switch ($t) {
+    case "v":
+      $cell['datavalue'] = doubleval(socialcalc_decode_value($parts[$j++]));
+      break 2; // first time for me :-)
+    case "t":
+      $cell['datavalue'] = strval(socialcalc_decode_value($parts[$j++]));
+      break 2;
+    case "vt":
+      $j++;
+      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
+      break 2;
+    case "vtf":
+      $j++;
+      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
+      break 2;
+    case "vtc":
+      $j++;
+      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
+      break 2;
+    }
+  }
+  return $cell;
 }
 
 function socialcalc_save($sc) {
@@ -476,5 +520,304 @@ function socialcalc_cellformat_parseborder($cell, $sheet, $attrib) {
     'b' => intval($color[3]),
   );
   return $border;
+}
+
+/**
+ * formatinfo = socialcalc_parse_numberformat(format_string)
+ *
+ * format_string: (e.g., "#,##0.00_);(#,##0.00)")
+ * formatinfo:
+       .operators - array of operators from parsing the format string (each a number) and corresponding operands (each usually a string)
+       .sectioninfo - one hash for each section of the format
+          .start
+          .integerdigits
+          .fractiondigits
+          .commas
+          .percent
+          .thousandssep
+          .hasdates
+       .hascomparison - true if any section has [<100], etc.
+
+ **************************/
+
+define(SOCIALCALC_COMMAND_COPY, 1);
+define(SOCIALCALC_COMMAND_COLOR, 2);
+define(SOCIALCALC_COMMAND_INTEGERPLACEHOLDER, 3);
+define(SOCIALCALC_COMMAND_FRACTIONPLACEHOLDER, 4);
+define(SOCIALCALC_COMMAND_DECIMAL, 5);
+define(SOCIALCALC_COMMAND_CURRENCY, 6);
+define(SOCIALCALC_COMMAND_GENERAL, 7);
+define(SOCIALCALC_COMMAND_SEPARATOR, 8);
+define(SOCIALCALC_COMMAND_DATE, 9);
+define(SOCIALCALC_COMMAND_COMPARISON, 10);
+define(SOCIALCALC_COMMAND_SECTION, 11);
+define(SOCIALCALC_COMMAND_STYLE, 11);
+
+function socialcalc_parse_numberformat($format_string) {
+
+  $integerpart = 1; // start out in integer part
+  $lastwasinteger = false; // last char was an integer placeholder
+  $lastwasslash = false; // last char was a backslash - escaping following character
+  $lastwasasterisk = false; // repeat next char
+  $lastwasunderscore = false; // last char was _ which picks up following char for width
+  $inquote = false;
+  $quotestr = ''; // processing a quoted string
+  $inbracket = false;
+  $bracketstr = '';
+  $bracketdata = null; // processing a bracketed string
+  $ingeneral = 0; // checks for characters "General"
+  $ampmstr = ''; // checks for characters "A/P" and "AM/PM"
+  $indate = ''; // keeps track of date/time placeholders
+
+  $thisformat = array(
+    'operators' => array(),
+    'sectioninfo' => array(),
+   ); // create info structure for this format
+
+  $sectioninfo = array(); // get reference to info for current section
+  $sectioninfo['sectionstart'] = 0; // position in operands that starts this section
+  $sectioninfo['integerdigits'] = 0; // number of integer-part placeholders
+  $sectioninfo['fractiondigits'] = 0; // fraction placeholders
+  $sectioninfo['commas'] = 0; // commas encountered, to handle scaling
+  $sectioninfo['percent'] = 0; // times to scale by 100
+
+  for ($chpos=0; $chpos<strlen($format_string); $chpos++) { // parse
+  $ch = $format_string[$chpos]; // get next char to examine
+    if ($inquote) {
+      if ($ch == '"') {
+        $inquote = false;
+        $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $quotestr);
+        continue;
+      }
+      $quotestr .= $ch;
+      continue;
+    }
+    if ($inbracket) {
+      if ($ch==']') {
+        $inbracket = false;
+        $bracketdata = socialcalc_parse_bracketformat($bracketstr);
+        if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_SEPARATOR) {
+          $sectioninfo['thousandssep'] = true; // explicit [,]
+          continue;
+        }
+        if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_DATE) {
+          $sectioninfo['hasdate'] = true;
+        }
+        if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_COMPARISON) {
+          $thisformat['hascomparison'] = true;
+        }
+        $thisformat['operators'][] = $bracketdata['operator'];
+        continue;
+      }
+      $bracketstr .= $ch;
+      continue;
+    }
+    if ($lastwasslash) {
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch);
+      $lastwasslash = false;
+      continue;
+    }
+    if ($lastwasasterisk) {
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch.$ch.$ch.$ch.$ch); // do 5 of them since no real tabs
+      $lastwasasterisk = false;
+      continue;
+    }
+    if ($lastwasunderscore) {
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => '&nbsp;');
+      $lastwasunderscore = false;
+      continue;
+    }
+    if ($ingeneral) {
+      if (substr('general', $ingeneral, 1) == strtolower($ch)) {
+        $ingeneral++;
+        if ($ingeneral == 7) {
+          $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_GENERAL => $ch);
+          $ingeneral = 0;
+        }
+        continue;
+      }
+      $ingeneral = 0;
+    }
+    if ($indate) { // last char was part of a date placeholder
+      if (substr($indate, 0, 1) == $ch) { // another of the same char
+        $indate .= $ch; // accumulate it
+        continue;
+      }
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DATE => $indate); // something else, save date info
+      $sectioninfo['hasdate'] = true;
+      $indate = '';
+    }
+    if ($ampmstr) {
+      $ampmstr .= $ch;
+      $part = strtolower($ampmstr);
+      if ($part != substr('am/pm', 0, strlen($part)) && $part != substr('a/p', 0, strlen($part))) {
+        $ampstr = '';
+      }
+      else if ($part == 'am/pm' || $part == 'a/p') {
+        $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DATE => $ampmstr);
+        $ampmstr = '';
+      }
+      continue;
+    }
+    if ($ch=='#' || $ch=='0' || $ch=='?') { // placeholder
+      if ($integerpart) {
+        $sectioninfo['integerdigits']++;
+        if ($sectioninfo['commas']) { // comma inside of integer placeholders
+          $sectioninfo['thousandssep'] = true; // any number is thousands separator
+          $sectioninfo['commas'] = 0; // reset count of "thousand" factors
+        }
+        $lastwasinteger = true;
+        $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER => $ch);
+      }
+      else {
+        $sectioninfo['fractiondigits']++;
+        $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER => $ch);
+      }
+    }
+    else if ($ch=='.') { // decimal point
+      $lastwasinteger = false;
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DECIMAL => $ch);
+      $integerpart = true;
+    }
+    else if ($ch=='$') { // currency char
+      $lastwasinteger = false;
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_CURRENCY => $ch);
+    }
+    else if ($ch==',') {
+      if ($lastwasinteger) {
+        $sectioninfo['commas']++;
+      }
+      else {
+        $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch);
+      }
+    }
+    else if ($ch=='%') {
+      $lastwasinteger = false;
+      $sectioninfo['percent']++;
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch);
+    }
+    else if ($ch=='"') {
+      $lastwasinteger = false;
+      $inquote = true;
+      $quotestr = '';
+    }
+    else if ($ch=='[') {
+      $lastwasinteger = false;
+      $inbracket = true;
+      $bracketstr = '';
+    }
+    else if ($ch=='\\') {
+      $lastwasslash = true;
+      $lastwasinteger = false;
+    }
+    else if ($ch=='*') {
+      $lastwasasterisk = true;
+      $lastwasinteger = false;
+    }
+    else if ($ch=='_') {
+      $lastwasunderscore = true;
+      $lastwasinteger = false;
+    }
+    else if ($ch==';') {
+      $thisformat['sectioninfo'][] = $sectioninfo; // store current section
+      $sectioninfo = array(); // create new section
+      $sectioninfo['sectionstart'] = 1 + count($thisformat['operators']); // remember where it starts
+      $sectioninfo['integerdigits'] = 0; // number of integer-part placeholders
+      $sectioninfo['fractiondigits'] = 0; // fraction placeholders
+      $sectioninfo['commas'] = 0; // commas encountered, to handle scaling
+      $sectioninfo['percent'] = 0; // times to scale by 100
+      $integerpart = true; // reset for new section
+      $lastwasinteger = false;
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_SECTION => $ch);
+    }
+    else if (strtolower($ch)=='g') {
+      $ingeneral = 1;
+      $lastwasinteger = false;
+    }
+    else if (strtolower($ch)=='a') {
+      $ampmstr = $ch;
+      $lastwasinteger = false;
+    }
+    else if (strpos('dmyhHs', $ch) !== false) {
+      $indate = $ch;
+    }
+    else {
+      $lastwasinteger = false;
+      $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch);
+    }
+  }
+
+  if ($indate) { // last char was part of unsaved date placeholder
+    $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DATE => $indate);
+    $sectioninfo['hasdate'] = true;
+  }
+  $thisformat['sectioninfo'][] = $sectioninfo;
+
+  return $thisformat;
+}
+
+
+/**
+ * bracketdata = socialcalc_parse_bracketformat(bracketstr)
+ *
+ * bracketstr: (e.g., "RED", ">10")
+ * bracketdata: array(operator => operand)
+ *
+ ************************* */
+
+function socialcalc_parse_bracketformat($bracketstr) {
+  $allowedcolors = array(
+    'BLACK' => "#000000", 
+    'BLUE' => "#0000FF", 
+    'CYAN' => "#00FFFF", 
+    'GREEN' => "#00FF00", 
+    'MAGENTA' => "#FF00FF",
+    'RED' => "#FF0000", 
+    'WHITE' => "#FFFFFF", 
+    'YELLOW' => "#FFFF00",
+  );
+  $alloweddates = array(
+    'H' => "h]", 
+    'M' => "m]", 
+    'MM' => "mm]", 
+    'S' => "s]", 
+    'SS' => "ss]",
+  );
+
+  $bracketdata = array();
+  $parts = array();
+
+  if (substr($bracketstr, 0, 1)=='$') { // currency
+    if (preg_match('/^\$(.+?)(\-.+?){0,1}$/', $bracketstr, $parts)) {
+      $operand = isset($parts[1]) ? $parts[1] : '$';
+    }
+    else {
+      $operand = substr($bracketstr, 1) ? substr($bracketstr, 1) : '$';
+    }
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_CURRENCY => $operand);
+  }
+  else if ($bracketstr=='?$') {
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_CURRENCY => '[?$]');
+  }
+  else if (isset($allowedcolors[strtoupper($bracketstr)])) {
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_COLOR => $allowedcolors[strtoupper($bracketstr)]);
+  }
+  else if (preg_match('/^style=([^"]*)$/', $bracketstr, $parts)) { // [style=...]
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_STYLE => $parts[1]);
+  }
+  else if ($bracketstr==',') {
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_SEPARATOR => $bracketstr);
+  }
+  else if ($alloweddates[strtoupper($bracketstr)]) {
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_DATE => $alloweddates[strtoupper($bracketstr)]);
+  }
+  else if (preg_match('/^[<>=]/', $bracketstr)) { // comparison operator
+    preg_match('/^([<>=]+)(.+)$/', $bracketstr, $parts); // split operator and value
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_COMPARISON => $parts[1].':'.$parts[2]);
+  }
+  else { // unknown bracket
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_COPY => '['.$bracketstr.']');
+  }
+  return $bracketdata;
 }
 
