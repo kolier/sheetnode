@@ -1,0 +1,7 @@
+; $Id$
+name = Sheetnode ODS
+description = Provides ODS import/export support for Sheetnode.
+package = Other
+dependencies[] = sheetnode
+dependencies[] = php_java_bridge
+core = 6.x

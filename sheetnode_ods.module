@@ -1,0 +1,81 @@
+<?php
+// $Id$
+
+function sheetnode_ods_link($type, $node = NULL, $teaser = FALSE) {
+  if ($type != 'node' || $node->type != 'sheetnode') return array();
+
+  $links['ods'] = array(
+    'title' => t('ODS version'),
+    'href' => 'sheetnode/ods/'. $node->nid,
+  );
+
+  return $links;
+}
+
+function sheetnode_ods_menu() {
+  $items = array();
+    
+  $items['sheetnode/ods'] = array(
+    'title' => 'ODS version',
+    'access arguments' => array('access content'),
+    'page callback' => '_sheetnode_ods_export',
+    'type' => MENU_CALLBACK,
+    'file' => 'sheetnode_ods.export.inc',
+  );
+  $items['node/add/ods'] = array(
+    'title' => 'Sheetnode import from OOo Calc',
+    'access arguments' => array('create sheetnode'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_sheetnode_ods_import_form'),
+    'description' => 'Create a new sheetnode with content from an existing OpenOffice.org (.ods) spreadsheet.',
+    'file' => 'sheetnode_ods.import.inc',
+  );
+  $items['admin/settings/ods'] = array(
+    'title' => 'Sheetnode ODS settings',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_sheetnode_ods_settings'),
+    'description' => 'Administer settings for Sheetnode ODS',
+  );
+
+  return $items;
+}
+
+function _sheetnode_ods_settings() {
+  $form['sheetnode_ods_jar_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('ODFDOM files path'),
+    '#description' => t('Enter the location of the odfdom.jar file and associated files.'),
+    '#default_value' => variable_get('sheetnode_ods_jar_path', ''),
+  );
+  $form['#submit'][] = '_sheetnode_ods_settings_submit';
+  $form['#validate'][] = '_sheetnode_ods_settings_validate';
+  return system_settings_form($form);
+}
+
+define(SHEETNODE_ODS_JAR_FILES,
+    'odfdom.jar;'.
+    'xercesImpl.jar');
+
+function _sheetnode_ods_settings_validate($form, $form_state) {
+  $path = $form_state['values']['sheetnode_ods_jar_path'];
+  if (!is_dir($path)) {
+    form_set_error('sheetnode_ods_jar_path', t('The path you entered does not point to a valid location. Please enter the location of the odfdom.jar file.'));
+    return;
+  }
+  foreach (explode(';', SHEETNODE_ODS_JAR_FILES) as $file) {
+    if (!file_exists($path.'/'.$file)) {
+      form_set_error('sheetnode_ods_jar_path', t('The file %file was not found in the given path. Please make sure the odfdom.jar file and associated libraries are placed in the path.', array('%file' => $file)));
+      return;
+    }
+  }
+}
+
+function _sheetnode_ods_settings_submit($form, $form_state) {
+  $path = $form_state['values']['sheetnode_ods_jar_path'];
+  foreach (explode(';', SHEETNODE_ODS_JAR_FILES) as $file) {
+    $files[] = $path.'/'.$file;
+  }
+  variable_set('sheetnode_ods_jar', implode(';', $files));
+}
+
