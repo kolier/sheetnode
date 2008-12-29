@@ -10,6 +10,10 @@ function sheetnode_xls_link($type, $node = NULL, $teaser = FALSE) {
     'title' => t('XLS version'),
     'href' => 'sheetnode/xls/'. $node->nid,
   );
+  $links['xlsx'] = array(
+    'title' => t('XLSX version'),
+    'href' => 'sheetnode/xlsx/'. $node->nid,
+  );
 
   return $links;
 }
@@ -21,18 +25,79 @@ function sheetnode_xls_menu() {
     'title' => 'XLS version',
     'access arguments' => array('access content'),
     'page callback' => '_sheetnode_xls_export',
+    'page arguments' => array('xls'),
+    'type' => MENU_CALLBACK,
+    'file' => 'sheetnode_xls.export.inc',
+  );
+  $items['sheetnode/xlsx'] = array(
+    'title' => 'XLSX version',
+    'access arguments' => array('access content'),
+    'page callback' => '_sheetnode_xls_export',
+    'page arguments' => array('xlsx'),
     'type' => MENU_CALLBACK,
     'file' => 'sheetnode_xls.export.inc',
   );
   $items['node/add/xls'] = array(
-    'title' => 'Sheetnode import from XLS',
+    'title' => 'Sheetnode import from Excel',
     'access arguments' => array('create sheetnode'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_xls_import_form'),
-    'description' => 'Create a new sheetnode with content from an existing Excel (.xls) spreadsheet.',
+    'description' => 'Create a new sheetnode with content from an existing Excel (.xls or .xlsx) spreadsheet.',
     'file' => 'sheetnode_xls.import.inc',
+  );
+  $items['admin/settings/xls'] = array(
+    'title' => 'Sheetnode XLS settings',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_sheetnode_xls_settings'),
+    'description' => 'Administer settings for Sheetnode XLS.',
   );
 
   return $items;
+}
+
+function _sheetnode_xls_settings() {
+  $form['sheetnode_xls_jar_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Apache POI files path'),
+    '#description' => t('Enter the location of the extracted Apache POI package.'),
+    '#default_value' => variable_get('sheetnode_xls_jar_path', ''),
+  );
+  $form['#submit'][] = '_sheetnode_xls_settings_submit';
+  $form['#validate'][] = '_sheetnode_xls_settings_validate';
+  return system_settings_form($form);
+}
+
+define(SHEETNODE_XLS_JAR_FILES,
+    'poi-3.5-beta4-20081128.jar;'.
+    'poi-ooxml-3.5-beta4-20081128.jar;'.
+    'lib/commons-logging-1.1.jar;'.
+    'lib/log4j-1.2.13.jar;'.
+    'ooxml-lib/dom4j-1.6.1.jar;'.
+    'ooxml-lib/jsr173_1.0_api.jar;'.
+    'ooxml-lib/ooxml-schemas-1.0.jar;'.
+    'ooxml-lib/openxml4j-1.0-beta.jar;'.
+    'ooxml-lib/xmlbeans-2.3.0.jar');
+
+function _sheetnode_xls_settings_validate($form, $form_state) {
+  $path = $form_state['values']['sheetnode_xls_jar_path'];
+  if (!is_dir($path)) {
+    form_set_error('sheetnode_xls_jar_path', t('The path you entered does not point to a valid location. Please enter the location of the extracted Apache POI package.'));
+    return;
+  }
+  foreach (explode(';', SHEETNODE_XLS_JAR_FILES) as $file) {
+    if (!file_exists($path.'/'.$file)) {
+      form_set_error('sheetnode_xls_jar_path', t('The file %file was not found in the given path. Please make sure the Apache POI package is correctly extracted.', array('%file' => $file)));
+      return;
+    }
+  }
+}
+
+function _sheetnode_xls_settings_submit($form, $form_state) {
+  $path = variable_get('sheetnode_xls_jar_path', '');
+  foreach (explode(';', SHEETNODE_XLS_JAR_FILES) as $file) {
+    $files[] = $path.'/'.$file;
+  }
+  variable_set('sheetnode_xls_jar', implode(';', $files));
 }
 

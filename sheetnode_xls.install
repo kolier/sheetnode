@@ -5,55 +5,37 @@ function sheetnode_xls_requirements($phase) {
   $requirements = array();
   $t = get_t();
 
-  $java = extension_loaded('java');
-  $requirements['sheetnode_xls_java'] = array(
-    'title' => $t('PHP/Java Bridge extension'),
-    'description' => $java ? 
-      $t('PHP/Java Bridge extension is loaded in php.ini.') : 
-      $t('PHP/Java Bridge extension is NOT loaded in php.ini. Please install it.'),
-    'severity' => $java ? REQUIREMENT_OK : REQUIREMENT_ERROR,
-  );
-
-  $pjb = file_exists(drupal_get_path('module', 'sheetnode_xls') .'/META-INF/java/Java.inc');
-  $requirements['sheetnode_xls_pjb'] = array(
-    'title' => $t('PHP/Java Bridge files'),
-    'description' => $pjb ? 
-      $t('PHP/Java Bridge files are found.') : 
-      $t('PHP/Java Bridge files are NOT found in META-INF/java/. Please unpack the JavaBridge.jar file to the sheetnode folder.'),
-    'severity' => $pjb ? REQUIREMENT_OK : REQUIREMENT_ERROR,
-  );
-
-  if ($java && $pjb) {
-    $JAVA_BASE = drupal_get_path('module', 'sheetnode_xls') .'/META-INF/java';
-    require_once("$JAVA_BASE/Java.inc");
+  if ($phase == 'runtime') {
+    $poi = TRUE;
+    $JAVA_BASE = variable_get('pjb_java_base', '');
+    if (file_exists("$JAVA_BASE/Java.inc")) {
+      require_once("$JAVA_BASE/Java.inc");
+      try {
+        java_require(variable_get('sheetnode_xls_jar', NULL));
+        $Version = new JavaClass('org.apache.poi.Version');
+        $poi_version = $Version->getVersion();
+      }
+      catch (Exception $e) {
+        $poi = $e->getMessage();
+      }
+    }
+    else { // !file_exists
+      $poi = $t('PHP/Java Bridge is not properly installed.');
+    }
+    $requirements['sheetnode_xls_jar'] = array(
+      'title' => $t('Apache POI'),
+      'value' => $poi === TRUE ? 
+        $t("Apache POI $poi_version is found.") : 
+        $t("Apache POI is NOT found: $poi"),
+      'severity' => $poi === TRUE ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+    );
   }
-
-  $poi = _sheetnode_xls_detect_poi();
-  if ($java && $pjb && $poi) {
-    java_autoload(variable_get('sheetnode_xls_poi', NULL));
-  }
-  $requirements['sheetnode_xls_poi'] = array(
-    'title' => $t('Apache POI'),
-    'description' => $poi ? 
-      $t('Apache POI is found.') : 
-      $t('Apache POI is NOT found. Please install the POI jar file in the sheetnode folder.'),
-    'severity' => $poi ? REQUIREMENT_OK : REQUIREMENT_ERROR,
-    'value' => $java && $pjb && $poi ? java_values(org_apache_poi_Version::type()->getVersion()) : FALSE,
-  );
 
   return $requirements;
 }
 
-function _sheetnode_xls_detect_poi() {
-  $jars = file_scan_directory(drupal_get_path('module', 'sheetnode_xls'), '^poi-(.*).jar$');
-  if ($jars) foreach ($jars as $jar) {
-    variable_set('sheetnode_xls_poi', $jar->filename);
-    return TRUE;
-  }
-  return FALSE;
-}
-
 function sheetnode_xls_uninstall() {
-  variable_del('sheetnode_xls_poi');
+  variable_del('sheetnode_xls_jar');
+  variable_del('sheetnode_xls_jar_path');
 }
 

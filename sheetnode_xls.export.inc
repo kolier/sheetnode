@@ -2,19 +2,16 @@
 // $Id$
 
 require_once('socialcalc.inc');
-$JAVA_BASE = drupal_get_path('module', 'sheetnode_xls').'/META-INF/java';
+$JAVA_BASE = variable_get('pjb_java_base', NULL);
 require_once("$JAVA_BASE/Java.inc");
-java_autoload(variable_get('sheetnode_xls_poi', NULL));
+java_autoload(variable_get('sheetnode_xls_jar', NULL));
 
-function _sheetnode_xls_export($nid) {
+function _sheetnode_xls_export($type, $nid) {
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
 
-  header('Content-type: application/vnd.ms-excel');
-  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($node->title, 'xls'));
-
   // Create the Excel sheet
-  $workbook = new org_apache_poi_hssf_usermodel_HSSFWorkbook();
+  $workbook = $type == 'xls' ? new org_apache_poi_hssf_usermodel_HSSFWorkbook() : new org_apache_poi_xssf_usermodel_XSSFWorkbook();
   $sheetname = $node->title;
   $sheet = $workbook->createSheet($sheetname);
   $patriarch = $sheet->createDrawingPatriarch();
@@ -27,9 +24,14 @@ function _sheetnode_xls_export($nid) {
     $definition = $info['definition'];
     if (strncmp('=', $definition, 1) == 0) { // formula
       $definition = substr($definition, 1);
+      $definition = str_replace('(', "('$sheetname'!", $definition);
+      $definition = str_replace(',', ",'$sheetname'!", $definition);
+    }
+    else {
+      $definition = "'$sheetname'!$definition";
     }
     try { // Not 100% safe
-      $name->setReference($definition);
+      $name->setRefersToFormula($definition);
     }
     catch (Exception $e) {
       $msg = 'Failed to export name %name with definition %definition: %error';
@@ -62,6 +64,13 @@ function _sheetnode_xls_export($nid) {
   }
 
   // Write and return the excel sheet to the client
+  if ($type == 'xls') {
+    header('Content-type: application/vnd.ms-excel');
+  }
+  else {
+    header('Content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  }
+  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($node->title, $type));
   $memoryStream = new java_io_ByteArrayOutputStream();
   $workbook->write($memoryStream);
   $memoryStream->close();
@@ -79,14 +88,13 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
     else {
       $cell->setCellValue($c['datavalue']);
     }
-    $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_STRING);
+    $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_STRING);
     break;
   case 'v':
-    $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_NUMERIC);
     $cell->setCellValue($c['datavalue']);
+    $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_NUMERIC);
     break;
   case 'f':
-    $cell->setCellType(org_apache_poi_hssf_usermodel_HSSFCell::type()->CELL_TYPE_FORMULA);
     try { // Not 100% safe
       $cell->setCellFormula($c['formula']);
     }
@@ -96,20 +104,26 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
       drupal_set_message(t($msg, $arg), 'error');
       watchdog('sheetnode', $msg, $arg, $WATCHDOG_WARNING);
     }
+    $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_FORMULA);
     break;
   }
 
   // Comment
   if ($c['comment']) {
-    $comment = $patriarch->createComment(
-      new org_apache_poi_hssf_usermodel_HSSFClientAnchor(0, 0, 0, 0, 
-        java_values($cell->getColumnIndex())+1, 
-        java_values($cell->getRowIndex())+1, 
-        java_values($cell->getColumnIndex())+4, 
-        java_values($cell->getRowIndex())+4));
-    $string = new org_apache_poi_hssf_usermodel_HSSFRichTextString($c['comment']);
-    $comment->setString($string);
-    $cell->setCellComment($comment);
+    $string = $workbook->getCreationHelper()->createRichTextString($c['comment']);
+    if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) { // HSSFWorkbook
+      $anchor = $workbook->getCreationHelper()->createClientAnchor();
+      $anchor->setCol1(java_values($cell->getColumnIndex())+1);
+      $anchor->setRow1(java_values($cell->getRowIndex())+1);
+      $anchor->setCol2(java_values($cell->getColumnIndex())+4);
+      $anchor->setRow2(java_values($cell->getRowIndex())+4);
+      $comment = $patriarch->createComment($anchor);
+      $comment->setString($string);
+      $cell->setCellComment($comment);
+    }
+    else { // XSSFWorkbook
+//      $comment = $sheet->createComment();
+    }
   }
 
   // Cellstyle
@@ -117,11 +131,11 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
 
   // Merged regions
   if ($c['colspan'] > 1 || $c['rowspan'] > 1) {
-    $cellrange = new org_apache_poi_hssf_util_CellRangeAddress(
+    $cellrange = new org_apache_poi_ss_util_CellRangeAddress(
       java_values($cell->getRowIndex()), 
-      java_values($cell->getRowIndex()) + max($c['rowspan'] - 1, 0),
+      java_values($cell->getRowIndex()) + max($c['rowspan']-1, 0),
       java_values($cell->getColumnIndex()), 
-      java_values($cell->getColumnIndex()) + max($c['colspan'] - 1, 0)
+      java_values($cell->getColumnIndex()) + max($c['colspan']-1, 0)
     );
     $sheet->addMergedRegion($cellrange);
   }
@@ -171,11 +185,11 @@ function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
   // Horizontal alignment
   if ($c['cellformat']) {
     $alignments = array(
-      'left' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_LEFT,
-      'right' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_RIGHT,
-      'center' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_CENTER,
+      'left' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_LEFT,
+      'right' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_RIGHT,
+      'center' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_CENTER,
     );
-    $alignment = $alignments[$sc['cellformats'][$c['cellformat']]] | org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->ALIGN_GENERAL;
+    $alignment = $alignments[$sc['cellformats'][$c['cellformat']]] | org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_GENERAL;
     $cellstyle->setAlignment($alignment);
   }
 
@@ -188,11 +202,11 @@ function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
     }
     if ($layout['alignvert']) {
       $valignments = array(
-        'top' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_TOP,
-        'bottom' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_BOTTOM,
-        'middle' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_CENTER,
+        'top' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_TOP,
+        'bottom' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_BOTTOM,
+        'middle' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_CENTER,
       );
-      $valignment = $valignments[$layout['alignvert']] | org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->VERTICAL_JUSTIFY;
+      $valignment = $valignments[$layout['alignvert']] | org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_JUSTIFY;
       $cellstyle->setVerticalAlignment($valignment);
     }
   }
@@ -237,7 +251,7 @@ function _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $s
   $ff = socialcalc_cellformat_parsefont($c, $sc);
   if ($ff['family']) $font->setFontName($ff['family']);
   if ($ff['size']) $font->setFontHeightInPoints(intval($ff['size']));
-  if ($ff['bold']) $font->setBoldweight(org_apache_poi_hssf_usermodel_HSSFFont::type()->BOLDWEIGHT_BOLD);
+  if ($ff['bold']) $font->setBoldweight(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD);
   if ($ff['italic']) $font->setItalic(true);
 
   $fc = socialcalc_cellformat_parsecolor($c, $sc, 'color');
@@ -259,7 +273,7 @@ function _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, 
   $border = socialcalc_cellformat_parseborder($c, $sc, $attribs[$pos]);
   if ($border) {
     if ($border['thickness'] || $border['style']) {
-      $thickness = str_replace('px', '', $border['thickness']);
+      $thickness = str_replace('px', '', $border['thickness']); // TODO: what about other units?
       if ($thickness > 0 && $thickness < 7) {
         $thickness = 'thin';
       }
@@ -271,20 +285,21 @@ function _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, 
       }
       $borderstyles = array(
         'thin' => array(
-          'solid' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_THIN,
-          'dashed' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DASHED,
-          'dotted' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DOTTED,
-          'double' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_DOUBLE,
+          'solid' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_THIN,
+          'dashed' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DASHED,
+          'dotted' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DOTTED,
+          'double' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DOUBLE,
         ),
         'medium' => array(
-          'solid' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_MEDIUM,
-          'dashed' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_MEDIUM_DASHED,
+          'solid' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM,
+          'dashed' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM_DASHED,
         ),
         'thick' => array(
-          'solid' => org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_THICK,
+          'solid' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_THICK,
         ),
       );
-      $borderstyle = $borderstyles[$thickness][$border['style']] | org_apache_poi_hssf_usermodel_HSSFCellStyle::type()->BORDER_NONE;
+      // TODO: what about other combinations?
+      $borderstyle = $borderstyles[$thickness][$border['style']] | org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_NONE;
       $setstyle = "setBorder{$pos}";
       $cellstyle->$setstyle($borderstyle);
     }
@@ -297,28 +312,36 @@ function _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, 
 }
 
 function _sheetnode_xls_export_color($cell, $sheet, $workbook, $c) {
-  static $used_palette = array();
+  if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) { // HSSFWorkbook
+    static $used_palette = array();
 
-  $palette = $workbook->getCustomPalette();
-  $color = $palette->findColor($c['r'], $c['g'], $c['b']);
-  if (java_is_null($color)) {
-    // Replace an unused existing color with the new one.
-    for ($i=0x8; $i<0x40; $i++) {
-      if ($used_palette[$i]) continue;
-      $palette->setColorAtIndex($i, $c['r'], $c['g'], $c['b']);
-      $used_palette[$i] = true;
-      return $i;
+    $palette = $workbook->getCustomPalette();
+    $color = $palette->findColor($c['r'], $c['g'], $c['b']);
+    if (java_is_null($color)) {
+      // Replace an unused existing color with the new one.
+      for ($i=0x8; $i<0x40; $i++) {
+        if ($used_palette[$i]) continue;
+        $palette->setColorAtIndex($i, $c['r'], $c['g'], $c['b']);
+        $used_palette[$i] = true;
+        return $i;
+      }
+
+      // Could not find an empty slot: find closest color.
+      $color = $palette->findSimilarColor($c['r'], $c['g'], $c['b']);
+      if (java_is_null($color)) {
+        // Could not even find a close color: return default color.
+        return org_apache_poi_ss_usermodel_Font::type()->COLOR_NORMAL;
+      }
     }
 
-    // Could not find an empty slot: find closest color.
-    $color = $palette->findSimilarColor($c['r'], $c['g'], $c['b']);
-    if (java_is_null($color)) {
-      // Could not even find a close color: return default color.
-      return org_apache_poi_hssf_usermodel_HSSFFont::type()->COLOR_NORMAL;
-     }
+    $used_palette[java_values($color->getIndex())] = true;
+    return $color->getIndex();
   }
-
-  $used_palette[java_values($color->getIndex())] = true;
-  return $color->getIndex();
+  else { // XSSFWorkbook
+    $color = new org_apache_poi_xssf_usermodel_XSSFColor();
+    $argb = array(1, $c['r'], $c['g'], $c['b']);
+    $color->setRgb($argb);
+    return $color;
+  }
 }
 

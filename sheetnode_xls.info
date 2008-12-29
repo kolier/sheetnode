@@ -2,5 +2,6 @@
 name = Sheetnode XLS
 description = Provides XLS import/export support for Sheetnode.
 package = Other
-dependencies[] = sheetnode
+dependencies[] = sheetnode 
+dependencies[] = php_java_bridge
 core = 6.x
