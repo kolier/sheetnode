@@ -1,0 +1,37 @@
+<?php
+// $Id$
+
+function php_java_bridge_menu() { 
+  $items['admin/settings/pjb'] = array(
+    'title' => 'PHP/Java Bridge settings',
+    'description' => 'Administer settings for PHP/Java Bridge.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_php_java_bridge_settings'),
+    'access arguments' => array('administer site configuration'),
+  );
+  return $items;
+}
+
+function _php_java_bridge_settings() {
+  $form['pjb_java_base'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Include files path'),
+    '#default_value' => variable_get('pjb_java_base', ''),
+    '#description' => t('Type the location of the Java.inc file that is shipped with PHP/Java Bridge. It is contained within the JavaBridge.jar package.'),
+  );
+  $form['#validate'][] = '_php_java_bridge_settings_validate';
+  return system_settings_form($form);
+}
+
+function _php_java_bridge_settings_validate($form, $form_state) {
+  $path = $form_state['values']['pjb_java_base'];
+  if (!is_dir($path)) {
+    form_set_error('pjb_java_base', t('The path you entered does not point to a valid location. Please enter the location of PHP/Java Bridge include files.'));
+    return;
+  }
+  if (!file_exists($path.'/Java.inc')) {
+    form_set_error('pjb_java_base', t('The path you entered does contain the Java.inc file. Please make sure to extract the JavaBridge.jar file and enter the full path of the META-INF/java location.'));
+    return;
+  }
+}
+

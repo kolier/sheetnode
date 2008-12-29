@@ -1,0 +1,35 @@
+<?php
+// $Id$
+
+function php_java_bridge_requirements($phase) {
+  $requirements = array();
+  $t = get_t();
+  
+  $extension = extension_loaded('java');
+  $requirements['pjb_extension'] = array(
+    'title' => $t('PHP/Java Bridge extension'),
+    'value' => $extension ?
+      $t('PHP/Java Bridge extension is loaded in php.ini.') :
+      $t('PHP/Java Bridge extension is NOT loaded in php.ini. Please install it.'),
+    'severity' => $extension ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+  );
+
+  if ($phase == 'runtime') {
+    $java_inc = file_exists(variable_get('pjb_java_base', '').'/Java.inc');
+    $requirements['pjb_java_inc'] = array(
+      'title' => $t('PHP/Java Bridge include files'),
+      'value' => $java_inc ?
+        $t('PHP/Java Bridge include files are found.') :
+        $t('PHP/Java Bridge include files are NOT found. Please <a href="@admin">set their location in the admin page</a>.', 
+          array('@admin' => url('admin/settings/pjb'))),
+      'severity' => $java_inc ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+    );
+  }
+
+  return $requirements;
+}
+
+function php_java_bridge_uninstall() {
+  variable_del('php_java_base');
+}
+

@@ -1,0 +1,5 @@
+; $Id$
+name = PHP/Java Bridge
+description = Drupal integration settings for <a href="http://php-java-bridge.sourceforge.net/pjb/">PHP/Java Bridge</a>.
+core = 6.x
+package = Other
