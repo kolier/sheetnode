@@ -129,6 +129,37 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   return $node;
 }
 
+function sheetnode_menu() {
+  $items = array();
+  $items['sheetnode/value'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => '_sheetnode_ajax_value',
+    'access arguments' => array('access content'),
+  );
+  $items['sheetnode/load'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => '_sheetnode_ajax_load',
+    'access arguments' => array('access content'),
+  );
+  return $items;
+}
+
+function _sheetnode_ajax_value($nid = null, $cells = null) {
+  require_once(drupal_get_path('module', 'sheetnode') .'/sheetnode.api.inc');
+  if (!$nid) $nid = $_REQUEST['nid'];
+  if (!$cells) $cells = $_REQUEST['cells'];
+  $cells = explode(';', $cells);
+  drupal_json(sheetnode_get_values($nid, $cells));
+  exit();
+}
+
+function _sheetnode_ajax_load($sheetname = null) {
+  if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
+  $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", strtoupper($sheetname)));
+  echo $value ? unserialize($value) : null;
+  exit();
+}
+
 function _sheetnode_load($nid) {
   $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", $nid));
   return ($value === FALSE ? '' : unserialize($value));
