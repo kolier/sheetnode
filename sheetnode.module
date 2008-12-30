@@ -155,7 +155,12 @@ function _sheetnode_ajax_value($nid = null, $cells = null) {
 
 function _sheetnode_ajax_load($sheetname = null) {
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
-  $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", strtoupper($sheetname)));
+  if (is_int($sheetname)) {
+    $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", intval($sheetname)));
+  }
+  else {
+    $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", strtoupper($sheetname)));
+  }
   echo $value ? unserialize($value) : null;
   exit();
 }
