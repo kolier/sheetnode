@@ -264,7 +264,7 @@ class SheetnodeXSSF extends SheetnodeXLS {
         'CharactersWithSpaces' => t('Character count (with spaces)'),
         'Company' => t('Company'),
         'DigSig' => t('Digital signature'),
-        'DocSecurity' => t('Security'),
+//        'DocSecurity' => t('Security'),
         'Lines' => t('Line count'),
         'Manager' => t('Manager'),
         'Pages' => t('Page count'),
@@ -292,6 +292,14 @@ class SheetnodeXSSF extends SheetnodeXLS {
         if (!java_is_null($value)) $properties[$field] = array('label' => $label, 'value' => java_values($value));
       }
     }
+    $security = array(
+      0 => t('No security'),
+      1 => t('Password protected'),
+      2 => t('Read-only recommended'),
+      4 => t('Read-only enforced'),
+      8 => t('Locked for annotations'),
+    );
+    $properties['Security'] = array('label' => t('Security'), 'value' => $security[java_values($this->_workbook->getProperties()->getExtendedProperties()->getUnderlyingProperties()->getDocSecurity())]);
     return $properties;
   }
   public function getFont($cellstyle) {
