@@ -155,7 +155,7 @@ function _sheetnode_ajax_value($nid = null, $cells = null) {
 
 function _sheetnode_ajax_load($sheetname = null) {
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
-  if (is_int($sheetname)) {
+  if (intval($sheetname) > 0) {
     $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", intval($sheetname)));
   }
   else {
