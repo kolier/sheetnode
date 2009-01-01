@@ -104,6 +104,13 @@ function _sheetnode_inject($value, $edit) {
 EOS;
 }
 
+function _sheetnode_sanitize_js($value) {
+  $chars = array(
+    chr(0xE2).chr(0x80).chr(0xA8), // Got this from Google Docs
+  );
+  return str_replace($chars, '', $value);
+}
+
 function sheetnode_insert($node) {
   if ($node->sheetsave) {
     _sheetnode_save($node->nid, $node->sheetsave);
@@ -159,7 +166,7 @@ function _sheetnode_ajax_load($sheetname = null) {
     $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", intval($sheetname)));
   }
   else {
-    $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", strtoupper($sheetname)));
+    $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", db_escape_string(strtoupper($sheetname))));
   }
   echo $value ? unserialize($value) : null;
   exit();
@@ -172,7 +179,7 @@ function _sheetnode_load($nid) {
 
 function _sheetnode_save($nid, $value) {
   db_query("DELETE FROM {sheetnode} WHERE nid=%d", $nid);
-  db_query("INSERT INTO {sheetnode} (nid, value) VALUES (%d, '%s')", $nid, serialize($value));
+  db_query("INSERT INTO {sheetnode} (nid, value) VALUES (%d, '%s')", $nid, serialize(_sheetnode_sanitize_js($value)));
 }
 
 // @see http://forums.codecharge.com/posts.php?post_id=75694
