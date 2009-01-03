@@ -142,15 +142,22 @@ class SheetnodeHSSF extends SheetnodeXLS {
         'Comments' => array('label' => t('Body'), 'field' => 'Body'),
         'CreateDateTime' => t('Creation date'),
         'LastSaveDateTime' => t('Last modification date'),
-        'EditTime' => t('Total time spent on editing'),
+        'EditTime' => array('label' => t('Total time spent on editing'), 'null' => 0),
         'LastAuthor' => t('Last modified by'),
         'LastPrinted' => t('Last printing date'),
-        'PageCount' => t('Page count'),
-        'WordCount' => t('Word count'),
-        'CharCount' => t('Character count'),
+        'PageCount' => array('label' => t('Page count'), 'null' => 0),
+        'WordCount' => array('label' => t('Word count'), 'null' => 0),
+        'CharCount' => array('label' => t('Character count'), 'null' => 0),
         'RevNumber' => t('Revision number'),
         'Template' => t('Template'),
         'ApplicationName' => t('Application'),
+        'Security' => array('label' => t('Security'), 'map' => array(
+          0 => null,
+          1 => t('Password protected'),
+          2 => t('Read-only recommended'),
+          4 => t('Read-only enforced'),
+          8 => t('Locked for annotations'),
+        )),
       )),
       array('object' => $dsi, 'fields' => array(
         'Category' => t('Category'),
@@ -162,24 +169,19 @@ class SheetnodeHSSF extends SheetnodeXLS {
       $object = $propertyset['object'];
       foreach ($propertyset['fields'] as $field => $label) {
         $function = 'get'. $field;
-        $value = $object->$function();
+        $value = java_values($object->$function());
+        $null = null;
         if (is_array($label)) {
-          $field = $label['field'];
+          if (isset($label['field'])) $field = $label['field'];
+          if (isset($label['null'])) $null = $label['null'];
+          if (isset($label['map'])) $value = $label['map'][$value];
           $label = $label['label'];
         }
-        if (!java_is_null($value)) $properties[$field] = array('label' => $label, 'value' => java_values($value));
+        if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
       }
     }
-    $security = array(
-      0 => t('No security'),
-      1 => t('Password protected'),
-      2 => t('Read-only recommended'),
-      4 => t('Read-only enforced'),
-      8 => t('Locked for annotations'),
-    );
-    $properties['Security'] = array('label' => t('Security'), 'value' => $security[java_values($si->getSecurity())]);
     foreach ($dsi->getCustomProperties() as $field => $value) {
-      if (!java_is_null($value)) $properties[$field] = array('label' => t($field), 'value' => java_value($value));
+      if (!java_is_null($value)) $properties[$field] = array('label' => t(java_values($value->getName())), 'value' => java_values($value->getValue()));
     }
     return $properties;
   }
@@ -243,7 +245,7 @@ class SheetnodeXSSF extends SheetnodeXLS {
         'Category' => t('Category'),
         'ContentStatus' => t('Content status'),
         'ContentType' => t('Content type'),
-        'Created' => t('Creation date'),
+        'Created' => array('label' => t('Creation date'), 'null' => 0),
         'Creator' => t('Author'),
         'Description' => array('label' => t('Body'), 'field' => 'Body'),
         'Identifier' => t('Identifier'),
@@ -264,13 +266,19 @@ class SheetnodeXSSF extends SheetnodeXLS {
         'CharactersWithSpaces' => t('Character count (with spaces)'),
         'Company' => t('Company'),
         'DigSig' => t('Digital signature'),
-//        'DocSecurity' => t('Security'),
-        'Lines' => t('Line count'),
+        'DocSecurity' => array('label' => t('Security'), 'field' => 'Security', 'map' => array(
+          0 => null,  
+          1 => t('Password protected'),
+          2 => t('Read-only recommended'),
+          4 => t('Read-only enforced'),
+          8 => t('Locked for annotations'),
+        )),
+        'Lines' => array('label' => t('Line count'), 'null' => 0),
         'Manager' => t('Manager'),
-        'Pages' => t('Page count'),
-        'Paragraphs' => t('Paragraph count'),
+        'Pages' => array('label' => t('Page count'), 'null' => 0),
+        'Paragraphs' => array('label' => t('Paragraph count'), 'null' => 0),
         'Template' => t('Template'),
-        'TotalTime' => t('Total time spent on editing'),
+        'TotalTime' => array('label' => t('Total time spent on editing'), 'null' => 0),
       ),
     );
     foreach ($fields_objects as $propertyset => $fields) {
@@ -279,27 +287,22 @@ class SheetnodeXSSF extends SheetnodeXLS {
       foreach ($fields as $field => $label) {
         if ($propertyset == 'CoreProperties') {
           $function = 'get'. $field .'Property';
-          $value = $object->$function()->getValue();
+          $value = java_values($object->$function()->getValue());
         }
         else {
           $function = 'get'. $field;
-          $value = $object->$function();
+          $value = java_values($object->$function());
         }
+        $null = null;
         if (is_array($label)) {
-          $field = $label['field'];
+          if (isset($label['field'])) $field = $label['field'];
+          if (isset($label['null'])) $null = $label['null'];
+          if (isset($label['map'])) $value = $label['map'][$value];
           $label = $label['label'];
         }
-        if (!java_is_null($value)) $properties[$field] = array('label' => $label, 'value' => java_values($value));
+        if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
       }
     }
-    $security = array(
-      0 => t('No security'),
-      1 => t('Password protected'),
-      2 => t('Read-only recommended'),
-      4 => t('Read-only enforced'),
-      8 => t('Locked for annotations'),
-    );
-    $properties['Security'] = array('label' => t('Security'), 'value' => $security[java_values($this->_workbook->getProperties()->getExtendedProperties()->getUnderlyingProperties()->getDocSecurity())]);
     return $properties;
   }
   public function getFont($cellstyle) {
