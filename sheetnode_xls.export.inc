@@ -24,10 +24,12 @@ function _sheetnode_xls_export($type, $nid) {
     $definition = $info['definition'];
     if (strncmp('=', $definition, 1) == 0) { // formula
       $definition = substr($definition, 1);
-      $definition = str_replace('(', "('$sheetname'!", $definition);
-      $definition = str_replace(',', ",'$sheetname'!", $definition);
+      if (strpos($definition, '!') === FALSE) {
+        $definition = str_replace('(', "('$sheetname'!", $definition);
+        $definition = str_replace(',', ",'$sheetname'!", $definition);
+      }
     }
-    else {
+    else if (strpos($definition, '!') === FALSE) {
       $definition = "'$sheetname'!$definition";
     }
     try { // Not 100% safe
@@ -37,7 +39,7 @@ function _sheetnode_xls_export($type, $nid) {
       $msg = 'Failed to export name %name with definition %definition: %error';
       $arg = array('%name' => $n, '%definition' => $definition, '%error' => $e->getMessage());
       drupal_set_message(t($msg, $arg), 'error');
-      watchdog('sheetnode', $msg, $arg, $WATCHDOG_WARNING);
+      watchdog('sheetnode', $msg, $arg, WATCHDOG_WARNING);
     }
   }
 
