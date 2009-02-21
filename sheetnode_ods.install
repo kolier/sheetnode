@@ -15,7 +15,7 @@ function sheetnode_ods_requirements($phase) {
       require_once("$JAVA_BASE/Java.inc");
       try {
         java_require(variable_get('sheetnode_ods_jar', NULL));
-        $Version = new Java('org.openoffice.odf.dom.Version');
+        $Version = new JavaClass('org.openoffice.odf.dom.Version');
         $ods_version = $Version->getApplicationTitle();
       }
       catch (Exception $e) {
