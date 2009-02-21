@@ -1,0 +1,11 @@
+--- socialcalc-3.js.orig	2009-02-21 11:36:31.000000000 -0800
++++ socialcalc-3.js	2009-02-21 11:36:44.000000000 -0800
+@@ -367,7 +367,7 @@
+                      sheetobj.rowattribs.height[coord]=parts[j++]-0;
+                      break;
+                   case "hide":
+-                     sheetobj.rowlattribs.hide[coord]=parts[j++];
++                     sheetobj.rowattribs.hide[coord]=parts[j++];
+                      break;
+                   default:
+                      throw scc.s_pssUnknownRowType+" '"+t+"'";

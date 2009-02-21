@@ -529,33 +529,33 @@ function socialcalc_cellformat_parseborder($cell, $sheet, $attrib) {
  * formatinfo:
        .operators - array of operators from parsing the format string (each a number) and corresponding operands (each usually a string)
        .sectioninfo - one hash for each section of the format
-          .start
+          .sectionstart
           .integerdigits
           .fractiondigits
           .commas
           .percent
           .thousandssep
-          .hasdates
+          .hasdate
+          .hascurrency
        .hascomparison - true if any section has [<100], etc.
 
  **************************/
 
-define(SOCIALCALC_COMMAND_COPY, 1);
-define(SOCIALCALC_COMMAND_COLOR, 2);
-define(SOCIALCALC_COMMAND_INTEGERPLACEHOLDER, 3);
-define(SOCIALCALC_COMMAND_FRACTIONPLACEHOLDER, 4);
-define(SOCIALCALC_COMMAND_DECIMAL, 5);
-define(SOCIALCALC_COMMAND_CURRENCY, 6);
-define(SOCIALCALC_COMMAND_GENERAL, 7);
-define(SOCIALCALC_COMMAND_SEPARATOR, 8);
-define(SOCIALCALC_COMMAND_DATE, 9);
-define(SOCIALCALC_COMMAND_COMPARISON, 10);
-define(SOCIALCALC_COMMAND_SECTION, 11);
-define(SOCIALCALC_COMMAND_STYLE, 11);
+define(SOCIALCALC_COMMANDS_COPY, 'COPY');
+define(SOCIALCALC_COMMANDS_COLOR, 'COLOR');
+define(SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER, 'INTEGER');
+define(SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER, 'FRACTION');
+define(SOCIALCALC_COMMANDS_DECIMAL, 'DECIMAL');
+define(SOCIALCALC_COMMANDS_CURRENCY, 'CURRENCY');
+define(SOCIALCALC_COMMANDS_GENERAL, 'GENERAL');
+define(SOCIALCALC_COMMANDS_SEPARATOR, 'SEPARATOR');
+define(SOCIALCALC_COMMANDS_DATE, 'DATE');
+define(SOCIALCALC_COMMANDS_COMPARISON, 'COMPARISON');
+define(SOCIALCALC_COMMANDS_SECTION, 'SECTION');
+define(SOCIALCALC_COMMANDS_STYLE, 'STYLE');
 
 function socialcalc_parse_numberformat($format_string) {
-
-  $integerpart = 1; // start out in integer part
+  $integerpart = true; // start out in integer part
   $lastwasinteger = false; // last char was an integer placeholder
   $lastwasslash = false; // last char was a backslash - escaping following character
   $lastwasasterisk = false; // repeat next char
@@ -582,7 +582,7 @@ function socialcalc_parse_numberformat($format_string) {
   $sectioninfo['percent'] = 0; // times to scale by 100
 
   for ($chpos=0; $chpos<strlen($format_string); $chpos++) { // parse
-  $ch = $format_string[$chpos]; // get next char to examine
+    $ch = $format_string[$chpos]; // get next char to examine
     if ($inquote) {
       if ($ch == '"') {
         $inquote = false;
@@ -605,6 +605,9 @@ function socialcalc_parse_numberformat($format_string) {
         }
         if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_COMPARISON) {
           $thisformat['hascomparison'] = true;
+        }
+        if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_CURRENCY) {
+          $sectioninfo['hascurrency'] = true;
         }
         $thisformat['operators'][] = $bracketdata['operator'];
         continue;
@@ -677,11 +680,12 @@ function socialcalc_parse_numberformat($format_string) {
     else if ($ch=='.') { // decimal point
       $lastwasinteger = false;
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DECIMAL => $ch);
-      $integerpart = true;
+      $integerpart = false;
     }
     else if ($ch=='$') { // currency char
       $lastwasinteger = false;
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_CURRENCY => $ch);
+      $sectioninfo['hascurrency'] = true;
     }
     else if ($ch==',') {
       if ($lastwasinteger) {
@@ -812,8 +816,9 @@ function socialcalc_parse_bracketformat($bracketstr) {
     $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_DATE => $alloweddates[strtoupper($bracketstr)]);
   }
   else if (preg_match('/^[<>=]/', $bracketstr)) { // comparison operator
-    preg_match('/^([<>=]+)(.+)$/', $bracketstr, $parts); // split operator and value
-    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_COMPARISON => $parts[1].':'.$parts[2]);
+//    preg_match('/^([<>=]+)(.+)$/', $bracketstr, $parts); // split operator and value
+//    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_COMPARISON => $parts[1].':'.$parts[2]);
+    $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_COMPARISON => $bracketstr);    
   }
   else { // unknown bracket
     $bracketdata['operator'] = array(SOCIALCALC_COMMANDS_COPY => '['.$bracketstr.']');

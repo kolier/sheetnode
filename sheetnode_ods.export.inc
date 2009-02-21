@@ -87,11 +87,11 @@ function _sheetnode_ods_export($nid) {
     }
 
     // Style
-    _sheetnode_ods_export_style($c, $sc, $spreadsheet, $dom, $cell, $p);
+    $style = _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p);
 
     // Number format
     if ($c['nontextvalueformat']) {
-      _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $dom, $cell, $p);
+      _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $style);
     }
 
     // Cell merges
@@ -121,7 +121,7 @@ function _sheetnode_ods_export($nid) {
       $name->setName($n);
     }
   }
-/*
+  
   // Write out to client.
   header('Content-type: application/vnd.oasis.opendocument.spreadsheet');
   header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($node->title, 'ods'));
@@ -130,29 +130,112 @@ function _sheetnode_ods_export($nid) {
   $memoryStream->close();
   echo java_values($memoryStream->toByteArray());
   exit();
-*/
 }
 
-function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $dom, $cell, $p) {
-  var_dump($sc['valueformats'][$c['nontextvalueformat']]);
+function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $style) {
+  static $stylecount = 0;
+
+  $dom = $spreadsheet->getStylesDom();
+  $styles = $spreadsheet->getOrCreateDocumentStyles();
   $formatinfo = socialcalc_parse_numberformat($sc['valueformats'][$c['nontextvalueformat']]);
+  $numsections = count($formatinfo['sectioninfo']);
+  $conditions = array();
+  $stylenames = array();
   foreach ($formatinfo['sectioninfo'] as $i => $sectioninfo) {
-    var_dump($sectioninfo);
-    echo '<br/>';
-    $sectionend = ($i+1) == count($formatinfo['sectioninfo']) ? count($formatinfo['operators']) : $formatinfo['sectioninfo'][$i+1]['sectionstart']-1;
-    for ($j=$sectioninfo['sectionstart']; $j<$sectionend; $j++) {
-      var_dump($formatinfo['operators'][$j]);
+    $sectionend = ($i+1) == $numsections ? count($formatinfo['operators']) : $formatinfo['sectioninfo'][$i+1]['sectionstart']-1;
+    $section = array_slice($formatinfo['operators'], $sectioninfo['sectionstart'], $sectionend - $sectioninfo['sectionstart']);
+    $stylenames[$i] = 'number'. $stylecount .'n'. $i;
+
+    // Create parent style
+    if ($sectioninfo['hascurrency']) {
+      $numstyle = new org_openoffice_odf_doc_element_number_OdfCurrencyStyle($dom);
     }
-    echo '<p/>';
+    else if ($sectioninfo['hasdate']) {
+      $numstyle = new org_openoffice_odf_doc_element_number_OdfDateStyle($dom);
+    }
+    else {
+      $numstyle = new org_openoffice_odf_doc_element_number_OdfNumberStyle($dom);
+    }
+    $numstyle->setName($stylenames[$i]);
+
+    // Populate number format
+    $minintdigits = 0;
+    $lastnumber = false;
+    $lasttext = '';
+    $section[] = array(SOCIALCALC_COMMANDS_SECTION => ';'); // Manually add this to make sure we don't miss anything
+    foreach ($section as $o) {
+      $operator = key($o);
+      $operand  = current($o);
+      
+      if ($lasttext && $operator != SOCIALCALC_COMMANDS_COPY) {
+        $text = $numstyle->appendChild(new org_openoffice_odf_doc_element_number_OdfText($dom));
+        $text->setTextContent($lasttext);
+        $lasttext = '';
+      }
+      if ($lastnumber && !in_array($operator, array(SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER, SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER, SOCIALCALC_COMMANDS_DECIMAL))) {
+        $number = $numstyle->appendChild(new org_openoffice_odf_doc_element_number_OdfNumber($dom));
+        $number->setGrouping($sectioninfo['thousandssep']);
+        $number->setDecimalPlaces($sectioninfo['fractiondigits']);
+        $number->setMinIntegerDigits($minintdigits);
+        $lastnumber = false;
+      }
+
+      switch ($operator) {
+      case SOCIALCALC_COMMANDS_CURRENCY:
+        $currencysymbol = $numstyle->appendChild(new org_openoffice_odf_doc_element_number_OdfCurrencySymbol($dom));
+        $currencysymbol->appendChild($dom->createTextNode($operand));
+        $currencysymbol->setCountry('US'); // TODO
+        $currencysymbol->setLanguage('en'); // TODO
+        break;
+      case SOCIALCALC_COMMANDS_COPY:
+        $lasttext .= $operand;
+        break;
+      case SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER:
+        if ($operand == '0') $minintdigits++;
+        // pass through
+      case SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER:
+      case SOCIALCALC_COMMANDS_DECIMAL:
+        $lastnumber = true;
+        break;
+      case SOCIALCALC_COMMANDS_COLOR: // TODO
+        //$textprop = $numstyle->appendChild(new org_openoffice_odf_doc_element_style_OdfTextProperties($dom));
+        //$numstyle->setProperty(org_openoffice_odf_doc_element_style_OdfTextProperties::type()->Color, $operand);
+        break;
+      case SOCIALCALC_COMMANDS_COMPARISON:
+        $conditions[$i] = $operand;
+        break;
+      }
+    }
+
+    // Insert into spreadsheet
+    $styles->appendChild($numstyle);
+    if (($i+1) == $numsections) { // Last section connects to original cell style and to other sections
+      $style->setDataStyleName($stylenames[$i]);
+      for ($j=0; $j<$i; $j++) {
+        $map = $numstyle->appendChild(new org_openoffice_odf_doc_element_style_OdfMap($dom));
+        $map->setApplyStyleName($stylenames[$j]);
+        $condition = isset($conditions[$j]) ? $conditions[$j] :
+                     (($numsections == 2) ? '>=0' : 
+                     (($numsections == 3 && $j == 0) ? '>0' :
+                     (($numsections == 3 && $j == 1) ? '<0' : '=0'
+                     )));
+        $map->setCondition('value()'.$condition);
+      }
+    }
+    else { // Earlier sections get volatile=true
+      $numstyle->setVolatile(true);
+    }
   }
+
+  $stylecount++;
 }
 
-function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $dom, $cell, $p) {
+function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
   static $stylecount = 0;
  
   // Create new style
   $styles = $spreadsheet->getOrCreateDocumentStyles();
-  $stylename = 'cell'.$stylecount;
+  $stylename = 'cell'.$stylecount++;
   $style = $styles->createStyle($stylename, org_openoffice_odf_dom_style_OdfStyleFamily::type()->TableCell);
   $cell->setStyleName($stylename);
   
@@ -203,6 +286,6 @@ function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $dom, $cell, $p) {
   if ($ff['bold']) $style->setProperty(org_openoffice_odf_doc_element_style_OdfTextProperties::type()->FontWeight, 'bold');
   if ($ff['italic']) $style->setProperty(org_openoffice_odf_doc_element_style_OdfTextProperties::type()->FontStyle, 'italic');
 
-  $stylecount++;
+  return $style;
 }
 
