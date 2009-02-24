@@ -24,7 +24,7 @@ function socialcalc_parse($data) {
       $coord = $parts[1];
       $pos = socialcalc_coord_to_cr($coord .'1'); // convert to col number
       $j = 2;
-      while ($t = $parts[$j++]) {
+      while ($t = @$parts[$j++]) {
         switch ($t) {
         case "w":
           $sheet['colattribs']['width'][$pos[0]] = strval($parts[$j++]); // must be text - could be auto or %, etc.
@@ -39,7 +39,7 @@ function socialcalc_parse($data) {
     case "row":
       $coord = intval($parts[1]);
       $j = 2;
-      while ($t = $parts[$j++]) {
+      while ($t = @$parts[$j++]) {
         switch ($t) {
         case "h":
           $sheet['rowattribs']['height'][$coord] = intval($parts[$j++]);
@@ -53,7 +53,7 @@ function socialcalc_parse($data) {
 
     case "sheet":
       $j = 1;
-      while ($t = $parts[$j++]) {
+      while ($t = @$parts[$j++]) {
         switch ($t) {
         case "c":
           $sheet['attribs']['lastcol'] = intval($parts[$j++]);
@@ -344,7 +344,7 @@ function socialcalc_encode_value($s) {
 
 function socialcalc_parse_cell($parts, $j) {
   $cell = array();
-  while ($t = $parts[$j++]) {
+  while ($t = @$parts[$j++]) {
     switch ($t) {
     case "v":
       $cell['datavalue'] = doubleval(socialcalc_decode_value($parts[$j++]));
@@ -541,18 +541,18 @@ function socialcalc_cellformat_parseborder($cell, $sheet, $attrib) {
 
  **************************/
 
-define(SOCIALCALC_COMMANDS_COPY, 'COPY');
-define(SOCIALCALC_COMMANDS_COLOR, 'COLOR');
-define(SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER, 'INTEGER');
-define(SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER, 'FRACTION');
-define(SOCIALCALC_COMMANDS_DECIMAL, 'DECIMAL');
-define(SOCIALCALC_COMMANDS_CURRENCY, 'CURRENCY');
-define(SOCIALCALC_COMMANDS_GENERAL, 'GENERAL');
-define(SOCIALCALC_COMMANDS_SEPARATOR, 'SEPARATOR');
-define(SOCIALCALC_COMMANDS_DATE, 'DATE');
-define(SOCIALCALC_COMMANDS_COMPARISON, 'COMPARISON');
-define(SOCIALCALC_COMMANDS_SECTION, 'SECTION');
-define(SOCIALCALC_COMMANDS_STYLE, 'STYLE');
+define('SOCIALCALC_COMMANDS_COPY', 'COPY');
+define('SOCIALCALC_COMMANDS_COLOR', 'COLOR');
+define('SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER', 'INTEGER');
+define('SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER', 'FRACTION');
+define('SOCIALCALC_COMMANDS_DECIMAL', 'DECIMAL');
+define('SOCIALCALC_COMMANDS_CURRENCY', 'CURRENCY');
+define('SOCIALCALC_COMMANDS_GENERAL', 'GENERAL');
+define('SOCIALCALC_COMMANDS_SEPARATOR', 'SEPARATOR');
+define('SOCIALCALC_COMMANDS_DATE', 'DATE');
+define('SOCIALCALC_COMMANDS_COMPARISON', 'COMPARISON');
+define('SOCIALCALC_COMMANDS_SECTION', 'SECTION');
+define('SOCIALCALC_COMMANDS_STYLE', 'STYLE');
 
 function socialcalc_parse_numberformat($format_string) {
   $integerpart = true; // start out in integer part

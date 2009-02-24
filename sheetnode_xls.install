@@ -8,8 +8,8 @@ function sheetnode_xls_requirements($phase) {
   if ($phase == 'runtime') {
     $poi = TRUE;
     $JAVA_BASE = variable_get('pjb_java_base', '');
-    if (file_exists("$JAVA_BASE/Java.inc")) {
-      require_once("$JAVA_BASE/Java.inc");
+    if (file_exists("$JAVA_BASE/java/Java.inc")) {
+      require_once("$JAVA_BASE/java/Java.inc");
       try {
         java_require(variable_get('sheetnode_xls_jar', NULL));
         $Version = new JavaClass('org.apache.poi.Version');

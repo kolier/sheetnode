@@ -8,11 +8,11 @@ function sheetnode_ods_requirements($phase) {
   if ($phase == 'runtime') {
     $ods = TRUE;
     $JAVA_BASE = variable_get('pjb_java_base', '');
-    if (!file_exists("$JAVA_BASE/Java.inc")) {
+    if (!file_exists("$JAVA_BASE/java/Java.inc")) {
       $ods = t('PHP/Java Bridge is not properly installed.');
     }
     else {
-      require_once("$JAVA_BASE/Java.inc");
+      require_once("$JAVA_BASE/java/Java.inc");
       try {
         java_require(variable_get('sheetnode_ods_jar', NULL));
         $Version = new JavaClass('org.openoffice.odf.dom.Version');

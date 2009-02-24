@@ -15,7 +15,7 @@ function php_java_bridge_requirements($phase) {
   );
 
   if ($phase == 'runtime') {
-    $java_inc = file_exists(variable_get('pjb_java_base', '').'/Java.inc');
+    $java_inc = file_exists(variable_get('pjb_java_base', '').'/java/Java.inc');
     $requirements['pjb_java_inc'] = array(
       'title' => $t('PHP/Java Bridge include files'),
       'value' => $java_inc ?

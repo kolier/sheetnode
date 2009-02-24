@@ -3,7 +3,7 @@
 
 require_once('socialcalc.inc');
 $JAVA_BASE = variable_get('pjb_java_base', '');
-require_once("$JAVA_BASE/Java.inc");
+require_once("$JAVA_BASE/java/Java.inc");
 java_autoload(variable_get('sheetnode_ods_jar', ''));
 
 function _sheetnode_ods_export($nid) {

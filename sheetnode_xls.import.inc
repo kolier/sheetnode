@@ -17,7 +17,7 @@ function _sheetnode_xls_import_form(&$form_state) {
 
 require_once('socialcalc.inc');
 $JAVA_BASE = variable_get('pjb_java_base', NULL);
-require_once("$JAVA_BASE/Java.inc");
+require_once("$JAVA_BASE/java/Java.inc");
 java_autoload(variable_get('sheetnode_xls_jar', NULL));
 
 function _sheetnode_xls_import_form_validate($form, &$form_state) {
