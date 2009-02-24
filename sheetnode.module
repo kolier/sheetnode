@@ -71,7 +71,7 @@ function sheetnode_form(&$node) {
 }
 
 function sheetnode_form_alter(&$form, $form_state, $form_id) {
-  if (isset($form['type']) && $form['type']['#value'] == 'sheetnode') {
+  if (isset($form['type']) && isset($form['type']['#value']) && $form['type']['#value'] == 'sheetnode') {
     $form['buttons']['submit']['#attributes'] = array('class' => 'sheetnode-submit');
     unset($form['buttons']['preview']);
   }

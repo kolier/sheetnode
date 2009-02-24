@@ -53,7 +53,7 @@ function _sheetnode_ods_settings() {
   return system_settings_form($form);
 }
 
-define(SHEETNODE_ODS_JAR_FILES,
+define('SHEETNODE_ODS_JAR_FILES',
     'odfdom.jar;'.
     'xercesImpl.jar');
 

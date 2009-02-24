@@ -68,7 +68,7 @@ function _sheetnode_xls_settings() {
   return system_settings_form($form);
 }
 
-define(SHEETNODE_XLS_JAR_FILES,
+define('SHEETNODE_XLS_JAR_FILES',
     'poi-3.5-beta4-20081128.jar;'.
     'poi-ooxml-3.5-beta4-20081128.jar;'.
     'lib/commons-logging-1.1.jar;'.
