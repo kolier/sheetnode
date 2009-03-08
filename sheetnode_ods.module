@@ -53,29 +53,21 @@ function _sheetnode_ods_settings() {
   return system_settings_form($form);
 }
 
-define('SHEETNODE_ODS_JAR_FILES',
-    'odfdom.jar;'.
-    'xercesImpl.jar');
-
 function _sheetnode_ods_settings_validate($form, $form_state) {
   $path = $form_state['values']['sheetnode_ods_jar_path'];
   if (!is_dir($path)) {
     form_set_error('sheetnode_ods_jar_path', t('The path you entered does not point to a valid location. Please enter the location of the odfdom.jar file.'));
     return;
   }
-  foreach (explode(';', SHEETNODE_ODS_JAR_FILES) as $file) {
-    if (!file_exists($path.'/'.$file)) {
-      form_set_error('sheetnode_ods_jar_path', t('The file %file was not found in the given path. Please make sure the odfdom.jar file and associated libraries are placed in the path.', array('%file' => $file)));
-      return;
-    }
-  }
 }
 
 function _sheetnode_ods_settings_submit($form, $form_state) {
-  $path = $form_state['values']['sheetnode_ods_jar_path'];
-  foreach (explode(';', SHEETNODE_ODS_JAR_FILES) as $file) {
-    $files[] = $path.'/'.$file;
+  $path = variable_get('sheetnode_ods_jar_path', '');
+  $files = file_scan_directory($path, '(.*).jar$');
+  $jars = array();
+  if ($files) foreach ($files as $file) {
+    $jars[] = $file->filename;
   }
-  variable_set('sheetnode_ods_jar', implode(';', $files));
+  variable_set('sheetnode_ods_jar', implode(';', $jars));
 }
 

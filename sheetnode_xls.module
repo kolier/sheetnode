@@ -68,36 +68,21 @@ function _sheetnode_xls_settings() {
   return system_settings_form($form);
 }
 
-define('SHEETNODE_XLS_JAR_FILES',
-    'poi-3.5-beta4-20081128.jar;'.
-    'poi-ooxml-3.5-beta4-20081128.jar;'.
-    'lib/commons-logging-1.1.jar;'.
-    'lib/log4j-1.2.13.jar;'.
-    'ooxml-lib/dom4j-1.6.1.jar;'.
-    'ooxml-lib/jsr173_1.0_api.jar;'.
-    'ooxml-lib/ooxml-schemas-1.0.jar;'.
-    'ooxml-lib/openxml4j-1.0-beta.jar;'.
-    'ooxml-lib/xmlbeans-2.3.0.jar');
-
 function _sheetnode_xls_settings_validate($form, $form_state) {
   $path = $form_state['values']['sheetnode_xls_jar_path'];
   if (!is_dir($path)) {
     form_set_error('sheetnode_xls_jar_path', t('The path you entered does not point to a valid location. Please enter the location of the extracted Apache POI package.'));
     return;
   }
-  foreach (explode(';', SHEETNODE_XLS_JAR_FILES) as $file) {
-    if (!file_exists($path.'/'.$file)) {
-      form_set_error('sheetnode_xls_jar_path', t('The file %file was not found in the given path. Please make sure the Apache POI package is correctly extracted.', array('%file' => $file)));
-      return;
-    }
-  }
 }
 
 function _sheetnode_xls_settings_submit($form, $form_state) {
   $path = variable_get('sheetnode_xls_jar_path', '');
-  foreach (explode(';', SHEETNODE_XLS_JAR_FILES) as $file) {
-    $files[] = $path.'/'.$file;
+  $files = file_scan_directory($path, '(.*).jar$');
+  $jars = array();
+  if ($files) foreach ($files as $file) {
+    $jars[] = $file->filename;
   }
-  variable_set('sheetnode_xls_jar', implode(';', $files));
+  variable_set('sheetnode_xls_jar', implode(';', $jars));
 }
 
