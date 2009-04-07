@@ -387,7 +387,7 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
     $form_state_node = array();
     $form_state_node['values']['title'] = $sheetname;
     $body = '';
-    if (!$book) {
+    if (!isset($book)) {
       foreach ($sheetnode->getProperties() as $field => $property) {
         $body .= $property['label'] .': <strong>'. $property['value'] ."</strong>\n";
       }
@@ -396,7 +396,7 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
     $form_state_node['values']['name'] = $user->name;
     $form_state_node['values']['sheetsave'] = _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode);
     $form_state_node['values']['op'] = t('Save');
-    if ($numsheets > 1 && module_exists('book')) { // insert inside the book
+    if (isset($book)) { // insert inside the book
       $form_state_node['values']['book']['bid'] = $book->nid;
       $form_state_node['values']['book']['plid'] = $book->book['mlid'];
       $form_state_node['values']['book']['weight'] = $s;
@@ -405,7 +405,7 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
   }
 
   // If more than one sheet, create a book to hold them
-  if ($book) {
+  if (isset($book)) {
     $form_state['redirect'] = 'node/'. $book->nid;
   }
   else {
