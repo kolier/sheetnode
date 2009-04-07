@@ -119,13 +119,22 @@ function _sheetnode_google_import_form_submit($form, &$form_state) {
     return;
   }
 
+  // Create spreadsheet URL.
+  $key = array_pop(explode('/', $spreadsheet->id->text));
+  $domain = array();
+  $url = 'http://spreadsheets.google.com/';
+  if (preg_match('/@(.*)$/', $form_state['values']['username'], $domain) && $domain[1] != 'gmail.com') {
+    $url .= 'a/'. $domain[1] .'/';
+  }
+  $url .= 'ccc?key='. $key;
+
   // Create a book if there are more than one sheet.
   $numsheets = count($worksheets->entries);
   if ($numsheets > 1 && module_exists('book')) {
     $node = array('type' => 'book');
     $form_state_book = array();
     $form_state_book['values']['title'] = $spreadsheet->title->text;
-    $body = t('Imported from Google Spreadsheet <a href="@url">!sheet</a>.', array('@url' => $spreadsheet->id->text, '!sheet' => $spreadsheet->title->text));
+    $body = t('Imported from Google Spreadsheet <a href="@url">!sheet</a>.', array('@url' => $url, '!sheet' => $spreadsheet->title->text));
     $form_state_book['values']['body'] = $body;
     $form_state_book['values']['name'] = $user->name;
     $form_state_book['values']['op'] = t('Save');
@@ -141,10 +150,10 @@ function _sheetnode_google_import_form_submit($form, &$form_state) {
   foreach ($worksheets->entries as $worksheet) {
     $node = array('type' => 'sheetnode');
     $form_state_node = array();
-    $form_state_node['values']['title'] = $worksheet->title->text;
+    $form_state_node['values']['title'] = (isset($book) ? '' : $spreadsheet->title->text .' > ') . $worksheet->title->text;
     $body = '';
     if (!isset($book)) {
-      $body = t('Imported from Google Spreadsheet <a href="@url">!sheet</a>.', array('@url' => $spreadsheet->id->text, '!sheet' => $spreadsheet->title->text));
+      $body = t('Imported from Google Spreadsheet <a href="@url">!sheet</a>.', array('@url' => $url, '!sheet' => $spreadsheet->title->text));
     }
     $form_state_node['values']['body'] = $body;
     $form_state_node['values']['name'] = $user->name;
