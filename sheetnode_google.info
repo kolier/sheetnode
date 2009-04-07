@@ -1,0 +1,6 @@
+; $Id$
+name = Sheetnode Google Spreadsheets
+description = Provides Google Spreadsheets import/export support for Sheetnode.
+package = Other
+dependencies[] = sheetnode 
+core = 6.x
