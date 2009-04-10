@@ -1,0 +1,37 @@
+Index: formula1.js
+===================================================================
+--- formula1.js	(revision 65)
++++ formula1.js	(working copy)
+@@ -2541,16 +2541,28 @@
+       return;
+       }
+ 
+-   if (!cond.value) foperand.pop();
+-   operand.push(foperand.pop());
+-   if (cond.value) foperand.pop();
++   var op1, op2;
+ 
++   op1 = foperand.pop();
++   if (foperand.length == 1) {
++      op2 = foperand.pop();
++      }
++   else if (foperand.length == 0) {
++      op2 = {type: "n", value: 0};
++      }
++   else {
++      scf.FunctionArgsError(fname, operand);
++      return 0;
++      }
++
++   operand.push(cond.value ? op1 : op2);
++
+    return null;
+ 
+    }
+ 
+ // Add to function list
+-SocialCalc.Formula.FunctionList["IF"] = [SocialCalc.Formula.IfFunction, 3];
++SocialCalc.Formula.FunctionList["IF"] = [SocialCalc.Formula.IfFunction, -2];
+ 
+ /*
+ #
