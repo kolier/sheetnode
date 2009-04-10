@@ -136,6 +136,32 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   return $node;
 }
 
+function sheetnode_nodeapi($node, $op) {
+  if ($node->type != 'sheetnode') return;
+  switch ($op) {
+  case 'update index':
+    require_once('socialcalc.inc');
+    $output = '<table>';
+    $sc = socialcalc_parse(_sheetnode_load($node->nid));
+    $row = -1;
+    if (@$sc['cells']) foreach ($sc['cells'] as $c) {
+      if ($c['pos'][1] > $row) { // new row?
+        if ($row != -1) {
+          $output .= '</tr>';
+        }
+        $row = $c['pos'][1];
+        $output .= '<tr>';
+      }
+      $output .= '<td>'. $c['datavalue'] .'</td>';
+    }
+    if ($row != -1) {
+      $output .= '</tr>';
+    }
+    $output .= '</table>';
+    return $output;
+  }
+}
+
 function sheetnode_menu() {
   $items = array();
   $items['sheetnode/value'] = array(
