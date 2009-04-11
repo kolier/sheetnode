@@ -75,6 +75,20 @@ function sheetnode_form_alter(&$form, $form_state, $form_id) {
     $form['buttons']['submit']['#attributes'] = array('class' => 'sheetnode-submit');
     unset($form['buttons']['preview']);
   }
+  
+  // @see http://drupal.org/node/344040#comment-1155144
+  if ($form_id == 'sheetnode_node_form') {
+    if ($form['#post']['book']) {
+      $form['book']['bid'] = array(
+        '#type' => 'hidden',
+        '#value' => $form['#post']['book']['bid'],
+      );
+      $form['book']['plid'] = array(
+        '#type' => 'hidden',
+        '#value' => $form['#post']['book']['plid'],
+      );
+    }
+  }
 }
 
 function _sheetnode_inject($value, $edit) {

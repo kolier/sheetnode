@@ -63,22 +63,6 @@ function _sheetnode_xls_import_form_validate($form, &$form_state) {
   }
 }
 
-// @see http://drupal.org/node/344040#comment-1155144
-function sheetnode_xls_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == 'sheetnode_node_form') {
-    if ($form['#post']['book']) {
-      $form['book']['bid'] = array(
-        '#type' => 'hidden',
-        '#value' => $form['#post']['book']['bid'],
-      );
-      $form['book']['plid'] = array(
-        '#type' => 'hidden',
-        '#value' => $form['#post']['book']['plid'],
-      );
-    }
-  }
-}
-
 abstract class SheetnodeXLS {
   public static function create($workbook) {
     if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) {
