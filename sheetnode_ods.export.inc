@@ -156,6 +156,7 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $s
     else {
       $numstyle = new org_openoffice_odf_doc_element_number_OdfNumberStyle($dom);
     }
+    // TODO: handle OdfPercentageStyle.
     $numstyle->setName($stylenames[$i]);
 
     // Populate number format

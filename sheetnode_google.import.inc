@@ -101,8 +101,13 @@ function _sheetnode_google_import_form_submit($form, &$form_state) {
   module_load_include('inc', 'node', 'node.pages');
 
   try {
-    $service = Zend_Gdata_Spreadsheets::AUTH_SERVICE_NAME;
-    $client = Zend_Gdata_ClientLogin::getHttpClient($form_state['values']['username'], $form_state['values']['password'], $service);
+    if (!empty($form_state['values']['username'])) {
+      $service = Zend_Gdata_Spreadsheets::AUTH_SERVICE_NAME;
+      $client = Zend_Gdata_ClientLogin::getHttpClient($form_state['values']['username'], $form_state['values']['password'], $service);
+    }
+    else {
+      $client = NULL;
+    }
     $spreadsheetService = new Zend_Gdata_Spreadsheets($client);
     $query = new Zend_Gdata_Spreadsheets_DocumentQuery();
     $query->setSpreadsheetKey($form_state['values']['key']);
