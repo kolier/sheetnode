@@ -14,7 +14,7 @@ function sheetnode_schema() {
     'fields' => array(
       'nid' => array(
         'description' => t('The primary identifier for a node.'),
-        'type' => 'serial',
+        'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE
       ),
@@ -27,6 +27,42 @@ function sheetnode_schema() {
     ),
     'primary key' => array('nid'),
   );
+  $schema['sheetnode_template'] = array(
+    'fields' => array(
+      'tid' => array(
+        'description' => t('The primary identifier for the template.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '32',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'The unique name of the template. May only be alphanumeric characters plus underscores.',
+      ),
+      'value' => array(
+        'description' => t('The serialized worksheet template content.'),
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('tid'),
+    'unique keys' => array(
+      'key_name' => array('name'),
+    ),
+  );
   return $schema;
+}
+
+function sheetnode_update_6001(&$sandbox = NULL) {
+  $ret = array();
+  $schema = sheetnode_schema();
+  db_create_table($ret, 'sheetnode_template', $schema['sheetnode_template']);
+  db_change_field($ret, 'sheetnode', 'nid', 'nid', $schema['sheetnode']['fields']['nid']);
+  return $ret;
 }
 
