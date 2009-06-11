@@ -106,12 +106,13 @@ function _sheetnode_inject($value, $edit) {
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalctableeditor.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/formatnumber2.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/formula1.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcpopup.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcspreadsheetcontrol.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode').'/sheetnode.js');
   drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
   drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
   drupal_add_js(array('sheetnode' => array('value' => $value, 
-                                           'imagePrefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc',
+                                           'imagePrefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-',
                                            'element' => 'sheetview',
                                            'editMode' => $edit ? true : false,
                                           )), 'setting');

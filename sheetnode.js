@@ -3,7 +3,41 @@
 Drupal.sheetnode = {};
 
 Drupal.sheetnode.functionsSetup = function() {
-  SocialCalc.Formula.FunctionList["SUMPRODUCT"] = [Drupal.sheetnode.functionSumProduct, -1];
+  SocialCalc.Formula.FunctionList["SUMPRODUCT"] = [Drupal.sheetnode.functionSumProduct, -1, "rangen", "", "stat"];
+  SocialCalc.Constants.s_fdef_SUMPRODUCT = 'Sums the pairwise products of 2 or more ranges. The ranges must be of equal length.';
+  SocialCalc.Constants.s_farg_rangen = 'range1, range2, ...';
+
+  // Override IF function to allow optional false value.
+  SocialCalc.Formula.FunctionList["IF"] = [Drupal.sheetnode.functionIf, -2, "iffunc2", "", "test"];
+  SocialCalc.Constants.s_farg_iffunc2 = "logical-expression, true-value[, false-value]";
+}
+
+Drupal.sheetnode.functionIf = function(fname, operand, foperand, sheet) {
+  var cond, t;
+
+  cond = SocialCalc.Formula.OperandValueAndType(sheet, foperand);
+  t = cond.type.charAt(0);
+  if (t != "n" && t != "b") {
+    operand.push({type: "e#VALUE!", value: 0});
+    return;
+  }
+
+  var op1, op2;
+
+  op1 = foperand.pop();
+  if (foperand.length == 1) {
+    op2 = foperand.pop();
+  }
+  else if (foperand.length == 0) {
+    op2 = {type: "n", value: 0};
+  }
+  else {
+    scf.FunctionArgsError(fname, operand);
+    return;
+  }
+  
+  operand.push(cond.value ? op1 : op2);
+  return;
 }
 
 Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) {
@@ -69,25 +103,34 @@ Drupal.sheetnode.focusSetup = function() {
 
 Drupal.sheetnode.startUp = function() {
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
-  SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"-commentbg.gif);"
-  SocialCalc.Constants.s_TCTDFthumbstatusPrefixv = "Row&nbsp;";
-  SocialCalc.Constants.s_TCTDFthumbstatusPrefixh = "Col&nbsp;";
+  SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"commentbg.gif);"
+  SocialCalc.Constants.defaultCommentClass = "cellcomment";
 
   this.sheet = new SocialCalc.SpreadsheetControl();
+
+  // Remove audit tab.
+  this.sheet.tabs.splice(this.sheet.tabnums.audit, 1);
+  this.sheet.tabnums = {};
+  for (var i=0; i<this.sheet.tabs.length; i++) {
+    this.sheet.tabnums[this.sheet.tabs[i].name] = i;
+  }
+  
+  // Hide toolbar if we're just viewing.
   if (!Drupal.settings.sheetnode.editMode) {
     this.sheet.tabbackground="display:none;";
     this.sheet.toolbarbackground="display:none;";
   }
+
+  // Read in data and recompute.
   this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
-  this.sheet.FullRefreshAndRender();
+  this.sheet.ExecuteCommand('redisplay');
   this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
-  this.sheet.currentTab = this.sheet.tabnums.edit;
   
   Drupal.sheetnode.focusSetup();
   Drupal.sheetnode.functionsSetup();
   Drupal.sheetnode.loadsheetSetup();
 
-  this.sheet.editor.recalcFunction(this.sheet.editor);
+  this.sheet.ExecuteCommand('recalc');
 }
 
 Drupal.sheetnode.resize = function() {

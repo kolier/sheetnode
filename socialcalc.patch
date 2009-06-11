@@ -1,0 +1,277 @@
+Common subdirectories: socialcalc.old/images and socialcalc/images
+diff -uP socialcalc.old/socialcalc-3.js socialcalc/socialcalc-3.js
+--- socialcalc.old/socialcalc-3.js	2009-06-02 10:59:48.000000000 -0700
++++ socialcalc/socialcalc-3.js	2009-06-11 05:48:23.000000000 -0700
+@@ -4281,6 +4281,7 @@
+    if (num) stylestr+="border-left:"+sheetobj.borderstyles[num]+";";
+ 
+    if (cell.comment) {
++      result.title = cell.comment;
+       if (context.showGrid) {
+          if (context.commentClassName) {
+             result.className = (result.className ? result.className+" " : "") + context.commentClassName;
+@@ -4581,6 +4582,47 @@
+    }
+ 
+ //
++// GetComputedStyle(element, style) - returns computed style value
++//
++// http://blog.stchur.com/2006/06/21/css-computed-style/
++//
++
++SocialCalc.GetComputedStyle = function (element, style) {
++
++   var computedStyle;
++   if (typeof element.currentStyle != 'undefined') { // IE
++      computedStyle = element.currentStyle;
++      }
++   else {
++      computedStyle = document.defaultView.getComputedStyle(element, null);
++      }
++   return computedStyle[style];
++
++   }
++
++//
++// GetRelativeOffset(element) - returns relative offset of element
++// The relative offset is the offset of the first relative-positioned ancestor of the element.
++//
++
++SocialCalc.GetRelativeOffset = function (element) {
++
++   var e = element;
++   var offsetLeft = 0, offsetTop = 0;
++   while (e) {
++      if (e.nodeType==1 && SocialCalc.GetComputedStyle(e, 'position')=='relative') {
++         offset = SocialCalc.GetElementPosition(e);
++         offsetLeft += offset.left;
++         offsetTop  += offset.top;
++         break;
++         }
++      e = e.parentNode;
++      }
++   return {left:offsetLeft, top:offsetTop};
++
++   }
++
++//
+ // LookupElement(element, array) - returns array element which is an object with "element" of element
+ //
+ 
+diff -uP socialcalc.old/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
+--- socialcalc.old/socialcalcspreadsheetcontrol.js	2009-06-02 10:59:48.000000000 -0700
++++ socialcalc/socialcalcspreadsheetcontrol.js	2009-06-11 05:47:31.000000000 -0700
+@@ -2656,6 +2656,7 @@
+    var s=SocialCalc.GetSpreadsheetControlObject();
+    s.ExecuteCommand("set %C comment "+SocialCalc.encodeForSave(document.getElementById(s.idPrefix+"commenttext").value));
+    var cell=SocialCalc.GetEditorCellElement(s.editor, s.editor.ecell.row, s.editor.ecell.col);
++   cell.element.title = document.getElementById(s.idPrefix+"commenttext").value;
+    s.editor.UpdateCellCSS(cell, s.editor.ecell.row, s.editor.ecell.col);
+    SocialCalc.KeyboardFocus();
+    }
+diff -uP socialcalc.old/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
+--- socialcalc.old/socialcalctableeditor.js	2009-06-02 10:59:48.000000000 -0700
++++ socialcalc/socialcalctableeditor.js	2009-06-11 06:34:09.000000000 -0700
+@@ -335,6 +335,9 @@
+ 
+    this.range2 = {hasrange: false};
+ 
++   // Relative offset of editor when it's embedded inside relative-positioned ancestors
++   this.relativeoffset = {left:0, top:0};
++
+    }
+ 
+ // Methods:
+@@ -1321,8 +1324,8 @@
+    sizedisplay.style.width = "auto";
+    sizedisplay.style.position = "absolute";
+    sizedisplay.style.zIndex = 100;
+-   sizedisplay.style.top = (editor.headposition.top+0)+"px";
+-   sizedisplay.style.left = editor.colpositions[result.coltoresize]+"px";
++   sizedisplay.style.top = (editor.headposition.top-editor.relativeoffset.top)+"px";
++   sizedisplay.style.left = (editor.colpositions[result.coltoresize]-editor.relativeoffset.left)+"px";
+    sizedisplay.innerHTML = '<table cellpadding="0" cellspacing="0"><tr><td style="height:100px;'+
+       'border:1px dashed black;background-color:white;width:' +
+       (editor.context.colwidth[mouseinfo.mouseresizecolnum]-2) + 'px;">&nbsp;</td>'+
+@@ -1868,8 +1871,8 @@
+          delete result.coltoresize;
+          return result;
+          }
+-      else if (clientX >= editor.verticaltablecontrol.controlborder ||
+-               clientY >= editor.horizontaltablecontrol.controlborder ||
++      else if (clientX >= editor.verticaltablecontrol.controlborder+editor.relativeoffset.left ||
++               clientY >= editor.horizontaltablecontrol.controlborder+editor.relativeoffset.top ||
+                clientX < editor.gridposition.left || clientY <= editor.gridposition.top) {
+          return result;
+          }
+@@ -2504,6 +2507,9 @@
+    editor.lastnonscrollingcol = editor.context.colpanes.length-1 > 0 ?
+          editor.context.colpanes[editor.context.colpanes.length-2].last : 0;
+ 
++   // Relative offset
++   editor.relativeoffset = SocialCalc.GetRelativeOffset(editor.toplevel);
++
+    // Now do the table controls
+ 
+    editor.verticaltablecontrol.ComputeTableControlPositions();
+@@ -3162,8 +3168,8 @@
+       cell=SocialCalc.GetEditorCellElement(editor, editor.ecell.row, editor.ecell.col);
+       if (cell) {
+          position = SocialCalc.GetElementPosition(cell.element);
+-         inputecho.container.style.left = (position.left-1)+"px";
+-         inputecho.container.style.top = (position.top-1)+"px";
++         inputecho.container.style.left = (position.left-1-editor.relativeoffset.left)+"px";
++         inputecho.container.style.top = (position.top-1-editor.relativeoffset.top)+"px";
+          }
+       inputecho.container.style.display = "block";
+       if (inputecho.interval) window.clearInterval(inputecho.interval); // just in case
+@@ -3487,7 +3493,7 @@
+ 
+    var control = bobj.functionobj.control;
+    var bposition = SocialCalc.GetElementPosition(bobj.element);
+-   var clickpos = control.vertical ? buttoninfo.clientY : buttoninfo.clientX;
++   var clickpos = control.vertical ? buttoninfo.clientY-control.editor.relativeoffset.top : buttoninfo.clientX-control.editor.relativeoffset.left;
+    if (control.editor.busy) { // ignore if busy - wait for next repeat
+       return;
+       }
+@@ -3562,26 +3568,27 @@
+ SocialCalc.ComputeTableControlPositions = function(control) {
+ 
+    var editor = control.editor;
++   var offset = control.editor.relativeoffset;
+ 
+    if (!editor.gridposition || !editor.headposition) throw("Can't compute table control positions before editor positions");
+ 
+    if (control.vertical) {
+-      control.controlborder = editor.gridposition.left+editor.tablewidth; // border=left position
+-      control.endcapstart = editor.gridposition.top; // start=top position
+-      control.panesliderstart = editor.firstscrollingrowtop-control.sliderthickness;
+-      control.lessbuttonstart = editor.firstscrollingrowtop-1;
+-      control.morebuttonstart = editor.gridposition.top+editor.tableheight-control.buttonthickness;
+-      control.scrollareastart = editor.firstscrollingrowtop-1+control.buttonthickness;
++      control.controlborder = editor.gridposition.left+editor.tablewidth-offset.left; // border=left position
++      control.endcapstart = editor.gridposition.top-offset.top; // start=top position
++      control.panesliderstart = editor.firstscrollingrowtop-control.sliderthickness-offset.top;
++      control.lessbuttonstart = editor.firstscrollingrowtop-1-offset.top;
++      control.morebuttonstart = editor.gridposition.top+editor.tableheight-control.buttonthickness-offset.top;
++      control.scrollareastart = editor.firstscrollingrowtop-1+control.buttonthickness-offset.top;
+       control.scrollareaend = control.morebuttonstart-1;
+       control.scrollareasize = control.scrollareaend-control.scrollareastart+1;
+       }
+    else {
+-      control.controlborder = editor.gridposition.top+editor.tableheight; // border=top position
+-      control.endcapstart = editor.gridposition.left; // start=left position
+-      control.panesliderstart = editor.firstscrollingcolleft-control.sliderthickness;
+-      control.lessbuttonstart = editor.firstscrollingcolleft-1;
+-      control.morebuttonstart = editor.gridposition.left+editor.tablewidth-control.buttonthickness;
+-      control.scrollareastart = editor.firstscrollingcolleft-1+control.buttonthickness;
++      control.controlborder = editor.gridposition.top+editor.tableheight-offset.top; // border=top position
++      control.endcapstart = editor.gridposition.left-offset.left; // start=left position
++      control.panesliderstart = editor.firstscrollingcolleft-control.sliderthickness-offset.left;
++      control.lessbuttonstart = editor.firstscrollingcolleft-1-offset.left;
++      control.morebuttonstart = editor.gridposition.left+editor.tablewidth-control.buttonthickness-offset.left;
++      control.scrollareastart = editor.firstscrollingcolleft-1+control.buttonthickness-offset.left;
+       control.scrollareaend = control.morebuttonstart-1;
+       control.scrollareasize = control.scrollareaend-control.scrollareastart+1;
+       }
+@@ -3613,8 +3620,8 @@
+ 
+    if (dobj.vertical) {
+       row = SocialCalc.Lookup(draginfo.clientY+dobj.functionobj.control.sliderthickness, editor.rowpositions);
+-      draginfo.trackingline.style.top = (editor.rowpositions[row] || editor.headposition.top)+"px";
+-      draginfo.trackingline.style.left = editor.headposition.left+"px";
++      draginfo.trackingline.style.top = ((editor.rowpositions[row] || editor.headposition.top)-editor.relativeoffset.top)+"px";
++      draginfo.trackingline.style.left = (editor.headposition.left-editor.relativeoffset.left)+"px";
+       if (editor.context.rowpanes.length-1) { // has 2 already
+          editor.context.SetRowPaneFirstLast(1, editor.context.rowpanes[0].last+1, editor.context.rowpanes[0].last+1);
+          editor.FitToEditTable();
+@@ -3623,8 +3630,8 @@
+       }
+    else {
+       col = SocialCalc.Lookup(draginfo.clientX+dobj.functionobj.control.sliderthickness, editor.colpositions);
+-      draginfo.trackingline.style.top = editor.headposition.top+"px";
+-      draginfo.trackingline.style.left = (editor.colpositions[col] || editor.headposition.left)+"px";
++      draginfo.trackingline.style.top = (editor.headposition.top-editor.relativeoffset.top)+"px";
++      draginfo.trackingline.style.left = ((editor.colpositions[col] || editor.headposition.left)-editor.relativeoffset.left)+"px";
+       if (editor.context.colpanes.length-1) { // has 2 already
+          editor.context.SetColPaneFirstLast(1, editor.context.colpanes[0].last+1, editor.context.colpanes[0].last+1);
+          editor.FitToEditTable();
+@@ -3650,20 +3657,20 @@
+    if (dobj.vertical) {
+       max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetY; // restrict movement
+       if (draginfo.clientY > max) draginfo.clientY = max;
+-      min = editor.headposition.top - sliderthickness - draginfo.offsetY;
++      min = editor.headposition.top - sliderthickness - draginfo.offsetY - editor.relativeoffset.top;
+       if (draginfo.clientY < min) draginfo.clientY = min;
+ 
+       row = SocialCalc.Lookup(draginfo.clientY+sliderthickness, editor.rowpositions);
+-      draginfo.trackingline.style.top = (editor.rowpositions[row] || editor.headposition.top)+"px";
++      draginfo.trackingline.style.top = ((editor.rowpositions[row] || editor.headposition.top)-editor.relativeoffset.top)+"px";
+       }
+    else {
+       max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetX;
+       if (draginfo.clientX > max) draginfo.clientX = max;
+-      min = editor.headposition.left - sliderthickness - draginfo.offsetX;
++      min = editor.headposition.left - sliderthickness - draginfo.offsetX - editor.relativeoffset.left;
+       if (draginfo.clientX < min) draginfo.clientX = min;
+ 
+       col = SocialCalc.Lookup(draginfo.clientX+sliderthickness, editor.colpositions);
+-      draginfo.trackingline.style.left = (editor.colpositions[col] || editor.headposition.left)+"px";
++      draginfo.trackingline.style.left = ((editor.colpositions[col] || editor.headposition.left)-editor.relativeoffset.left)+"px";
+       }
+ 
+    SocialCalc.DragFunctionPosition(event, draginfo, dobj);
+@@ -3684,7 +3691,7 @@
+    if (dobj.vertical) {
+       max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetY; // restrict movement
+       if (draginfo.clientY > max) draginfo.clientY = max;
+-      min = editor.headposition.top - sliderthickness - draginfo.offsetY;
++      min = editor.headposition.top - sliderthickness - draginfo.offsetY - editor.relativeoffset.top;
+       if (draginfo.clientY < min) draginfo.clientY = min;
+ 
+       row = SocialCalc.Lookup(draginfo.clientY+sliderthickness, editor.rowpositions);
+@@ -3706,7 +3713,7 @@
+    else {
+       max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetX;
+       if (draginfo.clientX > max) draginfo.clientX = max;
+-      min = editor.headposition.left - sliderthickness - draginfo.offsetX;
++      min = editor.headposition.left - sliderthickness - draginfo.offsetX - editor.relativeoffset.left;
+       if (draginfo.clientX < min) draginfo.clientX = min;
+ 
+       col = SocialCalc.Lookup(draginfo.clientX+sliderthickness, editor.colpositions);
+@@ -3761,7 +3768,7 @@
+    if (dobj.vertical) {
+       if (scc.TCTDFSthumbstatusvClass) draginfo.thumbstatus.className = scc.TCTDFSthumbstatusvClass;
+       SocialCalc.setStyles(draginfo.thumbstatus, scc.TCTDFSthumbstatusvStyle);
+-      draginfo.thumbstatus.style.top = (draginfo.clientY+scc.TCTDFStopOffsetv)+"px";
++      draginfo.thumbstatus.style.top = (draginfo.clientY+scc.TCTDFStopOffsetv-editor.relativeoffset.top)+"px";
+       draginfo.thumbstatus.style.left = (control.controlborder-10-(editor.tablewidth/2))+"px";
+       draginfo.thumbstatus.style.width = (editor.tablewidth/2)+"px";
+ 
+@@ -3782,7 +3789,7 @@
+       if (scc.TCTDFSthumbstatushClass) draginfo.thumbstatus.className = scc.TCTDFSthumbstatushClass;
+       SocialCalc.setStyles(draginfo.thumbstatus, scc.TCTDFSthumbstatushStyle);
+       draginfo.thumbstatus.style.top = (control.controlborder+scc.TCTDFStopOffseth)+"px";
+-      draginfo.thumbstatus.style.left = (draginfo.clientX+scc.TCTDFSleftOffseth)+"px";
++      draginfo.thumbstatus.style.left = (draginfo.clientX+scc.TCTDFSleftOffseth-editor.relativeoffset.left)+"px";
+       editor.toplevel.appendChild(draginfo.thumbstatus);
+       draginfo.thumbstatus.innerHTML = scc.s_TCTDFthumbstatusPrefixh+SocialCalc.rcColname(editor.firstscrollingcol);
+       }
+@@ -3828,7 +3835,7 @@
+          draginfo.clientY = control.scrollareaend - draginfo.offsetY - control.thumbthickness + 2;
+       if (draginfo.clientY < control.scrollareastart - draginfo.offsetY - 1)
+          draginfo.clientY = control.scrollareastart - draginfo.offsetY - 1;
+-      draginfo.thumbstatus.style.top = draginfo.clientY+"px";
++      draginfo.thumbstatus.style.top = (draginfo.clientY-editor.relativeoffset.top)+"px";
+ 
+       first =
+          ((draginfo.clientY+draginfo.offsetY-control.scrollareastart+1)/(control.scrollareasize-control.thumbthickness))
+@@ -3847,7 +3854,7 @@
+          draginfo.clientX = control.scrollareaend - draginfo.offsetX - control.thumbthickness + 2;
+       if (draginfo.clientX < control.scrollareastart - draginfo.offsetX - 1)
+          draginfo.clientX = control.scrollareastart - draginfo.offsetX - 1;
+-      draginfo.thumbstatus.style.left = draginfo.clientX+"px";
++      draginfo.thumbstatus.style.left = (draginfo.clientX-editor.relativeoffset.left)+"px";
+ 
+       first =
+          ((draginfo.clientX+draginfo.offsetX-control.scrollareastart+1)/(control.scrollareasize-control.thumbthickness))

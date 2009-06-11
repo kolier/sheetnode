@@ -4,6 +4,7 @@
 
 .sheetview {
   padding-top: 10px;
+  margin-bottom: 30px;
 }
 
 .sheetview table, .sheetview td, .sheetview th {
