@@ -28,14 +28,11 @@ function _sheetnode_google_import_form() {
     '#prefix' => '<div id="sheetnode-google-spreadsheet-key">',
     '#suffix' => '</div>',
   );
-  $form['google']['error'] = array('#type' => 'markup', '#value' => '');
-  $form['google']['key'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Public spreadsheet key'),
-  );
-  $form['submit'] = array(
+  $form['google']['error'] = array('#type' => 'markup', '#value' => '<p>');
+  $form['google']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Import'),
+    '#disabled' => TRUE,
   );
   return $form;
 }
@@ -69,6 +66,12 @@ function &_sheetnode_google_import_fetch(&$form, $form_state) {
     '#type' => 'select',
     '#title' => t('Private spreadsheets'),
     '#options' => $options,
+  );
+  $form['google']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import'),
+    '#weight' => 99,
+    '#disabled' => empty($options),
   );
   return $form['google'];
 }
