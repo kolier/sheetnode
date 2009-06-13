@@ -83,7 +83,7 @@ Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) 
 }
 
 Drupal.sheetnode.loadsheetSetup = function() {
-  SocialCalc.Formula.SheetCache.loadsheet = function(sheetname) {
+  SocialCalc.RecalcInfo.LoadSheet = function(sheetname) {
     data = $.ajax({
       type: 'POST',
       url: Drupal.settings.basePath+'sheetnode/load',
@@ -91,6 +91,9 @@ Drupal.sheetnode.loadsheetSetup = function() {
       datatype: 'text',
       async: false
     }).responseText;
+    if (data !== null) {
+      SocialCalc.RecalcLoadedSheet(sheetname, data, true);
+    }
     return data;
   }
 }
