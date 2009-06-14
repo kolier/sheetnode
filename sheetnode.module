@@ -12,7 +12,7 @@ function sheetnode_node_info() {
 }
 
 function sheetnode_perm() {
-  return array('create sheetnode', 'edit own sheetnode');
+  return array('create sheetnode', 'edit own sheetnode', 'create sheet template');
 }
 
 function sheetnode_access($op, $node, $account) {
@@ -57,7 +57,7 @@ function sheetnode_form(&$node) {
   if (isset($_POST['sheetsave'])) {
     $value = $_POST['sheetsave'];
   }
-  else if ($node->nid) {
+  else if (!empty($node->nid)) {
     $value = _sheetnode_load($node->nid);
   }
   else {
@@ -68,12 +68,14 @@ function sheetnode_form(&$node) {
   $form['sheet']['sheetsave'] = array('#type' => 'hidden');
 
   // Template.
-  $form['template'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Save as template'),
-    '#description' => t('When saving this sheet, also keep a copy under the name you specify here. Later, this copy can be used as a template for other sheets.'),
-    '#required' => FALSE,
-  );
+  if (user_access('create sheet template')) {
+    $form['template'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Save as template'),
+      '#description' => t('When saving this sheet, also keep a copy under the name you specify here. Later, this copy can be used as a template for other sheets.'),
+      '#required' => FALSE,
+    );
+  }
 
   return $form;
 }
@@ -138,7 +140,7 @@ function sheetnode_insert($node) {
   if ($node->sheetsave) {
     _sheetnode_save($node->nid, $node->sheetsave);
   }
-  if ($node->template) {
+  if ($node->template && user_access('create sheet template')) {
     _sheetnode_template_save($node->template, $node->sheetsave);
   }
 }
@@ -147,7 +149,7 @@ function sheetnode_update($node) {
   if ($node->sheetsave) {
     _sheetnode_save($node->nid, $node->sheetsave);
   }
-  if ($node->template) {
+  if ($node->template && user_access('create sheet template')) {
     _sheetnode_template_save($node->template, $node->sheetsave);
   }
 }
