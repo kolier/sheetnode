@@ -1,6 +1,6 @@
 <?php
 // $Id$
-
+/*
 function sheetnode_google_link($type, $node = NULL, $teaser = FALSE) {
   if ($type != 'node' || $node->type != 'sheetnode') return array();
 
@@ -11,7 +11,7 @@ function sheetnode_google_link($type, $node = NULL, $teaser = FALSE) {
   
   return $links;
 }
-
+*/
 function sheetnode_google_menu() {
   $items = array();
     

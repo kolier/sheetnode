@@ -82,7 +82,7 @@ function _sheetnode_xls_export($type, $nid) {
 
 function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $sc) {
   // Cell data
-  switch ($c['datatype']) {
+  if (isset($c['datatype'])) switch ($c['datatype']) {
   case 't':
     if ($c['valuetype'] == 'th') { // text-html
       $cell->setCellValue(strip_tags($c['datavalue']));
@@ -111,7 +111,7 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
   }
 
   // Comment
-  if ($c['comment']) {
+  if (!empty($c['comment'])) {
     $string = $workbook->getCreationHelper()->createRichTextString($c['comment']);
     if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) { // HSSFWorkbook
       $anchor = $workbook->getCreationHelper()->createClientAnchor();
@@ -132,12 +132,12 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
   _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc);
 
   // Merged regions
-  if ($c['colspan'] > 1 || $c['rowspan'] > 1) {
+  if (@$c['colspan'] > 1 || @$c['rowspan'] > 1) {
     $cellrange = new org_apache_poi_ss_util_CellRangeAddress(
       java_values($cell->getRowIndex()), 
-      java_values($cell->getRowIndex()) + max($c['rowspan']-1, 0),
+      java_values($cell->getRowIndex()) + max(@$c['rowspan']-1, 0),
       java_values($cell->getColumnIndex()), 
-      java_values($cell->getColumnIndex()) + max($c['colspan']-1, 0)
+      java_values($cell->getColumnIndex()) + max(@$c['colspan']-1, 0)
     );
     $sheet->addMergedRegion($cellrange);
   }
@@ -148,17 +148,17 @@ function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
   
   // Return if no formatting set.
   $cs = array_filter(array(
-    $c['font'] ? 'f:'. $c['font'] : NULL, 
-    $c['color'] ? 'c:'. $c['color'] : NULL, 
-    $c['bt'] ? 'bt:'. $c['bt'] : NULL, 
-    $c['br'] ? 'br:'. $c['br'] : NULL, 
-    $c['bb'] ? 'bb:'. $c['bb'] : NULL, 
-    $c['bl'] ? 'bl:'. $c['bl'] : NULL,
-    $c['layout'] ? 'l:'. $c['layout'] : NULL, 
-    $c['bgcolor'] ? 'bg:'. $c['bgcolor'] : NULL,
-    $c['cellformat'] ? 'cf:'. $c['cellformat'] : NULL, 
-    $c['nontextvalueformat'] ? 'ntvf:'. $c['nontextvalueformat'] : NULL, 
-    $c['textvalueformat'] ? 'tvf:'. $c['textvalueformat'] : NULL,
+    isset($c['font']) ? 'f:'. $c['font'] : NULL, 
+    isset($c['color']) ? 'c:'. $c['color'] : NULL, 
+    isset($c['bt']) ? 'bt:'. $c['bt'] : NULL, 
+    isset($c['br']) ? 'br:'. $c['br'] : NULL, 
+    isset($c['bb']) ? 'bb:'. $c['bb'] : NULL, 
+    isset($c['bl']) ? 'bl:'. $c['bl'] : NULL,
+    isset($c['layout']) ? 'l:'. $c['layout'] : NULL, 
+    isset($c['bgcolor']) ? 'bg:'. $c['bgcolor'] : NULL,
+    isset($c['cellformat']) ? 'cf:'. $c['cellformat'] : NULL, 
+    isset($c['nontextvalueformat']) ? 'ntvf:'. $c['nontextvalueformat'] : NULL, 
+    isset($c['textvalueformat']) ? 'tvf:'. $c['textvalueformat'] : NULL,
   ));
   if (empty($cs)) return;
   
@@ -185,32 +185,30 @@ function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
   }
 
   // Horizontal alignment
-  if ($c['cellformat']) {
+  if (isset($c['cellformat'])) {
     $alignments = array(
       'left' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_LEFT,
       'right' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_RIGHT,
       'center' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_CENTER,
     );
-    $alignment = $alignments[$sc['cellformats'][$c['cellformat']]] | org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_GENERAL;
+    $alignment = isset($alignments[$sc['cellformats'][$c['cellformat']]]) ? $alignments[$sc['cellformats'][$c['cellformat']]] : org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_GENERAL;
     $cellstyle->setAlignment($alignment);
   }
 
   // Vertical alignment and padding
   $layout = socialcalc_cellformat_parselayout($c, $sc);
-  if ($layout) {
-    if ($layout['padleft']) {
-      $indent = intval(ceil($layout['padleft'] / WIDTH_CHAR_TO_PX)); 
-      $cellstyle->setIndention($indent);
-    }
-    if ($layout['alignvert']) {
-      $valignments = array(
-        'top' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_TOP,
-        'bottom' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_BOTTOM,
-        'middle' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_CENTER,
-      );
-      $valignment = $valignments[$layout['alignvert']] | org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_JUSTIFY;
-      $cellstyle->setVerticalAlignment($valignment);
-    }
+  if (isset($layout['padleft'])) {
+    $indent = intval(ceil($layout['padleft'] / WIDTH_CHAR_TO_PX)); 
+    $cellstyle->setIndention($indent);
+  }
+  if (isset($layout['alignvert'])) {
+    $valignments = array(
+      'top' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_TOP,
+      'bottom' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_BOTTOM,
+      'middle' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_CENTER,
+    );
+    $valignment = isset($valignments[$layout['alignvert']]) ? $valignments[$layout['alignvert']] : org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_JUSTIFY;
+    $cellstyle->setVerticalAlignment($valignment);
   }
 
   // Borders
@@ -220,7 +218,7 @@ function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
   _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Bottom');
 
   // Data format
-  if ($c['nontextvalueformat']) {
+  if (isset($c['nontextvalueformat'])) {
     $dataformat = $workbook->createDataFormat();
     $format = $dataformat->getFormat($sc['valueformats'][$c['nontextvalueformat']]);
     $cellstyle->setDataFormat($format);
@@ -234,8 +232,8 @@ function _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $s
 
   // Return if no font set. 
   $f = array(
-    $c['font'] ? 'f:'. $c['font'] : NULL, 
-    $c['color'] ? 'c:'. $c['color'] : NULL, 
+    isset($c['font']) ? 'f:'. $c['font'] : NULL, 
+    isset($c['color']) ? 'c:'. $c['color'] : NULL, 
   );
   if (empty($f)) return;
 
@@ -251,10 +249,10 @@ function _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $s
   $fonts[$h] = $font;
 
   $ff = socialcalc_cellformat_parsefont($c, $sc);
-  if ($ff['family']) $font->setFontName($ff['family']);
-  if ($ff['size']) $font->setFontHeightInPoints(intval($ff['size']));
-  if ($ff['bold']) $font->setBoldweight(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD);
-  if ($ff['italic']) $font->setItalic(true);
+  if (isset($ff['family'])) $font->setFontName($ff['family']);
+  if (isset($ff['size'])) $font->setFontHeightInPoints(intval($ff['size']));
+  if (isset($ff['bold'])) $font->setBoldweight(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD);
+  if (isset($ff['italic'])) $font->setItalic(true);
 
   $fc = socialcalc_cellformat_parsecolor($c, $sc, 'color');
   if ($fc) {
@@ -322,7 +320,7 @@ function _sheetnode_xls_export_color($cell, $sheet, $workbook, $c) {
     if (java_is_null($color)) {
       // Replace an unused existing color with the new one.
       for ($i=0x8; $i<0x40; $i++) {
-        if ($used_palette[$i]) continue;
+        if (!empty($used_palette[$i])) continue;
         $palette->setColorAtIndex($i, $c['r'], $c['g'], $c['b']);
         $used_palette[$i] = true;
         return $i;

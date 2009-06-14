@@ -9,13 +9,13 @@ function sheetnode_ods_requirements($phase) {
     $ods = TRUE;
     $JAVA_BASE = variable_get('pjb_java_base', '');
     if (!file_exists("$JAVA_BASE/java/Java.inc")) {
-      $ods = t('PHP/Java Bridge is not properly installed.');
+      $ods = $t('PHP/Java Bridge is not properly installed.');
     }
     else {
       require_once("$JAVA_BASE/java/Java.inc");
       try {
         java_require(variable_get('sheetnode_ods_jar', NULL));
-        $Version = new JavaClass('org.openoffice.odf.dom.Version');
+        $Version = new JavaClass('org.odftoolkit.odfdom.dom.Version');
         $ods_version = $Version->getApplicationTitle();
       }
       catch (Exception $e) {
@@ -23,12 +23,12 @@ function sheetnode_ods_requirements($phase) {
       }
     }
     $requirements['sheetnode_ods_jar'] = array(
-      'title' => $t('ODFDOM'),
+      'title' => 'ODFDOM',
       'value' => $ods === TRUE ? 
-        $t("$ods_version is found.") :
-        $t("ODFDOM is NOT found: $ods"),
+        $t('!version is found.', array('!version' => $ods_version)) :
+        $t('ODFDOM is NOT found: !error', array('!error' => $ods)),
       'severity' => $ods === TRUE ? REQUIREMENT_OK : REQUIREMENT_ERROR,
-      'description' => $ods === TRUE ? t('Build date %build, ODF %odf supported.', array('%build' => $Version->getBuildDate(), '%odf' => $Version->getSupportedOdfVersion())) : '',
+      'description' => $ods === TRUE ? $t('Build date %build, ODF %version supported.', array('%build' => $Version->getBuildDate(), '%version' => $Version->getSupportedOdfVersion())) : '',
     );
   }
 

@@ -22,6 +22,7 @@ function sheetnode_ods_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'sheetnode_ods.export.inc',
   );
+/*
   $items['node/add/ods'] = array(
     'title' => 'Sheetnode import from OOo Calc',
     'access arguments' => array('create sheetnode'),
@@ -30,6 +31,7 @@ function sheetnode_ods_menu() {
     'description' => 'Create a new sheetnode with content from an existing OpenOffice.org (.ods) spreadsheet.',
     'file' => 'sheetnode_ods.import.inc',
   );
+*/
   $items['admin/settings/ods'] = array(
     'title' => 'Sheetnode ODS settings',
     'access arguments' => array('administer site configuration'),
