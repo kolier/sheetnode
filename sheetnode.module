@@ -116,7 +116,7 @@ function _sheetnode_inject($value, $edit) {
   drupal_add_js(array('sheetnode' => array('value' => $value, 
                                            'imagePrefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-',
                                            'element' => 'sheetview',
-                                           'editMode' => $edit ? true : false,
+                                           'editMode' => $edit ? TRUE : FALSE,
                                           )), 'setting');
   return <<<EOS
 <div class="sheetview" id="sheetview">
@@ -257,7 +257,16 @@ function _sheetnode_import_template_submit($form, &$form_state) {
   $form_state['redirect'] = 'node/'. $form_state_node['nid'] .'/edit';
 }
 
-function _sheetnode_ajax_value($nid = null, $cells = null) {
+/**
+ * Implementation of hook_views_api().
+ */
+function sheetnode_views_api() {
+  return array(
+    'api' => 2.0,
+  );
+}
+
+function _sheetnode_ajax_value($nid = NULL, $cells = NULL) {
   require_once(drupal_get_path('module', 'sheetnode') .'/sheetnode.api.inc');
   if (!$nid) $nid = $_REQUEST['nid'];
   if (!$cells) $cells = $_REQUEST['cells'];
@@ -266,7 +275,7 @@ function _sheetnode_ajax_value($nid = null, $cells = null) {
   exit();
 }
 
-function _sheetnode_ajax_load($sheetname = null) {
+function _sheetnode_ajax_load($sheetname = NULL) {
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
   if (intval($sheetname) > 0) {
     $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", intval($sheetname)));
@@ -274,7 +283,7 @@ function _sheetnode_ajax_load($sheetname = null) {
   else {
     $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", db_escape_string(strtoupper($sheetname))));
   }
-  echo $value ? unserialize($value) : null;
+  echo $value ? unserialize($value) : NULL;
   exit();
 }
 
