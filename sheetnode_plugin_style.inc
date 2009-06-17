@@ -22,12 +22,11 @@ class sheetnode_plugin_style extends views_plugin_style {
       $col = 1;
       foreach ($this->view->field as $field => $info) {
         if ($info->options['exclude']) continue;
-        if ($info->field_alias == 'unknown') continue;
         $cell['pos'] = array($col, $row);
-        $value = $result->{$info->field_alias};
+        $value = $this->view->field[$field]->theme($result);
         $cell['datavalue'] = $value;
         $cell['datatype'] = is_numeric($value) ? 'v' : 't';
-        $cell['valuetype'] = is_numeric($value) ? 'n' : 't';
+        $cell['valuetype'] = is_numeric($value) ? 'n' : 'th';
 
         $sc['cells'][] = $cell;
         $col++;

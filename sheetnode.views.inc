@@ -5,7 +5,7 @@ function sheetnode_views_plugins() {
   return array(
     'style' => array(
       'sheet' => array(
-        'title' => t('Sheetview'),
+        'title' => t('Spreadsheet'),
         'help' => t('Displays results in a browser spreadsheet.'),
         'handler' => 'sheetnode_plugin_style',
         'uses row plugin' => FALSE,
