@@ -10,7 +10,7 @@ class sheetnode_plugin_style extends views_plugin_style {
     foreach ($this->view->field as $field => $info) {
       if ($info->options['exclude']) continue;
       $cell['pos'] = array($col, 1);
-      $cell['datavalue'] = $info->options['label'];
+      $cell['datavalue'] = $info->label();
       $cell['datatype'] = 't';
       $cell['valuetype'] = 't';
 
@@ -23,7 +23,7 @@ class sheetnode_plugin_style extends views_plugin_style {
       foreach ($this->view->field as $field => $info) {
         if ($info->options['exclude']) continue;
         $cell['pos'] = array($col, $row);
-        $value = $this->view->field[$field]->theme($result);
+        $value = $info->theme($result);
         $cell['datavalue'] = $value;
         $cell['datatype'] = is_numeric($value) ? 'v' : 't';
         $cell['valuetype'] = is_numeric($value) ? 'n' : 'th';
