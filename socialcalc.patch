@@ -1,7 +1,8 @@
-diff -ruP DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/socialcalc-3.js socialcalc/socialcalc-3.js
---- DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/socialcalc-3.js	2009-06-11 12:47:09.000000000 -0700
-+++ socialcalc/socialcalc-3.js	2009-06-11 19:06:21.000000000 -0700
-@@ -4281,6 +4281,7 @@
+Common subdirectories: DanBricklin-socialcalc-13fb9262347c8a1a19e359fc5740f730df0e6b3e/images and socialcalc/images
+diff -uP DanBricklin-socialcalc-13fb9262347c8a1a19e359fc5740f730df0e6b3e/socialcalc-3.js socialcalc/socialcalc-3.js
+--- DanBricklin-socialcalc-13fb9262347c8a1a19e359fc5740f730df0e6b3e/socialcalc-3.js	2009-06-16 14:06:52.000000000 -0700
++++ socialcalc/socialcalc-3.js	2009-06-16 19:55:12.000000000 -0700
+@@ -4283,6 +4283,7 @@
     if (num) stylestr+="border-left:"+sheetobj.borderstyles[num]+";";
  
     if (cell.comment) {
@@ -9,7 +10,7 @@ diff -ruP DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/social
        if (context.showGrid) {
           if (context.commentClassName) {
              result.className = (result.className ? result.className+" " : "") + context.commentClassName;
-@@ -4581,6 +4582,47 @@
+@@ -4583,6 +4584,47 @@
     }
  
  //
@@ -57,10 +58,9 @@ diff -ruP DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/social
  // LookupElement(element, array) - returns array element which is an object with "element" of element
  //
  
-Binary files DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/.socialcalc-3.js.swp and socialcalc/.socialcalc-3.js.swp differ
-diff -ruP DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
---- DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/socialcalcspreadsheetcontrol.js	2009-06-11 12:47:09.000000000 -0700
-+++ socialcalc/socialcalcspreadsheetcontrol.js	2009-06-11 19:06:21.000000000 -0700
+diff -uP DanBricklin-socialcalc-13fb9262347c8a1a19e359fc5740f730df0e6b3e/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
+--- DanBricklin-socialcalc-13fb9262347c8a1a19e359fc5740f730df0e6b3e/socialcalcspreadsheetcontrol.js	2009-06-16 14:06:52.000000000 -0700
++++ socialcalc/socialcalcspreadsheetcontrol.js	2009-06-16 19:55:12.000000000 -0700
 @@ -2656,6 +2656,7 @@
     var s=SocialCalc.GetSpreadsheetControlObject();
     s.ExecuteCommand("set %C comment "+SocialCalc.encodeForSave(document.getElementById(s.idPrefix+"commenttext").value));
@@ -69,9 +69,9 @@ diff -ruP DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/social
     s.editor.UpdateCellCSS(cell, s.editor.ecell.row, s.editor.ecell.col);
     SocialCalc.KeyboardFocus();
     }
-diff -ruP DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
---- DanBricklin-socialcalc-da7f82f98eb24e4768f43ce932a4b97da683d952/socialcalctableeditor.js	2009-06-11 12:47:09.000000000 -0700
-+++ socialcalc/socialcalctableeditor.js	2009-06-11 19:06:21.000000000 -0700
+diff -uP DanBricklin-socialcalc-13fb9262347c8a1a19e359fc5740f730df0e6b3e/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
+--- DanBricklin-socialcalc-13fb9262347c8a1a19e359fc5740f730df0e6b3e/socialcalctableeditor.js	2009-06-16 14:06:52.000000000 -0700
++++ socialcalc/socialcalctableeditor.js	2009-06-16 19:55:12.000000000 -0700
 @@ -366,6 +366,9 @@
  
     this.range2 = {hasrange: false};
