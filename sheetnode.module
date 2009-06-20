@@ -1,6 +1,9 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_node_info().
+ */
 function sheetnode_node_info() {
   return array(
     'sheetnode' => array(
@@ -11,10 +14,16 @@ function sheetnode_node_info() {
   );
 }
 
+/**
+ * Implementation of hook_perm().
+ */
 function sheetnode_perm() {
   return array('create sheetnode', 'edit own sheetnode', 'create sheet template');
 }
 
+/**
+ * Implementation of hook_access().
+ */
 function sheetnode_access($op, $node, $account) {
   if ($op == 'create') {
     return user_access('create sheetnode', $account);
@@ -25,10 +34,16 @@ function sheetnode_access($op, $node, $account) {
   }
 }
 
+/**
+ * Implementation of hook_delete().
+ */
 function sheetnode_delete(&$node) {
   db_query('DELETE FROM {sheetnode} WHERE nid=%d', $node->nid);
 }
 
+/**
+ * Implementation of hook_form().
+ */
 function sheetnode_form(&$node) {
   $type = node_get_types('type', $node);
 
@@ -80,6 +95,9 @@ function sheetnode_form(&$node) {
   return $form;
 }
 
+/**
+ * Implementation of hook_form_alter().
+ */
 function sheetnode_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && isset($form['type']['#value']) && $form['type']['#value'] == 'sheetnode') {
     $form['buttons']['submit']['#attributes'] = array('class' => 'sheetnode-submit');
@@ -136,6 +154,9 @@ function _sheetnode_sanitize_js($value) {
   return str_replace($chars, '', $value);
 }
 
+/**
+ * Implementation of hook_insert().
+ */
 function sheetnode_insert($node) {
   if ($node->sheetsave) {
     _sheetnode_save($node->nid, $node->sheetsave);
@@ -145,6 +166,9 @@ function sheetnode_insert($node) {
   }
 }
 
+/**
+ * Implementation of hook_update().
+ */
 function sheetnode_update($node) {
   if ($node->sheetsave) {
     _sheetnode_save($node->nid, $node->sheetsave);
@@ -154,6 +178,9 @@ function sheetnode_update($node) {
   }
 }
 
+/**
+ * Implementation of hook_view().
+ */
 function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   $node = node_prepare($node, $teaser);
   
@@ -167,15 +194,19 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   return $node;
 }
 
+/**
+ * Implementation of hook_nodeapi().
+ */
 function sheetnode_nodeapi($node, $op) {
   if ($node->type != 'sheetnode') return;
   switch ($op) {
   case 'update index':
     require_once('socialcalc.inc');
     $output = '<table>';
-    $sc = socialcalc_parse(_sheetnode_load($node->nid));
+    $socialcalc = socialcalc_parse(_sheetnode_load($node->nid));
+    $sc = $socialcalc['sheet'];
     $row = -1;
-    if (@$sc['cells']) foreach ($sc['cells'] as $c) {
+    if (!empty($sc['cells'])) foreach ($sc['cells'] as $c) {
       if ($c['pos'][1] > $row) { // new row?
         if ($row != -1) {
           $output .= '</tr>';
@@ -183,7 +214,7 @@ function sheetnode_nodeapi($node, $op) {
         $row = $c['pos'][1];
         $output .= '<tr>';
       }
-      $output .= '<td>'. $c['datavalue'] .'</td>';
+      $output .= '<td>'. (isset($c['datavalue']) ? $c['datavalue'] : '&nbsp;') . (isset($c['comment']) ? ' ('. check_plain($c['comment']) .')' : '')  .'</td>';
     }
     if ($row != -1) {
       $output .= '</tr>';
@@ -193,6 +224,9 @@ function sheetnode_nodeapi($node, $op) {
   }
 }
 
+/**
+ * Implementation of hook_menu().
+ */
 function sheetnode_menu() {
   $items = array();
 
@@ -289,7 +323,7 @@ function _sheetnode_ajax_load($sheetname = NULL) {
 
 function _sheetnode_load($nid) {
   $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", $nid));
-  return ($value === FALSE ? '' : unserialize($value));
+  return $value ? unserialize($value) : NULL;
 }
 
 function _sheetnode_save($nid, $value) {

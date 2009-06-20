@@ -109,44 +109,46 @@ Drupal.sheetnode.startUp = function() {
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"commentbg.gif);"
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
 
-  this.sheet = new SocialCalc.SpreadsheetControl();
+  this.spreadsheet = new SocialCalc.SpreadsheetControl();
 
   // Remove audit tab.
-  this.sheet.tabs.splice(this.sheet.tabnums.audit, 1);
-  this.sheet.tabnums = {};
-  for (var i=0; i<this.sheet.tabs.length; i++) {
-    this.sheet.tabnums[this.sheet.tabs[i].name] = i;
+  this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
+  this.spreadsheet.tabnums = {};
+  for (var i=0; i<this.spreadsheet.tabs.length; i++) {
+    this.spreadsheet.tabnums[this.spreadsheet.tabs[i].name] = i;
   }
   
   // Hide toolbar if we're just viewing.
   if (!Drupal.settings.sheetnode.editMode) {
-    this.sheet.tabbackground="display:none;";
-    this.sheet.toolbarbackground="display:none;";
+    this.spreadsheet.tabbackground="display:none;";
+    this.spreadsheet.toolbarbackground="display:none;";
   }
 
   // Read in data and recompute.
-  this.sheet.ParseSheetSave(Drupal.settings.sheetnode.value);
-  this.sheet.ExecuteCommand('redisplay');
-  this.sheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, Drupal.settings.sheetnode.editMode ? 700 : 0);
-  
+  parts = this.spreadsheet.DecodeSpreadsheetSave(Drupal.settings.sheetnode.value);
+  this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
+  this.spreadsheet.ExecuteCommand('redisplay');
+  this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, 700);
+  this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
+
   Drupal.sheetnode.focusSetup();
   Drupal.sheetnode.functionsSetup();
   Drupal.sheetnode.loadsheetSetup();
 
-  this.sheet.ExecuteCommand('recalc');
+  this.spreadsheet.ExecuteCommand('recalc');
 }
 
 Drupal.sheetnode.resize = function() {
-  if (this.sheet.SizeSSDiv()) {
-    this.sheet.editor.ResizeTableEditor(this.sheet.width, this.sheet.height-
-      (this.sheet.spreadsheetDiv.firstChild.offsetHeight + this.sheet.formulabarDiv.offsetHeight));
+  if (this.spreadsheet.SizeSSDiv()) {
+    this.spreadsheet.editor.ResizeTableEditor(this.spreadsheet.width, this.spreadsheet.height-
+      (this.spreadsheet.spreadsheetDiv.firstChild.offsetHeight + this.spreadsheet.formulabarDiv.offsetHeight));
   }
 }
 
 Drupal.sheetnode.save = function() {
-  $('#edit-sheetsave').val(Drupal.sheetnode.sheet.CreateSheetSave());
+  $('#edit-sheetsave').val(this.spreadsheet.CreateSpreadsheetSave());
   log = $('#edit-log').val();
-  audit = Drupal.sheetnode.sheet.sheet.CreateAuditString();
+  audit = this.spreadsheet.sheet.CreateAuditString();
   if (!log.length) {
     $('#edit-log').val(audit);
   }
@@ -166,8 +168,8 @@ $(document).ready(function() {
       ev = 'propertychange';
     }
     $(this).bind(ev, function(e) {
-      if (Drupal.sheetnode.sheet) {
-        Drupal.sheetnode.sheet.editor.SchedulePositionCalculations();
+      if (Drupal.sheetnode.spreadsheet) {
+        Drupal.sheetnode.spreadsheet.editor.SchedulePositionCalculations();
       }
     }, false);
   });

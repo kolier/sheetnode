@@ -242,7 +242,12 @@ function _sheetnode_google_import_do($spreadsheetService, $spreadsheet, $workshe
     }
   }
 
-  return socialcalc_save($sc);
+  $socialcalc = array(
+    'sheet' => $sc,
+    'edit' => socialcalc_default_edit($sc),
+    'audit' => socialcalc_default_audit($sc),
+  );
+  return socialcalc_save($socialcalc);
 }
 
 function _sheetnode_google_import_formula_replace_coords($matches) {

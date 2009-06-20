@@ -66,3 +66,39 @@ function sheetnode_update_6001(&$sandbox = NULL) {
   return $ret;
 }
 
+function sheetnode_update_6002(&$sandbox = NULL) {
+  $ret = array();
+  require_once('socialcalc.inc');
+  $sig = 'version:1.5';
+  $siglen = strlen($sig);
+  $result = db_query("SELECT * FROM {sheetnode}");
+  while ($sheetnode = db_fetch_array($result)) {
+    $value = unserialize($sheetnode['value']);
+    if (strncmp($value, $sig, $siglen) === 0) {
+      $sheet = socialcalc_parse_sheet($value);
+      $sc = array(
+        'sheet' => $sheet,
+        'edit' => socialcalc_default_edit($sheet),
+        'audit' => socialcalc_default_audit($sheet),
+      );
+      $sql = "UPDATE {sheetnode} SET value='%s' WHERE nid=%d";
+      $ret[] = array('success' => FALSE !== db_query($sql, serialize(socialcalc_save($sc)), $sheetnode['nid']), 'query' => check_plain($sql));
+    }
+  }
+  $result = db_query("SELECT * FROM {sheetnode_template}");
+  while ($template = db_fetch_array($result)) {
+    $value = unserialize($template['value']);
+    if (strncmp($value, $sig, $siglen) === 0) {
+      $sheet = socialcalc_parse_sheet($value);
+      $sc = array(
+        'sheet' => $sheet,
+        'edit' => socialcalc_default_edit($sheet),
+        'audit' => socialcalc_default_audit($sheet),
+      );
+      $sql = "UPDATE {sheetnode_template} SET value='%s' WHERE tid=%d";
+      $ret[] = array('success' => FALSE !== db_query($sql, serialize(socialcalc_save($sc)), $template['tid']), 'query' => check_plain($sql));
+    }
+  }
+  return $ret;
+}
+

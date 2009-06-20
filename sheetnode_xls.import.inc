@@ -346,6 +346,7 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
     $node = array('type' => 'book');
     $form_state_book = array();
     $form_state_book['values']['title'] = $sheetnode->getProperties('Title') ? $sheetnode->getProperties('Title') : pathinfo($_FILES['files']['name']['import'], PATHINFO_FILENAME);
+    $body = '';
     foreach ($sheetnode->getProperties() as $field => $property) {
       if ($field != 'Title' && $field != 'Body') {
         $body .= $property['label'] .': <strong>'. $property['value'] ."</strong>\n";
@@ -461,7 +462,12 @@ function _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode) {
     );
   }
 
-  return socialcalc_save($sc);
+  $socialcalc = array(
+    'sheet' => $sc,
+    'edit' => socialcalc_default_edit($sc),
+    'audit' => socialcalc_default_audit($sc),
+  );
+  return socialcalc_save($socialcalc);
 }
 
 function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {

@@ -6,7 +6,115 @@
  * Translated from socialcalc-3.js and companion files
  */
 
+define('SOCIALCALC_MULTIPART_BOUNDARY', 'SocialCalcSpreadsheetControlSave');
+
 function socialcalc_parse($data) {
+  // Parse the MIME header.
+  $matches = array();
+  if (!preg_match('/^MIME-Version:\s1\.0/mi', $data, $matches)) return array();
+ 
+  $matches = array();
+  if (!preg_match('/^Content-Type:\s*multipart\/mixed;\s*boundary=(\S+)/mi', $data, $matches)) return array();
+  
+  $boundary = $matches[1];
+  $matches = array();
+  $count = preg_match_all("/^(--". $boundary ."(?:\r\n|\n|--))/m", $data, $matches, PREG_OFFSET_CAPTURE | PREG_PATTERN_ORDER);
+  if ($count === FALSE || $count < 2) return array();
+
+  // Parse the SocialCalc parts.
+  for ($i=0; $i<$count; $i++) {
+    if ($i == $count-1) continue;
+    $start = $matches[0][$i][1] + strlen($matches[1][$i][0]);
+    $end = $matches[0][$i+1][1];
+    $part = substr($data, $start, $end - $start);
+    $skip = array();
+    preg_match("/^Content-Type:(?:.*?)(?:\r\n|\n)(?:\r\n|\n)/mi", $part, $skip);
+    $part = substr($part, strlen($skip[0]));
+    if ($i == 0) { // Sheet header
+      $j = 1;
+      $line = strtok($part, "\n");
+      while ($line !== FALSE) {
+        $line = rtrim($line);
+        $parts = explode(':', $line);
+        if (isset($parts)) switch ($parts[0]) {
+        case 'version':
+          break;
+        case 'part':
+          $partnames[$j++] = $parts[1];
+          break;
+        }
+        $line = strtok("\n");
+      }
+    }
+    else { // Sheet parts
+      $sc[$partnames[$i]] = call_user_func('socialcalc_parse_'. $partnames[$i], $part);
+    }
+  }
+  return $sc;
+}
+
+function socialcalc_parse_edit($data) {
+  $edit = array(
+    'rowpanes' => array(0 => array('first' => 1, 'last' => 1)),
+    'colpanes' => array(0 => array('first' => 1, 'last' => 1)),
+    'range' => array('hasrange' => FALSE),
+  );
+  $line = strtok($data, "\n");
+  while ($line !== FALSE) {
+    $line = rtrim($line);
+    $parts = explode(':', $line);
+    switch ($parts[0]) {
+    case "version":
+      break;
+
+    case "rowpane":
+      $edit['rowpanes'][$parts[1]-0] = array('first' => $parts[2]-0, 'last' => $parts[3]-0);
+      break;
+
+    case "colpane":
+      $edit['colpanes'][$parts[1]-0] = array('first' => $parts[2]-0, 'last' => $parts[3]-0);
+      break;
+
+    case "ecell":
+      $edit['ecell']['pos'] = socialcalc_coord_to_cr($parts[1]);
+      $edit['ecell']['coord'] = $parts[1];
+      $edit['highlights'][$parts[1]] = "cursor";
+      break;
+
+    case "range":
+      $range['hasrange'] = TRUE;
+      $range['anchorcoord'] = $parts[1];
+      $range['anchorpos'] = socialcalc_coord_to_cr($parts[1]);
+      $range['top'] = $parts[2]-0;
+      $range['bottom'] = $parts[3]-0;
+      $range['left'] = $parts[4]-0;
+      $range['right'] = $parts[5]-0;
+      for ($row=$range['top']; $row<=$range['bottom']; $row++) {
+        for ($col=$range['left']; $col<=$range['right']; $col++) {
+          $coord = socialcalc_cr_to_coord($col, $row);
+          if (@$edit['highlights'][$coord] != "cursor") {
+            $edit['highlights'][$coord] = "range";
+          }
+        }
+      }
+      $edit['range'] = $range;
+      break;
+
+    default:
+      $key = array_shift($parts);
+      $edit[$key] = $parts;
+      break;
+    }
+    $line = strtok("\n");
+  }
+  return $edit;
+}
+
+function socialcalc_parse_audit($data) {
+  return array();
+}
+         
+function socialcalc_parse_sheet($data) {
   $line = strtok($data, "\n");
   $sheet = array();
   while ($line !== FALSE) {
@@ -150,7 +258,7 @@ function socialcalc_parse($data) {
       break;
 
     case "copiedfrom":
-      $sheetobj['copiedfrom'] = $parts[1] .':'. $parts[2];
+      $sheet['copiedfrom'] = $parts[1] .':'. $parts[2];
       break;
 
     case "clipboardrange": // in save versions up to 1.3. Ignored.
@@ -166,180 +274,6 @@ function socialcalc_parse($data) {
     $line = strtok("\n");
   }
   return $sheet;
-}
-
-function socialcalc_parse_values($data) {
-  $line = strtok($data, "\n");
-  $sheet = array();
-  while ($line !== FALSE) {
-    $line = rtrim($line);
-    $parts = explode(':', $line);
-    if ($parts[0] == 'cell') {
-      $coord = $parts[1];
-      $cell = isset($sheet['cells'][$coord]) ? $sheet['cells'][$coord] : array();
-      $cell += socialcalc_parse_cell_value($parts, 2);
-      $sheet['cells'][$coord] = $cell;
-    }
-    $line = strtok("\n");
-  }
-  return $sheet;
-}
-
-function socialcalc_parse_cell_value($parts, $j) {
-  $cell = array();
-  while ($t = $parts[$j++]) {
-    switch ($t) {
-    case "v":
-      $cell['datavalue'] = doubleval(socialcalc_decode_value($parts[$j++]));
-      break 2; // first time for me :-)
-    case "t":
-      $cell['datavalue'] = strval(socialcalc_decode_value($parts[$j++]));
-      break 2;
-    case "vt":
-      $j++;
-      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
-      break 2;
-    case "vtf":
-      $j++;
-      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
-      break 2;
-    case "vtc":
-      $j++;
-      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
-      break 2;
-    }
-  }
-  return $cell;
-}
-
-function socialcalc_save($sc) {
-  $sheet = array();
-  $sheet[] = 'version:1.5';
-  if (!empty($sc['cells'])) foreach ($sc['cells'] as $cell) {
-    $sheet[] = socialcalc_save_cell($cell);
-  }
-  if (isset($sc['colattribs'])) {
-    if (!empty($sc['colattribs']['width'])) foreach ($sc['colattribs']['width'] as $col => $width) {
-      $coord = socialcalc_cr_to_coord($col, 1);
-      $sheet[] = 'col:'. substr($coord, 0, -1) .':w:'. $width;
-    }
-    if (!empty($sc['colattribs']['hide'])) foreach ($sc['colattribs']['hide'] as $col => $hide) {
-      $coord = socialcalc_cr_to_coord($col, 1);
-      $sheet[] = 'col:'. substr($coord, 0, -1) .':hide:'. $hide;
-    }
-  }
-  if (isset($sc['rowattribs'])) {
-    if (!empty($sc['rowattribs']['height'])) foreach ($sc['rowattribs']['height'] as $row => $height) {
-      $sheet[] = 'row:'. $row .':h:'. $height;
-    }
-    if (!empty($sc['rowattribs']['hide'])) foreach ($sc['rowattribs']['hide'] as $row => $hide) {
-      $sheet[] = 'row:'. $row .':hide:'. $hide;
-    }
-  }
-  if (!empty($sc['fonts'])) foreach ($sc['fonts'] as $fid => $font) {
-    $sheet[] = 'font:'. $fid .':'. $font;
-  }
-  if (!empty($sc['borderstyles'])) foreach ($sc['borderstyles'] as $bsid => $borderstyle) {
-    $sheet[] = 'border:'. $bsid .':'. $borderstyle;
-  }
-  if (!empty($sc['cellformats'])) foreach ($sc['cellformats'] as $cfid => $cellformat) {
-    $sheet[] = 'cellformat:'. $cfid .':'. socialcalc_encode_value($cellformat);
-  }
-  if (!empty($sc['layouts'])) foreach ($sc['layouts'] as $lid => $layout) {
-    $sheet[] = 'layout:'. $lid .':'. $layout;
-  }
-  if (!empty($sc['colors'])) foreach ($sc['colors'] as $cid => $color) {
-    $sheet[] = 'color:'. $cid .':'. $color;
-  }
-  if (!empty($sc['valueformats'])) foreach ($sc['valueformats'] as $vfid => $valueformat) {
-    $sheet[] = 'valueformat:'. $vfid .':'. socialcalc_encode_value($valueformat);
-  }
-  if (!empty($sc['names'])) foreach ($sc['names'] as $name => $nameinfo) {
-    $sheet[] = 'name:'. socialcalc_encode_value($name) .':'. socialcalc_encode_value($nameinfo['desc']) .':'. socialcalc_encode_value($nameinfo['definition']);
-  }
-
-  $sheetfields = array(
-    'lastcol' => 'c', 
-    'lastrow' => 'r', 
-    'defaultcolwidth' => 'w', 
-    'defaultrowheight' => 'h',
-    'defaulttextformat' => 'tf', 
-    'defaultnontextformat' => 'ntf', 
-    'defaulttextvalueformat' => 'tvf', 
-    'defaultnontextvalueformat' => 'ntvf',
-    'defaultlayout' => 'layout', 
-    'defaultfont' => 'font', 
-    'defaultcolor' => 'color', 
-    'defaultbgcolor' => 'bgcolor',
-    'circularreferencecell' => 'circularreferencecell', 
-    'recalc' => 'recalc', 
-    'needsrecalc' => 'needsrecalc'
-  );
-  $sheetattribs = array();
-  foreach ($sheetfields as $key => $attrib) {
-    if (isset($sc['attribs'][$key])) {
-      $sheetattribs[] = $attrib .':'. $sc['attribs'][$key];
-    }
-  }
-  if ($sheetattribs) {
-    $sheet[] = 'sheet:'. implode(':', $sheetattribs);
-  }
-
-  $sheetsave = implode($sheet, "\n") ."\n";
-  return $sheetsave;
-}
-
-function socialcalc_save_cell($cell) {
-  $line = 'cell:'. socialcalc_cr_to_coord($cell['pos'][0], $cell['pos'][1]);
-  $value = socialcalc_encode_value($cell['datavalue']);
-  if ($cell['datatype']=='v') {
-    if ($cell['valuetype']=='n') $line .= ':v:'. $value;
-    else $line .= ':vt:'. $cell['valuetype'] .':' .$value;
-  }
-  else if ($cell['datatype']=='t') {
-    if ($cell['valuetype']=='t') $line .= ':t:'. $value;
-    else $line .= ':vt:'. $cell['valuetype'] .':' .$value;
-  }
-  else if (isset($cell['formula'])) {
-    $formula = socialcalc_encode_value($cell['formula']);
-    if ($cell['datatype']=='f')
-      $line .= ':vtf:'. $cell['valuetype'] .':'. $value .':'. $formula;
-    else if ($cell['datatype']=='c')
-      $line .= ':vtc:'. $cell['valuetype'] .':'. $value .':'. $formula;
-  }
-  if (isset($cell['errors'])) {
-    $line .= ':e:'. socialcalc_encode_value($cell['errors']);
-  }
-  $t = @$cell['bt'];
-  $r = @$cell['br'];
-  $b = @$cell['bb'];
-  $l = @$cell['bl'];
-  if ($t || $r || $b || $l)
-    $line .= ':b:'. $t .':'. $r .':'. $b .':'. $l;
-  if (isset($cell['layout'])) $line .= ':l:'. $cell['layout'];
-  if (isset($cell['font'])) $line .= ':f:'. $cell['font'];
-  if (isset($cell['color'])) $line .= ':c:'. $cell['color'];
-  if (isset($cell['bgcolor'])) $line .= ':bg:'. $cell['bgcolor'];
-  if (isset($cell['cellformat'])) $line .= ':cf:'. $cell['cellformat'];
-  if (isset($cell['textvalueformat'])) $line .= ':tvf:'. $cell['textvalueformat'];
-  if (isset($cell['nontextvalueformat'])) $line .= ':ntvf:'. $cell['nontextvalueformat'];
-  if (isset($cell['colspan'])) $line .= ':colspan:'. $cell['colspan'];
-  if (isset($cell['rowspan'])) $line .= ':rowspan:'. $cell['rowspan'];
-  if (isset($cell['cssc'])) $line .= ':cssc:' .$cell['cssc'];
-  if (isset($cell['csss'])) $line .= ':csss:' .socialcalc_encode_value($cell['csss']);
-  if (isset($cell['mod'])) $line .= ':mod:'. $cell['mod'];
-  if (isset($cell['comment'])) $line .= ':comment:'. socialcalc_encode_value($cell['comment']);
-
-  return $line;
-}
-
-function socialcalc_encode_value($s) {
-  if (!is_string($s)) return $s;
-  return str_replace(
-    array('\\', ':', "\n"),
-    array('\\b', '\\c', '\\n'),
-    $s
-  );
 }
 
 function socialcalc_parse_cell($parts, $j) {
@@ -425,6 +359,234 @@ function socialcalc_parse_cell($parts, $j) {
     }
   }
   return $cell;
+}
+
+function socialcalc_parse_values($data) {
+  $line = strtok($data, "\n");
+  $sheet = array();
+  while ($line !== FALSE) {
+    $line = rtrim($line);
+    $parts = explode(':', $line);
+    if ($parts[0] == 'cell') {
+      $coord = $parts[1];
+      $cell = isset($sheet['cells'][$coord]) ? $sheet['cells'][$coord] : array();
+      $cell += socialcalc_parse_cell_value($parts, 2);
+      $sheet['cells'][$coord] = $cell;
+    }
+    $line = strtok("\n");
+  }
+  return $sheet;
+}
+
+function socialcalc_parse_cell_value($parts, $j) {
+  $cell = array();
+  while ($t = $parts[$j++]) {
+    switch ($t) {
+    case "v":
+      $cell['datavalue'] = doubleval(socialcalc_decode_value($parts[$j++]));
+      break 2; // first time for me :-)
+    case "t":
+      $cell['datavalue'] = strval(socialcalc_decode_value($parts[$j++]));
+      break 2;
+    case "vt":
+      $j++;
+      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
+      break 2;
+    case "vtf":
+      $j++;
+      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
+      break 2;
+    case "vtc":
+      $j++;
+      $cell['datavalue'] = socialcalc_decode_value($parts[$j++]);
+      break 2;
+    }
+  }
+  return $cell;
+}
+
+function socialcalc_save($sc) {
+  $result = "socialcalc:version:1.0\n" .
+            "MIME-Version: 1.0\nContent-Type: multipart/mixed; boundary=" . SOCIALCALC_MULTIPART_BOUNDARY . "\n" .
+            "--" . SOCIALCALC_MULTIPART_BOUNDARY . "\nContent-type: text/plain; charset=UTF-8\n\n" .
+            "# SocialCalc Spreadsheet Control Save\nversion:1.0\npart:sheet\npart:edit\npart:audit\n" .
+            "--" . SOCIALCALC_MULTIPART_BOUNDARY . "\nContent-type: text/plain; charset=UTF-8\n\n" .
+            socialcalc_save_sheet($sc['sheet']) .
+            "--" . SOCIALCALC_MULTIPART_BOUNDARY . "\nContent-type: text/plain; charset=UTF-8\n\n" .
+            socialcalc_save_edit($sc['edit']) .
+            "--" . SOCIALCALC_MULTIPART_BOUNDARY . "\nContent-type: text/plain; charset=UTF-8\n\n" .
+            socialcalc_save_audit($sc['audit']) .
+            "--" . SOCIALCALC_MULTIPART_BOUNDARY . "--\n";
+
+  return $result;
+}
+
+function socialcalc_save_edit($edit) {
+  $result = "version:1.0\n";
+
+  if (!empty($edit['rowpanes'])) foreach ($edit['rowpanes'] as $i => $rowpane) {
+    $result .= "rowpane:". $i .":". $rowpane['first'] .":". $rowpane['last'] ."\n";
+  }
+  if (!empty($edit['colpanes'])) foreach ($edit['colpanes'] as $i => $colpane) {
+    $result .= "colpane:". $i .":". $colpane['first'] .":". $colpane['last'] ."\n";
+  }
+
+  if (isset($edit['ecell'])) {
+    $result .= "ecell:". $edit['ecell']['coord'] ."\n";
+  }
+
+  if (!empty($edit['range']['hasrange'])) {
+    $result .= "range:". $edit['range']['anchorcoord'] .":". $edit['range']['top'] .":". $edit['range']['bottom'] .":". $edit['range']['left'] .":". $edit['range']['right'] ."\n";
+  }
+
+  return $result;
+}
+
+function socialcalc_default_edit($sheet) {
+  return array(
+    'rowpanes' => array('first' => 1, 'last' => isset($sheet['attribs']['lastrow']) ? $sheet['attribs']['lastrow'] : 1),
+    'colpanes' => array('first' => 1, 'last' => isset($sheet['attribs']['lastcol']) ? $sheet['attribs']['lastcol'] : 1),
+    'ecell' => array('coord' => 'A1'),
+  );
+}
+
+function socialcalc_save_audit($audit) {
+  return '';
+}
+
+function socialcalc_default_audit($sheet) {
+  return '';
+}
+
+function socialcalc_save_sheet($sheet) {
+  $sheetar = array();
+  $sheetar[] = 'version:1.5';
+  if (!empty($sheet['cells'])) foreach ($sheet['cells'] as $cell) {
+    $sheetar[] = socialcalc_save_cell($cell);
+  }
+  if (isset($sheet['colattribs'])) {
+    if (!empty($sheet['colattribs']['width'])) foreach ($sheet['colattribs']['width'] as $col => $width) {
+      $coord = socialcalc_cr_to_coord($col, 1);
+      $sheetar[] = 'col:'. substr($coord, 0, -1) .':w:'. $width;
+    }
+    if (!empty($sheet['colattribs']['hide'])) foreach ($sheet['colattribs']['hide'] as $col => $hide) {
+      $coord = socialcalc_cr_to_coord($col, 1);
+      $sheetar[] = 'col:'. substr($coord, 0, -1) .':hide:'. $hide;
+    }
+  }
+  if (isset($sheet['rowattribs'])) {
+    if (!empty($sheet['rowattribs']['height'])) foreach ($sheet['rowattribs']['height'] as $row => $height) {
+      $sheetar[] = 'row:'. $row .':h:'. $height;
+    }
+    if (!empty($sheet['rowattribs']['hide'])) foreach ($sheet['rowattribs']['hide'] as $row => $hide) {
+      $sheetar[] = 'row:'. $row .':hide:'. $hide;
+    }
+  }
+  if (!empty($sheet['fonts'])) foreach ($sheet['fonts'] as $fid => $font) {
+    $sheetar[] = 'font:'. $fid .':'. $font;
+  }
+  if (!empty($sheet['borderstyles'])) foreach ($sheet['borderstyles'] as $bsid => $borderstyle) {
+    $sheetar[] = 'border:'. $bsid .':'. $borderstyle;
+  }
+  if (!empty($sheet['cellformats'])) foreach ($sheet['cellformats'] as $cfid => $cellformat) {
+    $sheetar[] = 'cellformat:'. $cfid .':'. socialcalc_encode_value($cellformat);
+  }
+  if (!empty($sheet['layouts'])) foreach ($sheet['layouts'] as $lid => $layout) {
+    $sheetar[] = 'layout:'. $lid .':'. $layout;
+  }
+  if (!empty($sheet['colors'])) foreach ($sheet['colors'] as $cid => $color) {
+    $sheetar[] = 'color:'. $cid .':'. $color;
+  }
+  if (!empty($sheet['valueformats'])) foreach ($sheet['valueformats'] as $vfid => $valueformat) {
+    $sheetar[] = 'valueformat:'. $vfid .':'. socialcalc_encode_value($valueformat);
+  }
+  if (!empty($sheet['names'])) foreach ($sheet['names'] as $name => $nameinfo) {
+    $sheetar[] = 'name:'. socialcalc_encode_value($name) .':'. socialcalc_encode_value($nameinfo['desc']) .':'. socialcalc_encode_value($nameinfo['definition']);
+  }
+
+  $sheetfields = array(
+    'lastcol' => 'c', 
+    'lastrow' => 'r', 
+    'defaultcolwidth' => 'w', 
+    'defaultrowheight' => 'h',
+    'defaulttextformat' => 'tf', 
+    'defaultnontextformat' => 'ntf', 
+    'defaulttextvalueformat' => 'tvf', 
+    'defaultnontextvalueformat' => 'ntvf',
+    'defaultlayout' => 'layout', 
+    'defaultfont' => 'font', 
+    'defaultcolor' => 'color', 
+    'defaultbgcolor' => 'bgcolor',
+    'circularreferencecell' => 'circularreferencecell', 
+    'recalc' => 'recalc', 
+    'needsrecalc' => 'needsrecalc'
+  );
+  $sheetattribs = array();
+  foreach ($sheetfields as $key => $attrib) {
+    if (isset($sheet['attribs'][$key])) {
+      $sheetattribs[] = $attrib .':'. $sheet['attribs'][$key];
+    }
+  }
+  if ($sheetattribs) {
+    $sheetar[] = 'sheet:'. implode(':', $sheetattribs);
+  }
+
+  return implode($sheetar, "\n") ."\n";
+}
+
+function socialcalc_save_cell($cell) {
+  $line = 'cell:'. socialcalc_cr_to_coord($cell['pos'][0], $cell['pos'][1]);
+  if (isset($cell['datavalue'])) {
+    $value = socialcalc_encode_value($cell['datavalue']);
+    if ($cell['datatype']=='v') {
+      if ($cell['valuetype']=='n') $line .= ':v:'. $value;
+      else $line .= ':vt:'. $cell['valuetype'] .':' .$value;
+    }
+    else if ($cell['datatype']=='t') {
+      if ($cell['valuetype']=='t') $line .= ':t:'. $value;
+      else $line .= ':vt:'. $cell['valuetype'] .':' .$value;
+    }
+    else if (isset($cell['formula'])) {
+      $formula = socialcalc_encode_value($cell['formula']);
+      if ($cell['datatype']=='f')
+        $line .= ':vtf:'. $cell['valuetype'] .':'. $value .':'. $formula;
+      else if ($cell['datatype']=='c')
+        $line .= ':vtc:'. $cell['valuetype'] .':'. $value .':'. $formula;
+    }
+  }
+  if (isset($cell['errors'])) {
+    $line .= ':e:'. socialcalc_encode_value($cell['errors']);
+  }
+  $t = @$cell['bt'];
+  $r = @$cell['br'];
+  $b = @$cell['bb'];
+  $l = @$cell['bl'];
+  if ($t || $r || $b || $l)
+    $line .= ':b:'. $t .':'. $r .':'. $b .':'. $l;
+  if (isset($cell['layout'])) $line .= ':l:'. $cell['layout'];
+  if (isset($cell['font'])) $line .= ':f:'. $cell['font'];
+  if (isset($cell['color'])) $line .= ':c:'. $cell['color'];
+  if (isset($cell['bgcolor'])) $line .= ':bg:'. $cell['bgcolor'];
+  if (isset($cell['cellformat'])) $line .= ':cf:'. $cell['cellformat'];
+  if (isset($cell['textvalueformat'])) $line .= ':tvf:'. $cell['textvalueformat'];
+  if (isset($cell['nontextvalueformat'])) $line .= ':ntvf:'. $cell['nontextvalueformat'];
+  if (isset($cell['colspan'])) $line .= ':colspan:'. $cell['colspan'];
+  if (isset($cell['rowspan'])) $line .= ':rowspan:'. $cell['rowspan'];
+  if (isset($cell['cssc'])) $line .= ':cssc:' .$cell['cssc'];
+  if (isset($cell['csss'])) $line .= ':csss:' .socialcalc_encode_value($cell['csss']);
+  if (isset($cell['mod'])) $line .= ':mod:'. $cell['mod'];
+  if (isset($cell['comment'])) $line .= ':comment:'. socialcalc_encode_value($cell['comment']);
+
+  return $line;
+}
+
+function socialcalc_encode_value($s) {
+  if (!is_string($s)) return $s;
+  return str_replace(
+    array('\\', ':', "\n"),
+    array('\\b', '\\c', '\\n'),
+    $s
+  );
 }
 
 function socialcalc_coord_to_cr($coord) {

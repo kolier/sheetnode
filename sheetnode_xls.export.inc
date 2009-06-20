@@ -15,7 +15,8 @@ function _sheetnode_xls_export($type, $nid) {
   $sheetname = $node->title;
   $sheet = $workbook->createSheet($sheetname);
   $patriarch = $sheet->createDrawingPatriarch();
-  $sc = socialcalc_parse(_sheetnode_load($nid));
+  $socialcalc = socialcalc_parse(_sheetnode_load($nid));
+  $sc = $socialcalc['sheet'];
   
   // Names
   if (isset($sc['names'])) foreach ($sc['names'] as $n => $info) {

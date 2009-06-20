@@ -10,7 +10,8 @@ function _sheetnode_ods_export($nid) {
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
  
-  $sc = socialcalc_parse(_sheetnode_load($nid));
+  $socialcalc = socialcalc_parse(_sheetnode_load($nid));
+  $sc = $socialcalc['sheet'];
   $sheetname = $node->title;
   $spreadsheet = org_odftoolkit_odfdom_doc_OdfSpreadsheetDocument::type()->createSpreadsheetDocument();
   $dom = $spreadsheet->getContentDom();
