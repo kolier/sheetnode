@@ -252,8 +252,8 @@ function _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $s
   $ff = socialcalc_cellformat_parsefont($c, $sc);
   if (isset($ff['family'])) $font->setFontName($ff['family']);
   if (isset($ff['size'])) $font->setFontHeightInPoints(intval($ff['size']));
-  if (isset($ff['bold'])) $font->setBoldweight(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD);
-  if (isset($ff['italic'])) $font->setItalic(true);
+  if (!empty($ff['bold'])) $font->setBoldweight(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD);
+  if (!empty($ff['italic'])) $font->setItalic(true);
 
   $fc = socialcalc_cellformat_parsecolor($c, $sc, 'color');
   if ($fc) {
