@@ -3,16 +3,30 @@
 
 require_once('socialcalc.inc');
 
+define('SHEETNODE_EXPANSION_VERTICAL', 0);
+define('SHEETNODE_EXPANSION_HORIZONTAL', 1);
+
 class sheetnode_plugin_style extends views_plugin_style {
   function options(&$options) {
     parent::options($options);
-    $options['use_template'] = FALSE;
+    $options['expansion'] = SHEETNODE_EXPANSION_VERTICAL; 
+    $options['template'] = TRUE;
     $options['sheetsave'] = '';
   }
 
   function options_form(&$form, &$form_values) {
     parent::options_form($form, $form_values);
-    $form['use_template'] = array(
+    $form['expansion'] = array(
+      '#type' => 'radios',
+      '#title' => t('Expansion of results'),
+      '#description' => t('You can specify whether view results should be expanded horizontally or vertically.'),
+      '#options' => array(
+        SHEETNODE_EXPANSION_VERTICAL => t('Consecutive rows'),
+        SHEETNODE_EXPANSION_HORIZONTAL => t('Consecutive columns'),
+      ),
+      '#default_value' => $this->options['expansion'], 
+    );
+    $form['template'] = array(
       '#type' => 'checkbox',
       '#title' => t('Use template'),
       '#description' => t('Check this box to use the spreadsheet below as template for your view. 
@@ -22,7 +36,7 @@ class sheetnode_plugin_style extends views_plugin_style {
                            <li><code>$[FUNCTION(@row.field_label_1@, @row.field_label_2@, ...)]</code> to indicate that a function should be placed in this cell. 
                            Field names will be replaced with the corresponding cell ranges.</li>
                            </ul>'),
-      '#default_value' => $this->options['use_template'],
+      '#default_value' => $this->options['template'],
     );
     global $base_url;
     $imagePrefix = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
@@ -46,7 +60,8 @@ EOS;
   }
 
   function render() {
-    if ($this->options['use_template']) {
+    $expansion = $this->options['expansion'];
+    if ($this->options['template']) {
       $socialcalc = socialcalc_parse($this->options['sheetsave']);
 
       // Iterate through cells, gathering placeholder values.
@@ -87,9 +102,9 @@ EOS;
           $newcell['datatype'] = is_numeric($value) ? 'v' : 't';
           $newcell['valuetype'] = is_numeric($value) ? 'n' : 'th';
           $socialcalc['sheet']['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $newcell;
-          $pos[1]++;
+          $pos[1-$expansion]++;
         }
-        $fields[$field_name]['endpos'] = array($pos[0], $pos[1]-1);
+        $fields[$field_name]['endpos'] = array($pos[0]-($expansion == SHEETNODE_EXPANSION_VERTICAL ? 0:1), $pos[1]-($expansion == SHEETNODE_EXPANSION_VERTICAL ? 1:0));
       }
 
       // Replace formula placeholders with actual values.
@@ -106,9 +121,9 @@ EOS;
           }
           else {
             $field = $fields[$field_name];
-            if ($pos[0] == $field['cell']['pos'][0]) { // supposed to be in the same column?
-              if ($pos[1] >= $field['cell']['pos'][1] && $pos[1] <= $field['endpos'][1]) {
-                $pos[1] = $field['endpos'][1]+1;
+            if ($pos[$expansion] == $field['cell']['pos'][$expansion]) { // supposed to be in the same column?
+              if ($pos[1-$expansion] >= $field['cell']['pos'][1-$expansion] && $pos[1-$expansion] <= $field['endpos'][1-$expansion]) {
+                $pos[1-$expansion] = $field['endpos'][1-$expansion]+1;
               }
             }
             $replace = socialcalc_cr_to_coord($field['cell']['pos'][0], $field['cell']['pos'][1]) .':'. socialcalc_cr_to_coord($field['endpos'][0], $field['endpos'][1]);
@@ -125,43 +140,54 @@ EOS;
     }
     else {
       // Hand-make default SocialCalc structure based on views results.
-      $col = 1;
+      $pos = array(1,1);
       foreach ($this->view->field as $field => $info) {
         if ($info->options['exclude']) continue;
-        $cell['pos'] = array($col, 1);
+        $cell['pos'] = $pos;
         $cell['datavalue'] = $info->label();
         $cell['datatype'] = 't';
         $cell['valuetype'] = 't';
 
-        $sheet['cells'][] = $cell;
-        $col++;
+        $sheet['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
+        $pos[$expansion]++;
       }
-      $row = 2;
+      $pos[1-$expansion] = 2;
       foreach ($this->view->result as $result) {
-        $col = 1;
+        $pos[$expansion] = 1;
         foreach ($this->view->field as $field => $info) {
           if ($info->options['exclude']) continue;
-          $cell['pos'] = array($col, $row);
+          $cell['pos'] = $pos;
           $value = $info->theme($result);
           $cell['datavalue'] = $value;
           $cell['datatype'] = is_numeric($value) ? 'v' : 't';
           $cell['valuetype'] = is_numeric($value) ? 'n' : 'th';
 
-          $sheet['cells'][socialcalc_cr_to_coord($col, $row)] = $cell;
-          $col++;
+          $sheet['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
+          $pos[$expansion]++;
         }
-        $row++;
+        $pos[1-$expansion]++;
       }
-      $sheet['attribs']['lastcol'] = $col-1;
-      $sheet['attribs']['lastrow'] = $row-1;
+      $sheet['attribs']['lastcol'] = $pos[0]-1;
+      $sheet['attribs']['lastrow'] = $pos[1]-1;
 
-      $edit['rowpanes'] = array(
-        0 => array('first' => 1, 'last' => 1),
-        1 => array('first' => 2, 'last' => $row-1),
-      );
-      $edit['colpanes'] = array(
-        0 => array('first' => 1, 'last' => $col-1),
-      );
+      if ($expansion == SHEETNODE_EXPANSION_VERTICAL) { 
+        $edit['rowpanes'] = array(
+          0 => array('first' => 1, 'last' => 1),
+          1 => array('first' => 2, 'last' => $sheet['attribs']['lastrow']),
+        );
+        $edit['colpanes'] = array(
+          0 => array('first' => 1, 'last' => $sheet['attribs']['lastcol']),
+        );
+      }
+      else {
+        $edit['colpanes'] = array(
+          0 => array('first' => 1, 'last' => 1),
+          1 => array('first' => 2, 'last' => $sheet['attribs']['lastcol']),
+        );
+        $edit['rowpanes'] = array(
+          0 => array('first' => 1, 'last' => $sheet['attribs']['lastrow']),
+        );
+      }
       $edit['ecell'] = array(
         'coord' => 'A1',
       );
