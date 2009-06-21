@@ -1,6 +1,8 @@
 // $Id$
+(function ($) {
+// START jQuery
 
-Drupal.sheetnode = {};
+Drupal.sheetnode = Drupal.sheetnode || {};
 
 Drupal.sheetnode.functionsSetup = function() {
   SocialCalc.Formula.FunctionList["SUMPRODUCT"] = [Drupal.sheetnode.functionSumProduct, -1, "rangen", "", "stat"];
@@ -104,7 +106,28 @@ Drupal.sheetnode.focusSetup = function() {
   });
 }
 
-Drupal.sheetnode.startUp = function() {
+Drupal.sheetnode.start = function() {
+  // DOM initialization.
+  $('#'+Drupal.settings.sheetnode.sheetsave).parents('form').submit(function() {
+    Drupal.sheetnode.save();
+    return true;
+  });
+  $('.collapsed').each(function() {
+    var ev = 'DOMAttrModified';
+    if ($.browser.msie) {
+      ev = 'propertychange';
+    }
+    $(this).bind(ev, function(e) {
+      if (Drupal.sheetnode.spreadsheet) {
+        Drupal.sheetnode.spreadsheet.editor.SchedulePositionCalculations();
+      }
+    }, false);
+  });
+  $(window).resize(function() {
+    Drupal.sheetnode.resize();
+  });
+
+  // SocialCalc initialization.
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"commentbg.gif);"
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
@@ -126,10 +149,14 @@ Drupal.sheetnode.startUp = function() {
 
   // Read in data and recompute.
   parts = this.spreadsheet.DecodeSpreadsheetSave(Drupal.settings.sheetnode.value);
-  this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
+  if (parts && parts.sheet) {
+    this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
+  }
   this.spreadsheet.ExecuteCommand('redisplay');
   this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, 700);
-  this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
+  if (parts && parts.edit) {
+    this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
+  }
 
   Drupal.sheetnode.focusSetup();
   Drupal.sheetnode.functionsSetup();
@@ -146,35 +173,19 @@ Drupal.sheetnode.resize = function() {
 }
 
 Drupal.sheetnode.save = function() {
-  $('#edit-sheetsave').val(this.spreadsheet.CreateSpreadsheetSave());
+  $('#'+Drupal.settings.sheetnode.sheetsave).val(this.spreadsheet.CreateSpreadsheetSave());
   log = $('#edit-log').val();
-  audit = this.spreadsheet.sheet.CreateAuditString();
-  if (!log.length) {
-    $('#edit-log').val(audit);
-  }
-  else {
-    $('#edit-log').val(log + '\n' + audit);
+  if (log != undefined) {
+    audit = this.spreadsheet.sheet.CreateAuditString();
+    if (!log.length) {
+      $('#edit-log').val(audit);
+    }
+    else {
+      $('#edit-log').val(log + '\n' + audit);
+    }
   }
 }
 
-$(document).ready(function() {
-  $('.sheetnode-submit').parents('form').submit(function() {
-    Drupal.sheetnode.save();
-    return true;
-  });
-  $('.collapsed').each(function() {
-    var ev = 'DOMAttrModified';
-    if ($.browser.msie) {
-      ev = 'propertychange';
-    }
-    $(this).bind(ev, function(e) {
-      if (Drupal.sheetnode.spreadsheet) {
-        Drupal.sheetnode.spreadsheet.editor.SchedulePositionCalculations();
-      }
-    }, false);
-  });
-  $(window).resize(function() {
-    Drupal.sheetnode.resize();
-  });
-});
+// END jQuery
+})(jQuery);
 

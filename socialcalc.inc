@@ -9,6 +9,14 @@
 define('SOCIALCALC_MULTIPART_BOUNDARY', 'SocialCalcSpreadsheetControlSave');
 
 function socialcalc_parse($data) {
+  $parts = socialcalc_parse_parts($data);
+  foreach ($parts as $name => $part) {
+    $sc[$name] = call_user_func('socialcalc_parse_'. $name, $part);
+  }
+  return $sc;
+}
+
+function socialcalc_parse_parts($data) {
   // Parse the MIME header.
   $matches = array();
   if (!preg_match('/^MIME-Version:\s1\.0/mi', $data, $matches)) return array();
@@ -35,22 +43,22 @@ function socialcalc_parse($data) {
       $line = strtok($part, "\n");
       while ($line !== FALSE) {
         $line = rtrim($line);
-        $parts = explode(':', $line);
-        if (isset($parts)) switch ($parts[0]) {
+        $names = explode(':', $line);
+        if (isset($names)) switch ($names[0]) {
         case 'version':
           break;
         case 'part':
-          $partnames[$j++] = $parts[1];
+          $partnames[$j++] = $names[1];
           break;
         }
         $line = strtok("\n");
       }
     }
     else { // Sheet parts
-      $sc[$partnames[$i]] = call_user_func('socialcalc_parse_'. $partnames[$i], $part);
+      $parts[$partnames[$i]] = $part;
     }
   }
-  return $sc;
+  return $parts;
 }
 
 function socialcalc_parse_edit($data) {

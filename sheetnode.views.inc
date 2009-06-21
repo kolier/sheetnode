@@ -13,6 +13,16 @@ function sheetnode_views_plugins() {
         'uses options' => TRUE,
         'type' => 'normal',
         'theme' => 'views_view_sheet',
+        'js' => array(
+          drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcconstants.js',
+          drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc-3.js',
+          drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalctableeditor.js',
+          drupal_get_path('module', 'sheetnode').'/socialcalc/formatnumber2.js',
+          drupal_get_path('module', 'sheetnode').'/socialcalc/formula1.js',
+          drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcpopup.js',
+          drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcspreadsheetcontrol.js',
+          drupal_get_path('module', 'sheetnode').'/sheetnode.js',
+        ),
       ),
     ),
   );

@@ -100,7 +100,6 @@ function sheetnode_form(&$node) {
  */
 function sheetnode_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && isset($form['type']['#value']) && $form['type']['#value'] == 'sheetnode') {
-    $form['buttons']['submit']['#attributes'] = array('class' => 'sheetnode-submit');
     unset($form['buttons']['preview']);
   }
   
@@ -134,13 +133,14 @@ function _sheetnode_inject($value, $edit) {
   drupal_add_js(array('sheetnode' => array('value' => $value, 
                                            'imagePrefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-',
                                            'element' => 'sheetview',
+                                           'sheetsave' => 'edit-sheetsave',
                                            'editMode' => $edit ? TRUE : FALSE,
-                                          )), 'setting');
+  )), 'setting');
   return <<<EOS
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
   $(document).ready(function() {
-    Drupal.sheetnode.startUp();
+    Drupal.sheetnode.start();
   });
 </script>
 </div>
@@ -310,6 +310,7 @@ function _sheetnode_ajax_value($nid = NULL, $cells = NULL) {
 }
 
 function _sheetnode_ajax_load($sheetname = NULL) {
+  require_once('socialcalc.inc');
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
   if (intval($sheetname) > 0) {
     $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", intval($sheetname)));
@@ -317,7 +318,12 @@ function _sheetnode_ajax_load($sheetname = NULL) {
   else {
     $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", db_escape_string(strtoupper($sheetname))));
   }
-  echo $value ? unserialize($value) : NULL;
+  if ($value) {
+    $parts = socialcalc_parse_parts($value);
+    if (isset($parts['sheet'])) {
+      echo $parts['sheet'];
+    }
+  }
   exit();
 }
 
