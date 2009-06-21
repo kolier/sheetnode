@@ -35,6 +35,7 @@ class sheetnode_plugin_style extends views_plugin_style {
     var ajax_area = Drupal.settings.views.ajax.id;
     $('input[type=submit]', ajax_area).click(function() {
       Drupal.sheetnode.save();
+      window.location.reload();
     });
     Drupal.sheetnode.start();
   }
