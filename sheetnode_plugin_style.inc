@@ -63,6 +63,7 @@ EOS;
     $expansion = $this->options['expansion'];
     if ($this->options['template']) {
       $socialcalc = socialcalc_parse($this->options['sheetsave']);
+      $lastpos = array(0,0);
 
       // Iterate through cells, gathering placeholder values.
       foreach ($socialcalc['sheet']['cells'] as $coord => $cell) {
@@ -89,6 +90,7 @@ EOS;
             );
           }
         }
+        $lastpos = array(max($lastpos[0], $cell['pos'][0]), max($lastpos[1], $cell['pos'][1]));
       }
 
       // Replace field placeholders with actual values.
@@ -105,6 +107,7 @@ EOS;
           $pos[1-$expansion]++;
         }
         $fields[$field_name]['endpos'] = array($pos[0]-($expansion == SHEETNODE_EXPANSION_VERTICAL ? 0:1), $pos[1]-($expansion == SHEETNODE_EXPANSION_VERTICAL ? 1:0));
+        $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
       }
 
       // Replace formula placeholders with actual values.
@@ -136,7 +139,10 @@ EOS;
         $newcell['valuetype'] = 'n';
         $newcell['datavalue'] = 0;
         $socialcalc['sheet']['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $newcell;
+        $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
       }
+      $socialcalc['sheet']['attribs']['lastcol'] = $lastpos[0];
+      $socialcalc['sheet']['attribs']['lastrow'] = $lastpos[1];
     }
     else {
       // Hand-make default SocialCalc structure based on views results.
