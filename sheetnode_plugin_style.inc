@@ -33,7 +33,7 @@ class sheetnode_plugin_style extends views_plugin_style {
                            To place view results in the template, use the following syntax in the cells:
                            <ul>
                            <li><code>${row.field_label}</code> to indicate that this cell and subsequent ones should be filled with values of this field.</li>
-                           <li><code>$[FUNCTION(@row.field_label_1@, @row.field_label_2@, ...)]</code> to indicate that a function should be placed in this cell. 
+                           <li><code>$[FUNCTION(@row.field_A_label@, @row.field_B_label@, ...)]</code> to indicate that a function should be placed in this cell. 
                            Field names will be replaced with the corresponding cell ranges.</li>
                            </ul>'),
       '#default_value' => $this->options['template'],
@@ -45,11 +45,12 @@ class sheetnode_plugin_style extends views_plugin_style {
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
   Drupal.behaviors.sheetnode = function(context) {
+    if ($('div.sheetview').length == 0) return;
+
     jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $imagePrefix, "element": "sheetview", "sheetsave": "edit-style-options-sheetsave", "editMode": true } });
     var ajax_area = Drupal.settings.views.ajax.id;
     $('input[type=submit]', ajax_area).click(function() {
       Drupal.sheetnode.save();
-      window.location.reload();
     });
     Drupal.sheetnode.start();
   }
@@ -60,7 +61,10 @@ EOS;
   }
 
   function render() {
-    $expansion = $this->options['expansion'];
+    if (strpos($_REQUEST['q'], 'admin/build/views/ajax/preview') === 0) return t('<div class="messages error">Spreadsheet previewing is not supported yet.</div>');
+
+    $tangent = $this->options['expansion'];
+    $normal  = 1-$tangent;
     if ($this->options['template']) {
       $socialcalc = socialcalc_parse($this->options['sheetsave']);
       $lastpos = array(0,0);
@@ -84,6 +88,7 @@ EOS;
             $formula = $matches[1];
             $expression = $matches[2];
             $formulas[] = array(
+              'coord' => $coord,
               'cell' => $cell,
               'formula' => $formula,
               'expression' => $expression,
@@ -94,7 +99,9 @@ EOS;
       }
 
       // Replace field placeholders with actual values.
+      $tangent_increment = array(SHEETNODE_EXPANSION_VERTICAL => 0, SHEETNODE_EXPANSION_HORIZONTAL => 1);
       if (!empty($fields)) foreach ($fields as $field_name => $field) {
+        unset($socialcalc['sheet']['cells'][$field['coord']]);
         $newcell = $field['cell'];
         $pos = $newcell['pos'];
         foreach ($this->view->result as $result) {
@@ -103,17 +110,16 @@ EOS;
           $newcell['datavalue'] = $value;
           $newcell['datatype'] = is_numeric($value) ? 'v' : 't';
           $newcell['valuetype'] = is_numeric($value) ? 'n' : 'th';
-          $socialcalc['sheet']['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $newcell;
-          $pos[1-$expansion]++;
+          $newcells[socialcalc_cr_to_coord($pos[0], $pos[1])] = $newcell;
+          $pos[$normal]++;
         }
-        $fields[$field_name]['endpos'] = array($pos[0]-($expansion == SHEETNODE_EXPANSION_VERTICAL ? 0:1), $pos[1]-($expansion == SHEETNODE_EXPANSION_VERTICAL ? 1:0));
+        $fields[$field_name]['endpos'] = array($pos[0]-$tangent_increment[$tangent], $pos[1]-$tangent_increment[$normal]);
         $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
       }
 
       // Replace formula placeholders with actual values.
       if (!empty($formulas)) foreach ($formulas as $formula) {
         $newcell = $formula['cell'];
-        $pos = $newcell['pos'];
         $expression = $formula['expression'];
         $matches = array();
         $count = (int)preg_match_all('/@row\.(\w+)@/', $formula['expression'], $matches);
@@ -124,23 +130,37 @@ EOS;
           }
           else {
             $field = $fields[$field_name];
-            if ($pos[$expansion] == $field['cell']['pos'][$expansion]) { // supposed to be in the same column?
-              if ($pos[1-$expansion] >= $field['cell']['pos'][1-$expansion] && $pos[1-$expansion] <= $field['endpos'][1-$expansion]) {
-                $pos[1-$expansion] = $field['endpos'][1-$expansion]+1;
-              }
-            }
             $replace = socialcalc_cr_to_coord($field['cell']['pos'][0], $field['cell']['pos'][1]) .':'. socialcalc_cr_to_coord($field['endpos'][0], $field['endpos'][1]);
           }
           $expression = preg_replace('/@row\.(?:\w+)@/', $replace, $expression, 1);
         }
-        $newcell['pos'] = $pos;
         $newcell['formula'] = $formula['formula'] .'('. $expression .')';
         $newcell['datatype'] = 'f';
         $newcell['valuetype'] = 'n';
         $newcell['datavalue'] = 0;
-        $socialcalc['sheet']['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $newcell;
-        $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
+        $socialcalc['sheet']['cells'][$formula['coord']] = $newcell;
+        $lastpos = array(max($lastpos[0], $newcell['pos'][0]), max($lastpos[1], $newcell['pos'][1]));
       }
+
+      // Adjust positions of cells based on expanded values.
+      foreach ($socialcalc['sheet']['cells'] as $coord => $cell) {
+        $pos = $cell['pos'];
+        foreach ($fields as $field_name => $field) {
+          if ($pos[$tangent] == $field['cell']['pos'][$tangent]) { // supposed to be in the same column/row?
+            if ($pos[$normal] >= $field['cell']['pos'][$normal] && $pos[$normal] <= $field['endpos'][$normal]) {
+              $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
+              unset($socialcalc['sheet']['cells'][$coord]);
+              $cell['pos'] = $pos;
+              $socialcalc['sheet']['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
+              $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
+              break;
+            }
+          }
+        }
+      }
+
+      // Replace values inside the sheet.
+      $socialcalc['sheet']['cells'] += $newcells;
       $socialcalc['sheet']['attribs']['lastcol'] = $lastpos[0];
       $socialcalc['sheet']['attribs']['lastrow'] = $lastpos[1];
     }
@@ -155,11 +175,11 @@ EOS;
         $cell['valuetype'] = 't';
 
         $sheet['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
-        $pos[$expansion]++;
+        $pos[$tangent]++;
       }
-      $pos[1-$expansion] = 2;
+      $pos[$normal] = 2;
       foreach ($this->view->result as $result) {
-        $pos[$expansion] = 1;
+        $pos[$tangent] = 1;
         foreach ($this->view->field as $field => $info) {
           if ($info->options['exclude']) continue;
           $cell['pos'] = $pos;
@@ -169,14 +189,14 @@ EOS;
           $cell['valuetype'] = is_numeric($value) ? 'n' : 'th';
 
           $sheet['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
-          $pos[$expansion]++;
+          $pos[$tangent]++;
         }
-        $pos[1-$expansion]++;
+        $pos[$normal]++;
       }
       $sheet['attribs']['lastcol'] = $pos[0]-1;
       $sheet['attribs']['lastrow'] = $pos[1]-1;
 
-      if ($expansion == SHEETNODE_EXPANSION_VERTICAL) { 
+      if ($tangent == SHEETNODE_EXPANSION_VERTICAL) { 
         $edit['rowpanes'] = array(
           0 => array('first' => 1, 'last' => 1),
           1 => array('first' => 2, 'last' => $sheet['attribs']['lastrow']),
