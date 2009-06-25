@@ -52,6 +52,7 @@ class sheetnode_plugin_style extends views_plugin_style {
     $('input[type=submit]', ajax_area).click(function() {
       Drupal.sheetnode.save();
     });
+    SocialCalc.Popup.Controls = {};
     Drupal.sheetnode.start();
   }
 </script>
