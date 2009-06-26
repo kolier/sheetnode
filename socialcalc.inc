@@ -613,7 +613,7 @@ function socialcalc_coord_to_cr($coord) {
 }
 
 
-function socialcalc_cr_to_coord($c, $r) {
+function socialcalc_cr_to_coord($c, $r, $return_as_array = FALSE) {
   $letters = array( "A","B","C","D","E","F","G","H","I","J","K","L","M",
                     "N","O","P","Q","R","S","T","U","V","W","X","Y","Z" );
   if ($c < 1) $c = 1;
@@ -622,12 +622,12 @@ function socialcalc_cr_to_coord($c, $r) {
   $collow = ($c - 1) % 26;
   $colhigh = floor(($c - 1) / 26);
   if ($colhigh) {
-    $result = $letters[$colhigh-1] . $letters[$collow] . $r;
+    $result = array($letters[$colhigh-1] . $letters[$collow], $r);
   }
   else {
-    $result = $letters[$collow] . $r;
+    $result = array($letters[$collow], $r);
   }
-  return $result;
+  return $return_as_array ? $result : $result[0].$result[1];
 }
 
 function socialcalc_decode_value($s) {

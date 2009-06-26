@@ -155,40 +155,36 @@ EOS;
       if (!empty($fields)) foreach ($socialcalc['sheet']['cells'] as $coord => $cell) {
         $pos = $cell['pos'];
         foreach ($fields as $field_name => $field) {
-          if ($pos[$tangent] == $field['cell']['pos'][$tangent]) { // supposed to be in the same column/row?
-            if ($pos[$normal] >= $field['cell']['pos'][$normal] && $pos[$normal] <= $field['endpos'][$normal]) {
-              $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
-              unset($socialcalc['sheet']['cells'][$coord]);
-              $cell['pos'] = $pos;
-              $newcoord = socialcalc_cr_to_coord($pos[0], $pos[1]);
-              $socialcalc['sheet']['cells'][$newcoord] = $cell;
-              if (isset($references[$coord])) {
-                $references[$newcoord] = $references[$coord];
-                unset($references[$coord]);
-              }
-              $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
-              break;
+          if ($pos[$tangent] == $field['cell']['pos'][$tangent] && $pos[$normal] > $field['cell']['pos'][$normal]) {
+            $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
+            unset($socialcalc['sheet']['cells'][$coord]);
+            $cell['pos'] = $pos;
+            $newcoord = socialcalc_cr_to_coord($pos[0], $pos[1]);
+            $socialcalc['sheet']['cells'][$newcoord] = $cell;
+            if (isset($references[$coord])) {
+              $references[$newcoord] = $references[$coord];
+              unset($references[$coord]);
             }
+            $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
+            break;
           }
         }
       }
 
       // Adjust references in formulas based on expanded values.
-      if (!empty($references)) foreach ($references as $coord => $positions) {
+      if (!empty($fields) && !empty($references)) foreach ($references as $coord => $positions) {
         $cell = $socialcalc['sheet']['cells'][$coord];
         $expression = $cell['formula'];
         $matches = array();
         $count = (int)preg_match_all('/@\$?\w\w?\$?\d+@/', $expression, $matches);
         for ($i=0; $i<$count; $i++) {
           $pos = $positions[$i];
-          if (!empty($fields)) foreach ($fields as $field_name => $field) {
-            if ($pos[$tangent] == $field['cell']['pos'][$tangent]) { // supposed to be in the same column/row?
-              if ($pos[$normal] >= $field['cell']['pos'][$normal] && $pos[$normal] <= $field['endpos'][$normal]) {
-                $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
-                $refcoord = socialcalc_cr_to_coord($pos[0], $pos[1]);
-                $expression = str_replace($matches[0][$i], $refcoord, $expression);
-                break;
-              }
+          foreach ($fields as $field_name => $field) {
+            if ($pos[$tangent] == $field['cell']['pos'][$tangent] && $pos[$normal] >= $field['cell']['pos'][$normal]) {
+              $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
+              $refcoord = socialcalc_cr_to_coord($pos[0], $pos[1], TRUE);
+              $expression = preg_replace('/@(\$?)\w\w?(\$?)\d+@/', '${1}'.$refcoord[0].'${2}'.$refcoord[1], $expression, 1);
+              break;
             }
           }
         }
