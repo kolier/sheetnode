@@ -32,9 +32,9 @@ class sheetnode_plugin_style extends views_plugin_style {
       '#description' => t('Check this box to use the spreadsheet below as template for your view. 
                            To place view results in the template, use the following syntax in the cells:
                            <ul>
-                           <li><code>${row.field_label}</code> to indicate that this cell and subsequent ones should be filled with values of this field.</li>
-                           <li><code>$[FUNCTION(@row.field_A_label@, @row.field_B_label@, ...)]</code> to indicate that a function should be placed in this cell. 
-                           Field names will be replaced with the corresponding cell ranges.</li>
+                           <li><code>${field_label}</code> to indicate that this cell and subsequent ones should be filled with values of this field.</li>
+                           <li><code>$[FUNCTION(@field_label@, @cell_ref@, ...)]</code> to indicate that a function should be placed in this cell. 
+                           Field names are replaced with the corresponding cell ranges, and cell references are relocated according to the expanded results.</li>
                            </ul>'),
       '#default_value' => $this->options['template'],
     );
@@ -62,7 +62,10 @@ EOS;
   }
 
   function render() {
-    if (strpos($_REQUEST['q'], 'admin/build/views/ajax/preview') === 0) return t('<div class="messages error">Spreadsheet previewing is not supported yet.</div>');
+    if (strpos($_REQUEST['q'], 'admin/build/views/ajax/preview') === 0) {
+      drupal_set_message(t('Spreadsheet previewing is not supported yet.'), 'warning');
+      return '';
+    }
 
     $tangent = $this->options['expansion'];
     $normal  = 1-$tangent;
@@ -75,7 +78,7 @@ EOS;
         // Field placeholder?
         $matches = array();
         if (isset($cell['datavalue']) && $cell['datatype'] == 't') {
-          if (preg_match('/^\$\{row\.(\w+)\}$/', $cell['datavalue'], $matches)) {
+          if (preg_match('/^\${(.*?)\}$/', $cell['datavalue'], $matches)) {
             $field_name = $this->get_real_field_name($matches[1]);
             if ($field_name && !$this->view->field[$field_name]->options['exclude']) {
               $fields[$field_name] = array(
@@ -85,13 +88,11 @@ EOS;
               );
             }
           }
-          else if (preg_match('/^\$\[(\w+)\((.*?)\)]$/', $cell['datavalue'], $matches)) {
-            $formula = $matches[1];
-            $expression = $matches[2];
+          else if (preg_match('/^\$\[(.*?)]$/', $cell['datavalue'], $matches)) {
+            $expression = $matches[1];
             $formulas[] = array(
               'coord' => $coord,
               'cell' => $cell,
-              'formula' => $formula,
               'expression' => $expression,
             );
           }
@@ -123,19 +124,26 @@ EOS;
         $newcell = $formula['cell'];
         $expression = $formula['expression'];
         $matches = array();
-        $count = (int)preg_match_all('/@row\.(\w+)@/', $formula['expression'], $matches);
+        $count = (int)preg_match_all('/@(.*?)@/', $expression, $matches);
         for ($i=0; $i<$count; $i++) {
-          $field_name = $matches[1][$i];
-          if (!isset($fields[$field_name])) { 
-            $replace = 0;
+          $field_name = $this->get_real_field_name($matches[1][$i]);
+          if (!$field_name || !isset($fields[$field_name])) { 
+            // Not a field: try a cell coordinate.
+            if (preg_match('/^\$?\w\w?\$?\d+$/', $matches[1][$i])) {
+              $replace = '@'.$matches[1][$i].'@';
+              $references[$formula['coord']][] = socialcalc_coord_to_cr(str_replace('$', '', $matches[1][$i]));
+            }
+            else {
+              $replace = '';
+            }
           }
           else {
             $field = $fields[$field_name];
             $replace = socialcalc_cr_to_coord($field['cell']['pos'][0], $field['cell']['pos'][1]) .':'. socialcalc_cr_to_coord($field['endpos'][0], $field['endpos'][1]);
           }
-          $expression = preg_replace('/@row\.(?:\w+)@/', $replace, $expression, 1);
+          $expression = str_replace($matches[0][$i], $replace, $expression);
         }
-        $newcell['formula'] = $formula['formula'] .'('. $expression .')';
+        $newcell['formula'] = $expression;
         $newcell['datatype'] = 'f';
         $newcell['valuetype'] = 'n';
         $newcell['datavalue'] = 0;
@@ -144,7 +152,7 @@ EOS;
       }
 
       // Adjust positions of cells based on expanded values.
-      foreach ($socialcalc['sheet']['cells'] as $coord => $cell) {
+      if (!empty($fields)) foreach ($socialcalc['sheet']['cells'] as $coord => $cell) {
         $pos = $cell['pos'];
         foreach ($fields as $field_name => $field) {
           if ($pos[$tangent] == $field['cell']['pos'][$tangent]) { // supposed to be in the same column/row?
@@ -152,7 +160,12 @@ EOS;
               $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
               unset($socialcalc['sheet']['cells'][$coord]);
               $cell['pos'] = $pos;
-              $socialcalc['sheet']['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
+              $newcoord = socialcalc_cr_to_coord($pos[0], $pos[1]);
+              $socialcalc['sheet']['cells'][$newcoord] = $cell;
+              if (isset($references[$coord])) {
+                $references[$newcoord] = $references[$coord];
+                unset($references[$coord]);
+              }
               $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
               break;
             }
@@ -160,8 +173,33 @@ EOS;
         }
       }
 
+      // Adjust references in formulas based on expanded values.
+      if (!empty($references)) foreach ($references as $coord => $positions) {
+        $cell = $socialcalc['sheet']['cells'][$coord];
+        $expression = $cell['formula'];
+        $matches = array();
+        $count = (int)preg_match_all('/@\$?\w\w?\$?\d+@/', $expression, $matches);
+        for ($i=0; $i<$count; $i++) {
+          $pos = $positions[$i];
+          if (!empty($fields)) foreach ($fields as $field_name => $field) {
+            if ($pos[$tangent] == $field['cell']['pos'][$tangent]) { // supposed to be in the same column/row?
+              if ($pos[$normal] >= $field['cell']['pos'][$normal] && $pos[$normal] <= $field['endpos'][$normal]) {
+                $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
+                $refcoord = socialcalc_cr_to_coord($pos[0], $pos[1]);
+                $expression = str_replace($matches[0][$i], $refcoord, $expression);
+                break;
+              }
+            }
+          }
+        }
+        $cell['formula'] = $expression;
+        $socialcalc['sheet']['cells'][$coord] = $cell;
+      }
+
       // Replace values inside the sheet.
-      $socialcalc['sheet']['cells'] += $newcells;
+      if (!empty($newcells)) {
+        $socialcalc['sheet']['cells'] += $newcells;
+      }
       $socialcalc['sheet']['attribs']['lastcol'] = $lastpos[0];
       $socialcalc['sheet']['attribs']['lastrow'] = $lastpos[1];
     }
