@@ -180,7 +180,7 @@ EOS;
         for ($i=0; $i<$count; $i++) {
           $pos = $positions[$i];
           foreach ($fields as $field_name => $field) {
-            if ($pos[$tangent] == $field['cell']['pos'][$tangent] && $pos[$normal] >= $field['cell']['pos'][$normal]) {
+            if ($pos[$tangent] == $field['cell']['pos'][$tangent] && $pos[$normal] > $field['cell']['pos'][$normal]) {
               $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
               $refcoord = socialcalc_cr_to_coord($pos[0], $pos[1], TRUE);
               $expression = preg_replace('/@(\$?)\w\w?(\$?)\d+@/', '${1}'.$refcoord[0].'${2}'.$refcoord[1], $expression, 1);
