@@ -34,7 +34,7 @@ class sheetnode_plugin_style extends views_plugin_style {
                            <ul>
                            <li><code>${field_label}</code> to indicate that this cell and subsequent ones should be filled with values of this field.</li>
                            <li><code>$[FUNCTION(@field_label@, @cell_ref@, ...)]</code> to indicate that a function should be placed in this cell. 
-                           Field names are replaced with the corresponding cell ranges, and cell references are relocated according to the expanded results.</li>
+                           Field names are replaced with the corresponding cell ranges, and cell references are adjusted according to the expanded results.</li>
                            </ul>'),
       '#default_value' => $this->options['template'],
     );
@@ -61,12 +61,7 @@ EOS;
     $form['sheetsave'] = array('#type' => 'hidden');
   }
 
-  function render() {
-    if (strpos($_REQUEST['q'], 'admin/build/views/ajax/preview') === 0) {
-      drupal_set_message(t('Spreadsheet previewing is not supported yet.'), 'warning');
-      return '';
-    }
-
+  function render_sheet() {
     $tangent = $this->options['expansion'];
     $normal  = 1-$tangent;
     if ($this->options['template']) {
@@ -74,7 +69,7 @@ EOS;
       $lastpos = array(0,0);
 
       // Iterate through cells, gathering placeholder values.
-      foreach ($socialcalc['sheet']['cells'] as $coord => $cell) {
+      if (!empty($socialcalc['sheet']['cells'])) foreach ($socialcalc['sheet']['cells'] as $coord => $cell) {
         // Field placeholder?
         $matches = array();
         if (isset($cell['datavalue']) && $cell['datatype'] == 't') {
@@ -260,6 +255,16 @@ EOS;
         'audit' => socialcalc_default_audit($sheet),
       );
     }
+    return $socialcalc;
+  }
+
+  function render() {
+    if (strpos($_REQUEST['q'], 'admin/build/views/ajax') === 0) {
+      drupal_set_message(t('Spreadsheet previewing is not supported yet.'), 'warning');
+      return ;
+    }
+
+    $socialcalc = $this->render_sheet();
     return _sheetnode_inject(socialcalc_save($socialcalc), FALSE);
   }
 
