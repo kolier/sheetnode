@@ -40,7 +40,7 @@ function sheetnode_schema() {
         'length' => '32',
         'default' => '',
         'not null' => TRUE,
-        'description' => 'The unique name of the template. May only be alphanumeric characters plus underscores.',
+        'description' => t('The unique name of the template. May only be alphanumeric characters plus underscores.'),
       ),
       'value' => array(
         'description' => t('The serialized worksheet template content.'),
