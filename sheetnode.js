@@ -152,7 +152,6 @@ Drupal.sheetnode.start = function() {
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  this.spreadsheet.ExecuteCommand('redisplay');
   this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, 700);
   if (parts && parts.edit) {
     this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
