@@ -10,12 +10,15 @@ function _sheetnode_xls_export($type, $nid) {
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
 
+  _sheetnode_xls_export_do($type, $node->title, _socialcalc_parse(_sheetnode_load($nid)));
+}
+
+function _sheetnode_xls_export_do($type, $title, $socialcalc) {
   // Create the Excel sheet
   $workbook = $type == 'xls' ? new org_apache_poi_hssf_usermodel_HSSFWorkbook() : new org_apache_poi_xssf_usermodel_XSSFWorkbook();
-  $sheetname = $node->title;
+  $sheetname = $title;
   $sheet = $workbook->createSheet($sheetname);
   $patriarch = $sheet->createDrawingPatriarch();
-  $socialcalc = socialcalc_parse(_sheetnode_load($nid));
   $sc = $socialcalc['sheet'];
   
   // Names
@@ -73,7 +76,7 @@ function _sheetnode_xls_export($type, $nid) {
   else {
     header('Content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   }
-  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($node->title, $type));
+  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($title, $type));
   $memoryStream = new java_io_ByteArrayOutputStream();
   $workbook->write($memoryStream);
   $memoryStream->close();

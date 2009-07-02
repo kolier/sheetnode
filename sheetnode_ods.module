@@ -1,6 +1,18 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_views_api().
+ */
+function sheetnode_ods_views_api() {
+  return array(
+    'api' => 2,
+  );
+}
+  
+/**
+ * Implementation of hook_link().
+ */
 function sheetnode_ods_link($type, $node = NULL, $teaser = FALSE) {
   if ($type != 'node' || $node->type != 'sheetnode') return array();
 
@@ -12,6 +24,9 @@ function sheetnode_ods_link($type, $node = NULL, $teaser = FALSE) {
   return $links;
 }
 
+/**
+ * Implementation of hook_menu().
+ */
 function sheetnode_ods_menu() {
   $items = array();
     

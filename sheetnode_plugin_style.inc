@@ -37,10 +37,12 @@ class sheetnode_plugin_style extends views_plugin_style {
                            Field names are replaced with the corresponding cell ranges, and cell references are adjusted according to the expanded results.</li>
                            </ul>'),
       '#default_value' => $this->options['template'],
+      '#weight' => 98,
     );
     global $base_url;
     $imagePrefix = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
     $value = drupal_to_js($this->options['sheetsave']);
+    $form['sheetview']['#weight'] = 99;
     $form['sheetview']['#value'] = <<<EOS
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
@@ -275,6 +277,16 @@ EOS;
       if (strcasecmp($info->label(), $field_name) == 0) return $field;
     }
     return FALSE;
+  }
+
+  function attach_to($display_id, $path, $title) {
+    $url_options = array('html' => true);
+    $input = $this->view->get_exposed_input();
+    if ($input) {
+      $url_options['query'] = $input;
+    }
+    $image = theme('image', $this->feed_image);
+    $this->view->feed_icon .= l($image, $this->view->get_url(NULL, $path), $url_options);
   }
 }
 

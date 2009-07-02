@@ -1,6 +1,9 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_views_plugins().
+ */
 function sheetnode_views_plugins() {
   return array(
     'style' => array(

@@ -3,6 +3,18 @@
 
 define('WIDTH_CHAR_TO_PX', 8.0);
 
+/**
+ * Implementation of hook_views_api().
+ */
+function sheetnode_xls_views_api() {
+  return array(
+    'api' => 2,
+  );
+}
+
+/**
+ * Implementation of hook_link().
+ */
 function sheetnode_xls_link($type, $node = NULL, $teaser = FALSE) {
   if ($type != 'node' || $node->type != 'sheetnode') return array();
 
@@ -18,6 +30,9 @@ function sheetnode_xls_link($type, $node = NULL, $teaser = FALSE) {
   return $links;
 }
 
+/**
+ * Implementation of hook_menu().
+ */
 function sheetnode_xls_menu() {
   $items = array();
     

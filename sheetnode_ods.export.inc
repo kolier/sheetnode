@@ -9,10 +9,13 @@ java_autoload(variable_get('sheetnode_ods_jar', ''));
 function _sheetnode_ods_export($nid) {
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
- 
-  $socialcalc = socialcalc_parse(_sheetnode_load($nid));
+
+  _sheetnode_ods_export_do($node->title, socialcalc_parse(_sheetnode_load($nid)));
+}
+
+function _sheetnode_ods_export_do($title, $socialcalc) {
   $sc = $socialcalc['sheet'];
-  $sheetname = $node->title;
+  $sheetname = $title;
   $spreadsheet = org_odftoolkit_odfdom_doc_OdfSpreadsheetDocument::type()->createSpreadsheetDocument();
   $dom = $spreadsheet->getContentDom();
   $table = $dom->getElementsByTagNameNS(org_odftoolkit_odfdom_doc_element_table_OdfTable::type()->ELEMENT_NAME->getUri(), 
@@ -125,7 +128,7 @@ function _sheetnode_ods_export($nid) {
   
   // Write out to client.
   header('Content-type: application/vnd.oasis.opendocument.spreadsheet');
-  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($node->title, 'ods'));
+  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($title, 'ods'));
   $memoryStream = new java_io_ByteArrayOutputStream();
   $spreadsheet->save($memoryStream);
   $memoryStream->close();
