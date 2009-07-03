@@ -201,7 +201,7 @@ function sheetnode_nodeapi($node, $op) {
   if ($node->type != 'sheetnode') return;
   switch ($op) {
   case 'update index':
-    require_once('socialcalc.inc');
+    require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
     $output = '<table>';
     $socialcalc = socialcalc_parse(_sheetnode_load($node->nid));
     $sc = $socialcalc['sheet'];
@@ -310,7 +310,7 @@ function _sheetnode_ajax_value($nid = NULL, $cells = NULL) {
 }
 
 function _sheetnode_ajax_load($sheetname = NULL) {
-  require_once('socialcalc.inc');
+  require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
   if (intval($sheetname) > 0) {
     $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", intval($sheetname)));

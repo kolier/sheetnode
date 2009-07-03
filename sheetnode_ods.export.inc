@@ -1,7 +1,7 @@
 <?php
 // $Id$
 
-require_once('socialcalc.inc');
+require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
 $JAVA_BASE = variable_get('pjb_java_base', '');
 require_once("$JAVA_BASE/java/Java.inc");
 java_autoload(variable_get('sheetnode_ods_jar', ''));

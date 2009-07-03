@@ -15,7 +15,7 @@ function _sheetnode_xls_import_form(&$form_state) {
   return $form;
 }
 
-require_once('socialcalc.inc');
+require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
 $JAVA_BASE = variable_get('pjb_java_base', NULL);
 require_once("$JAVA_BASE/java/Java.inc");
 java_autoload(variable_get('sheetnode_xls_jar', NULL));

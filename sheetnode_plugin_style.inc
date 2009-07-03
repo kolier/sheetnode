@@ -1,7 +1,7 @@
 <?php
 // $Id$
 
-require_once('socialcalc.inc');
+require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
 
 define('SHEETNODE_EXPANSION_VERTICAL', 0);
 define('SHEETNODE_EXPANSION_HORIZONTAL', 1);

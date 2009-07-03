@@ -1,7 +1,7 @@
 <?php
 // $Id$
 
-require_once('socialcalc.inc');
+require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
 
 function _sheetnode_google_import_form() {
   $form['username'] = array(

@@ -67,8 +67,8 @@ function sheetnode_update_6001(&$sandbox = NULL) {
 }
 
 function sheetnode_update_6002(&$sandbox = NULL) {
+  require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
   $ret = array();
-  require_once('socialcalc.inc');
   $sig = 'version:1.5';
   $siglen = strlen($sig);
   $result = db_query("SELECT * FROM {sheetnode}");
