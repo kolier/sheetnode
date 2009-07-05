@@ -10,7 +10,7 @@ function _sheetnode_ods_export($nid) {
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
 
-  _sheetnode_ods_export_do($node->title, socialcalc_parse(_sheetnode_load($nid)));
+  return _sheetnode_ods_export_do($node->title, socialcalc_parse(_sheetnode_load($nid)));
 }
 
 function _sheetnode_ods_export_do($title, $socialcalc) {
@@ -74,8 +74,10 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
       }
       break;
     case 'v':
-      $cell->SetValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
-      $cell->SetValue($c['datavalue']);
+      if (!isset($c['nontextvalueformat'])) { // default number type is float but the format might dictate another type
+        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
+        $cell->setValue($c['datavalue']);
+      }
       $p->appendChild($dom->createTextNode($c['datavalue']));
       break;
     case 'f':
@@ -125,7 +127,7 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
       $name->setName($n);
     }
   }
-  
+ 
   // Write out to client.
   header('Content-type: application/vnd.oasis.opendocument.spreadsheet');
   header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($title, 'ods'));
@@ -136,7 +138,7 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
   exit();
 }
 
-function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $style) {
+function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $style) {
   static $stylecount = 0;
 
   $dom = $spreadsheet->getStylesDom();
@@ -153,19 +155,31 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $s
     // Create parent style
     if (!empty($sectioninfo['hascurrency'])) {
       $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfCurrencyStyle($dom);
+      if (@$c['datatype'] == 'v') {
+        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('CURRENCY'));
+        $cell->setValue($c['datavalue']);
+      }
     }
     else if (!empty($sectioninfo['hasdate'])) {
       $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfDateStyle($dom);
+      if (@$c['datatype'] == 'v') {
+        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('DATE'));
+        $cell->setDateValue(org_odftoolkit_odfdom_dom_type_OdfDate::type()->valueOf($c['datavalue']));
+      }
     }
     else {
       $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfNumberStyle($dom);
+      if (@$c['datatype'] == 'v') {
+        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
+        $cell->setValue($c['datavalue']);
+      }
     }
-    // TODO: handle OdfPercentageStyle.
+    // TODO: handle OdfPercentageStyle
     $numstyle->setName(new org_odftoolkit_odfdom_dom_type_OdfStyleName($stylenames[$i]));
 
     // Populate number format
     $minintdigits = 0;
-    $lastnumber = false;
+    $lastnumber = FALSE;
     $lasttext = '';
     $section[] = array(SOCIALCALC_COMMANDS_SECTION => ';'); // Manually add this to make sure we don't miss anything
     foreach ($section as $o) {
@@ -182,7 +196,7 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $s
         $number->setGrouping(new org_odftoolkit_odfdom_dom_type_OdfBoolean($sectioninfo['thousandssep']));
         $number->setDecimalPlaces($sectioninfo['fractiondigits']);
         $number->setMinIntegerDigits($minintdigits);
-        $lastnumber = false;
+        $lastnumber = FALSE;
       }
 
       switch ($operator) {
@@ -200,7 +214,7 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $s
         // pass through
       case SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER:
       case SOCIALCALC_COMMANDS_DECIMAL:
-        $lastnumber = true;
+        $lastnumber = TRUE;
         break;
       case SOCIALCALC_COMMANDS_COLOR: // TODO
         //$textprop = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_element_style_OdfTextProperties($dom));
@@ -227,8 +241,8 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $s
         $map->setCondition('value()'.$condition);
       }
     }
-    else { // Earlier sections get volatile=true
-      $numstyle->setVolatile(new org_odftoolkit_odfdom_dom_type_OdfBoolean(true));
+    else { // Earlier sections get volatile=TRUE
+      $numstyle->setVolatile(new org_odftoolkit_odfdom_dom_type_OdfBoolean(TRUE));
     }
   }
 
@@ -262,7 +276,7 @@ function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
     'padleft' => 'MarginLeft',
   );
   foreach ($paddings as $pad => $property) {
-    if (isset($layout[$pad])) {
+    if (!empty($layout[$pad])) {
       $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->$property, 
         org_odftoolkit_odfdom_dom_util_OdfUnitConverter::type()->mapUnitToCm($layout[$pad].'px'));
       $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->TextAlign, 'start');

@@ -707,7 +707,7 @@ function socialcalc_cellformat_parseborder($cell, $sheet, $attrib) {
           .thousandssep
           .hasdate
           .hascurrency
-       .hascomparison - true if any section has [<100], etc.
+       .hascomparison - TRUE if any section has [<100], etc.
 
  **************************/
 
@@ -725,16 +725,16 @@ define('SOCIALCALC_COMMANDS_SECTION', 'SECTION');
 define('SOCIALCALC_COMMANDS_STYLE', 'STYLE');
 
 function socialcalc_parse_numberformat($format_string) {
-  $integerpart = true; // start out in integer part
-  $lastwasinteger = false; // last char was an integer placeholder
-  $lastwasslash = false; // last char was a backslash - escaping following character
-  $lastwasasterisk = false; // repeat next char
-  $lastwasunderscore = false; // last char was _ which picks up following char for width
-  $inquote = false;
+  $integerpart = TRUE; // start out in integer part
+  $lastwasinteger = FALSE; // last char was an integer placeholder
+  $lastwasslash = FALSE; // last char was a backslash - escaping following character
+  $lastwasasterisk = FALSE; // repeat next char
+  $lastwasunderscore = FALSE; // last char was _ which picks up following char for width
+  $inquote = FALSE;
   $quotestr = ''; // processing a quoted string
-  $inbracket = false;
+  $inbracket = FALSE;
   $bracketstr = '';
-  $bracketdata = null; // processing a bracketed string
+  $bracketdata = NULL; // processing a bracketed string
   $ingeneral = 0; // checks for characters "General"
   $ampmstr = ''; // checks for characters "A/P" and "AM/PM"
   $indate = ''; // keeps track of date/time placeholders
@@ -755,7 +755,7 @@ function socialcalc_parse_numberformat($format_string) {
     $ch = $format_string[$chpos]; // get next char to examine
     if ($inquote) {
       if ($ch == '"') {
-        $inquote = false;
+        $inquote = FALSE;
         $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $quotestr);
         continue;
       }
@@ -764,20 +764,20 @@ function socialcalc_parse_numberformat($format_string) {
     }
     if ($inbracket) {
       if ($ch==']') {
-        $inbracket = false;
+        $inbracket = FALSE;
         $bracketdata = socialcalc_parse_bracketformat($bracketstr);
         if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_SEPARATOR) {
-          $sectioninfo['thousandssep'] = true; // explicit [,]
+          $sectioninfo['thousandssep'] = TRUE; // explicit [,]
           continue;
         }
         if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_DATE) {
-          $sectioninfo['hasdate'] = true;
+          $sectioninfo['hasdate'] = TRUE;
         }
         if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_COMPARISON) {
-          $thisformat['hascomparison'] = true;
+          $thisformat['hascomparison'] = TRUE;
         }
         if (key($bracketdata['operator']) == SOCIALCALC_COMMANDS_CURRENCY) {
-          $sectioninfo['hascurrency'] = true;
+          $sectioninfo['hascurrency'] = TRUE;
         }
         $thisformat['operators'][] = $bracketdata['operator'];
         continue;
@@ -787,17 +787,17 @@ function socialcalc_parse_numberformat($format_string) {
     }
     if ($lastwasslash) {
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch);
-      $lastwasslash = false;
+      $lastwasslash = FALSE;
       continue;
     }
     if ($lastwasasterisk) {
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch.$ch.$ch.$ch.$ch); // do 5 of them since no real tabs
-      $lastwasasterisk = false;
+      $lastwasasterisk = FALSE;
       continue;
     }
     if ($lastwasunderscore) {
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => '&nbsp;');
-      $lastwasunderscore = false;
+      $lastwasunderscore = FALSE;
       continue;
     }
     if ($ingeneral) {
@@ -817,7 +817,7 @@ function socialcalc_parse_numberformat($format_string) {
         continue;
       }
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DATE => $indate); // something else, save date info
-      $sectioninfo['hasdate'] = true;
+      $sectioninfo['hasdate'] = TRUE;
       $indate = '';
     }
     if ($ampmstr) {
@@ -836,10 +836,10 @@ function socialcalc_parse_numberformat($format_string) {
       if ($integerpart) {
         $sectioninfo['integerdigits']++;
         if ($sectioninfo['commas']) { // comma inside of integer placeholders
-          $sectioninfo['thousandssep'] = true; // any number is thousands separator
+          $sectioninfo['thousandssep'] = TRUE; // any number is thousands separator
           $sectioninfo['commas'] = 0; // reset count of "thousand" factors
         }
-        $lastwasinteger = true;
+        $lastwasinteger = TRUE;
         $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER => $ch);
       }
       else {
@@ -848,14 +848,14 @@ function socialcalc_parse_numberformat($format_string) {
       }
     }
     else if ($ch=='.') { // decimal point
-      $lastwasinteger = false;
+      $lastwasinteger = FALSE;
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DECIMAL => $ch);
-      $integerpart = false;
+      $integerpart = FALSE;
     }
     else if ($ch=='$') { // currency char
-      $lastwasinteger = false;
+      $lastwasinteger = FALSE;
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_CURRENCY => $ch);
-      $sectioninfo['hascurrency'] = true;
+      $sectioninfo['hascurrency'] = TRUE;
     }
     else if ($ch==',') {
       if ($lastwasinteger) {
@@ -866,31 +866,31 @@ function socialcalc_parse_numberformat($format_string) {
       }
     }
     else if ($ch=='%') {
-      $lastwasinteger = false;
+      $lastwasinteger = FALSE;
       $sectioninfo['percent']++;
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch);
     }
     else if ($ch=='"') {
-      $lastwasinteger = false;
-      $inquote = true;
+      $lastwasinteger = FALSE;
+      $inquote = TRUE;
       $quotestr = '';
     }
     else if ($ch=='[') {
-      $lastwasinteger = false;
-      $inbracket = true;
+      $lastwasinteger = FALSE;
+      $inbracket = TRUE;
       $bracketstr = '';
     }
     else if ($ch=='\\') {
-      $lastwasslash = true;
-      $lastwasinteger = false;
+      $lastwasslash = TRUE;
+      $lastwasinteger = FALSE;
     }
     else if ($ch=='*') {
-      $lastwasasterisk = true;
-      $lastwasinteger = false;
+      $lastwasasterisk = TRUE;
+      $lastwasinteger = FALSE;
     }
     else if ($ch=='_') {
-      $lastwasunderscore = true;
-      $lastwasinteger = false;
+      $lastwasunderscore = TRUE;
+      $lastwasinteger = FALSE;
     }
     else if ($ch==';') {
       $thisformat['sectioninfo'][] = $sectioninfo; // store current section
@@ -900,30 +900,30 @@ function socialcalc_parse_numberformat($format_string) {
       $sectioninfo['fractiondigits'] = 0; // fraction placeholders
       $sectioninfo['commas'] = 0; // commas encountered, to handle scaling
       $sectioninfo['percent'] = 0; // times to scale by 100
-      $integerpart = true; // reset for new section
-      $lastwasinteger = false;
+      $integerpart = TRUE; // reset for new section
+      $lastwasinteger = FALSE;
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_SECTION => $ch);
     }
     else if (strtolower($ch)=='g') {
       $ingeneral = 1;
-      $lastwasinteger = false;
+      $lastwasinteger = FALSE;
     }
     else if (strtolower($ch)=='a') {
       $ampmstr = $ch;
-      $lastwasinteger = false;
+      $lastwasinteger = FALSE;
     }
-    else if (strpos('dmyhHs', $ch) !== false) {
+    else if (strpos('dmyhHs', $ch) !== FALSE) {
       $indate = $ch;
     }
     else {
-      $lastwasinteger = false;
+      $lastwasinteger = FALSE;
       $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_COPY => $ch);
     }
   }
 
   if ($indate) { // last char was part of unsaved date placeholder
     $thisformat['operators'][] = array(SOCIALCALC_COMMANDS_DATE => $indate);
-    $sectioninfo['hasdate'] = true;
+    $sectioninfo['hasdate'] = TRUE;
   }
   $thisformat['sectioninfo'][] = $sectioninfo;
 
