@@ -27,7 +27,9 @@ class sheetnode_xls_plugin_style extends sheetnode_plugin_style {
 
   function render() {
     require_once(drupal_get_path('module', 'sheetnode_xls') .'/sheetnode_xls.export.inc');
-    _sheetnode_xls_export_do($this->options['format'], $this->display->handler->get_option('title'), parent::render_sheet());
+    $title = $this->display->handler->get_option('title');
+    if (empty($title)) $title = $this->view->name;
+    _sheetnode_xls_export_do($this->options['format'], $title, parent::render_sheet());
   }
 };
 

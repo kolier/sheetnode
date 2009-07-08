@@ -9,7 +9,9 @@ class sheetnode_ods_plugin_style extends sheetnode_plugin_style {
 
   function render() {
     require_once(drupal_get_path('module', 'sheetnode_ods') .'/sheetnode_ods.export.inc');
-    _sheetnode_ods_export_do($this->display->handler->get_option('title'), parent::render_sheet());
+    $title = $this->display->handler->get_option('title');
+    if (empty($title)) $title = $this->view->name;
+    _sheetnode_ods_export_do($title, parent::render_sheet());
   }
 };
 

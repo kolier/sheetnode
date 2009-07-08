@@ -97,7 +97,7 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
     $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_STRING);
     break;
   case 'v':
-    $cell->setCellValue($c['datavalue']);
+    $cell->setCellValue((float)$c['datavalue']);
     $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_NUMERIC);
     break;
   case 'f':

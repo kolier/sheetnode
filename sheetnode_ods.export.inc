@@ -76,7 +76,7 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
     case 'v':
       if (!isset($c['nontextvalueformat'])) { // default number type is float but the format might dictate another type
         $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
-        $cell->setValue($c['datavalue']);
+        $cell->setValue((float)$c['datavalue']);
       }
       $p->appendChild($dom->createTextNode($c['datavalue']));
       break;
