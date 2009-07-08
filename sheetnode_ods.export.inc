@@ -78,6 +78,23 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
         $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
         $cell->setValue((float)$c['datavalue']);
       }
+      else {
+        $formatinfo = socialcalc_parse_numberformat($sc['valueformats'][$c['nontextvalueformat']]);
+        $sectioninfo = $formatinfo['sectioninfo'][0]; // TODO: Does it make sense to have sectioninfos with different cell types?
+        if (!empty($sectioninfo['hascurrency'])) {
+          $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('CURRENCY'));
+          $cell->setValue($c['datavalue']);
+        }
+        else if (!empty($sectioninfo['hasdate'])) {
+          $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('DATE'));
+          $cell->setDateValue(org_odftoolkit_odfdom_dom_type_OdfDate::type()->valueOf($c['datavalue']));
+        }
+        else {
+          $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
+          $cell->setValue((float)$c['datavalue']);
+        }
+        // TODO: handle OdfPercentageStyle
+      }
       $p->appendChild($dom->createTextNode($c['datavalue']));
       break;
     case 'f':
@@ -93,12 +110,7 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
     }
 
     // Style
-    $style = _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p);
-
-    // Number format
-    if (isset($c['nontextvalueformat'])) {
-      _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $style);
-    }
+    _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p);
 
     // Cell merges
     if (@$c['colspan'] > 1) $cell->setNumberColumnsSpanned($c['colspan']);
@@ -138,6 +150,93 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
   exit();
 }
 
+function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
+  static $stylecount = 0;
+  static $cellstyles = array();
+
+  // Return if no formatting set.
+  $cs = array_filter(array(
+    isset($c['font']) ? 'f:'. $c['font'] : NULL,
+    isset($c['color']) ? 'c:'. $c['color'] : NULL,
+    isset($c['bt']) ? 'bt:'. $c['bt'] : NULL,
+    isset($c['br']) ? 'br:'. $c['br'] : NULL,
+    isset($c['bb']) ? 'bb:'. $c['bb'] : NULL,
+    isset($c['bl']) ? 'bl:'. $c['bl'] : NULL,
+    isset($c['layout']) ? 'l:'. $c['layout'] : NULL,
+    isset($c['bgcolor']) ? 'bg:'. $c['bgcolor'] : NULL,
+    isset($c['cellformat']) ? 'cf:'. $c['cellformat'] : NULL,
+    isset($c['nontextvalueformat']) ? 'ntvf:'. $c['nontextvalueformat'] : NULL,
+//    isset($c['textvalueformat']) ? 'tvf:'. $c['textvalueformat'] : NULL,
+  ));
+  if (empty($cs)) return;
+
+  // Find cached cellstyle.
+  $h = md5(implode(',', $cs));
+  if (isset($cellstyles[$h])) {
+    $cell->setStyleName($cellstyles[$h]);
+    return;
+  }
+
+  // Create new style
+  $styles = $spreadsheet->getOrCreateDocumentStyles();
+  $stylename = 'cell'.$stylecount++;
+  $cellstyles[$h] = $stylename;
+  $style = $styles->createStyle($stylename, org_odftoolkit_odfdom_dom_style_OdfStyleFamily::type()->TableCell);
+  $cell->setStyleName($stylename);
+  
+  // Horizontal alignment
+  if (isset($c['cellformat'])) {
+    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->TextAlign, $sc['cellformats'][$c['cellformat']]);
+    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->TextAlignSource, 'fix');
+  }
+
+  // Vertical alignment and padding
+  $layout = socialcalc_cellformat_parselayout($c, $sc);
+  if (isset($layout['alignvert'])) {
+    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->VerticalAlign, $layout['alignvert']);
+  }
+  $paddings = array(
+    'padtop' => 'MarginTop',
+    'padright' => 'MarginRight',
+    'padbottom' => 'MarginBottom',
+    'padleft' => 'MarginLeft',
+  );
+  foreach ($paddings as $pad => $property) {
+    if (!empty($layout[$pad])) {
+      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->$property, 
+        org_odftoolkit_odfdom_dom_util_OdfUnitConverter::type()->mapUnitToCm($layout[$pad].'px'));
+      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->TextAlign, 'start');
+      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->TextAlignSource, 'fix');
+    }
+  }
+
+  // Background color
+  $bg = socialcalc_cellformat_parsecolor($c, $sc, 'bgcolor');
+  if ($bg) {
+    $color = sprintf('#%02X%02X%02X', $bg['r'], $bg['g'], $bg['b']);
+    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->BackgroundColor, $color);
+  }
+
+  // Color
+  $fg = socialcalc_cellformat_parsecolor($c, $sc, 'color');
+  if ($fg) {
+    $color = sprintf('#%02X%02X%02X', $fg['r'], $fg['g'], $fg['b']);
+    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->Color, $color);
+  }
+
+  // Font
+  $ff = socialcalc_cellformat_parsefont($c, $sc);
+  if (isset($ff['family'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontFamily, $ff['family']);
+  if (isset($ff['size'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontSize, $ff['size']);
+  if (!empty($ff['bold'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontWeight, 'bold');
+  if (!empty($ff['italic'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontStyle, 'italic');
+
+  // Number format
+  if (isset($c['nontextvalueformat'])) {
+    _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, $cell, $p, $style);
+  }
+}
+
 function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $style) {
   static $stylecount = 0;
 
@@ -155,24 +254,12 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $
     // Create parent style
     if (!empty($sectioninfo['hascurrency'])) {
       $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfCurrencyStyle($dom);
-      if (@$c['datatype'] == 'v') {
-        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('CURRENCY'));
-        $cell->setValue($c['datavalue']);
-      }
     }
     else if (!empty($sectioninfo['hasdate'])) {
       $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfDateStyle($dom);
-      if (@$c['datatype'] == 'v') {
-        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('DATE'));
-        $cell->setDateValue(org_odftoolkit_odfdom_dom_type_OdfDate::type()->valueOf($c['datavalue']));
-      }
     }
     else {
       $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfNumberStyle($dom);
-      if (@$c['datatype'] == 'v') {
-        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
-        $cell->setValue($c['datavalue']);
-      }
     }
     // TODO: handle OdfPercentageStyle
     $numstyle->setName(new org_odftoolkit_odfdom_dom_type_OdfStyleName($stylenames[$i]));
@@ -247,64 +334,5 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $
   }
 
   $stylecount++;
-}
-
-function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
-  static $stylecount = 0;
- 
-  // Create new style
-  $styles = $spreadsheet->getOrCreateDocumentStyles();
-  $stylename = 'cell'.$stylecount++;
-  $style = $styles->createStyle($stylename, org_odftoolkit_odfdom_dom_style_OdfStyleFamily::type()->TableCell);
-  $cell->setStyleName($stylename);
-  
-  // Horizontal alignment
-  if (isset($c['cellformat'])) {
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->TextAlign, $sc['cellformats'][$c['cellformat']]);
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->TextAlignSource, 'fix');
-  }
-
-  // Vertical alignment and padding
-  $layout = socialcalc_cellformat_parselayout($c, $sc);
-  if (isset($layout['alignvert'])) {
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->VerticalAlign, $layout['alignvert']);
-  }
-  $paddings = array(
-    'padtop' => 'MarginTop',
-    'padright' => 'MarginRight',
-    'padbottom' => 'MarginBottom',
-    'padleft' => 'MarginLeft',
-  );
-  foreach ($paddings as $pad => $property) {
-    if (!empty($layout[$pad])) {
-      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->$property, 
-        org_odftoolkit_odfdom_dom_util_OdfUnitConverter::type()->mapUnitToCm($layout[$pad].'px'));
-      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->TextAlign, 'start');
-      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->TextAlignSource, 'fix');
-    }
-  }
-
-  // Background color
-  $bg = socialcalc_cellformat_parsecolor($c, $sc, 'bgcolor');
-  if ($bg) {
-    $color = sprintf('#%02X%02X%02X', $bg['r'], $bg['g'], $bg['b']);
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->BackgroundColor, $color);
-  }
-
-  // Color
-  $fg = socialcalc_cellformat_parsecolor($c, $sc, 'color');
-  if ($fg) {
-    $color = sprintf('#%02X%02X%02X', $fg['r'], $fg['g'], $fg['b']);
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->Color, $color);
-  }
-
-  // Font
-  $ff = socialcalc_cellformat_parsefont($c, $sc);
-  if (isset($ff['family'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontFamily, $ff['family']);
-  if (isset($ff['size'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontSize, $ff['size']);
-  if (!empty($ff['bold'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontWeight, 'bold');
-  if (!empty($ff['italic'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontStyle, 'italic');
-
-  return $style;
 }
 
