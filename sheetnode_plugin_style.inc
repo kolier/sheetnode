@@ -10,7 +10,7 @@ class sheetnode_plugin_style extends views_plugin_style {
   function options(&$options) {
     parent::options($options);
     $options['expansion'] = SHEETNODE_EXPANSION_VERTICAL; 
-    $options['template'] = TRUE;
+    $options['template'] = FALSE;
     $options['sheetsave'] = '';
   }
 
