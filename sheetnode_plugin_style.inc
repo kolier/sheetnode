@@ -24,7 +24,8 @@ class sheetnode_plugin_style extends views_plugin_style {
         SHEETNODE_EXPANSION_VERTICAL => t('Consecutive rows'),
         SHEETNODE_EXPANSION_HORIZONTAL => t('Consecutive columns'),
       ),
-      '#default_value' => $this->options['expansion'], 
+      '#default_value' => $this->options['expansion'],
+      '#weight' => 97,
     );
     $form['template'] = array(
       '#type' => 'checkbox',
@@ -377,6 +378,39 @@ EOS;
     }
     $image = theme('image', $this->feed_image);
     $this->view->feed_icon .= l($image, $this->view->get_url(NULL, $path), $url_options);
+  }
+}
+
+class sheetnode_feed_plugin_style extends sheetnode_plugin_style {
+  function options(&$options) {
+    parent::options($options);
+    $options['inherit'] = TRUE;
+  }
+
+  function options_form(&$form, &$form_values) {
+    parent::options_form($form, $form_values);
+    $form['inherit'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Inherit spreadsheet settings'),
+      '#default_value' => $this->options['inherit'],
+      '#description' => t('If this feed is attached to a display that has a Spreadsheet style, this option lets you inherit the settings of that style, including the spreadsheet formatting. The settings below are then ignored.'),
+    );
+  }
+
+  function inherit_options() {
+    if ($this->options['inherit']) {
+      $displays = array_filter($this->display->handler->get_option('displays'));
+      if (!empty($displays)) foreach ($displays as $display) {
+        $handler = $this->view->display[$display]->handler;
+        if ($handler->get_option('style_plugin') == 'sheet') {
+          $options = $handler->get_option('style_options');
+          break;
+        }
+      }
+      if (isset($options)) foreach ($options as $key => $option) {
+        $this->options[$key] = $option;
+      }
+    }
   }
 }
 

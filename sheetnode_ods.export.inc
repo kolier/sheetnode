@@ -13,6 +13,14 @@ function _sheetnode_ods_export($nid) {
   return _sheetnode_ods_export_do($node->title, socialcalc_parse(_sheetnode_load($nid)));
 }
 
+function _sheetnode_ods_cell_cmp($a, $b) {
+  return $a['pos'][1] < $b['pos'][1] ? -1 : (
+         $a['pos'][1] > $b['pos'][1] ?  1 : (
+         $a['pos'][0] < $b['pos'][0] ? -1 : (
+         $a['pos'][0] > $b['pos'][0] ?  1 : 0
+  )));
+}
+
 function _sheetnode_ods_export_do($title, $socialcalc) {
   $sc = $socialcalc['sheet'];
   $sheetname = $title;
@@ -46,6 +54,7 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
 
   // Cells
   $rowNum = 0;
+  uasort($sc['cells'], '_sheetnode_ods_cell_cmp');
   if ($sc['cells']) foreach ($sc['cells'] as $c) {
     if ($rowNum < $c['pos'][1]) { // new row
       $rowNum = $c['pos'][1];
