@@ -263,6 +263,18 @@ EOS;
       }
       $socialcalc['sheet']['attribs']['lastcol'] = $lastpos[0];
       $socialcalc['sheet']['attribs']['lastrow'] = $lastpos[1];
+
+      // Adjust starting cell in editor.
+      $pos = $socialcalc['edit']['ecell']['pos'];
+      if (!empty($fields)) foreach ($fields as $field) {
+        if ($pos[$tangent] == $field['cell']['pos'][$tangent] && $pos[$normal] > $field['cell']['pos'][$normal]) {
+          $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
+          break;
+        }
+      }
+      $socialcalc['edit']['ecell']['pos'] = $pos;
+      $socialcalc['edit']['ecell']['coord'] = socialcalc_cr_to_coord($pos[0], $pos[1]);
+      $socialcalc['highlights'] = array(socialcalc_cr_to_coord($pos[0], $pos[1]) => 'cursor');
     }
     else {
       // Hand-make default SocialCalc structure based on views results.
