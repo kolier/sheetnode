@@ -7,7 +7,6 @@ function _sheetnode_google_import_form() {
   $form['username'] = array(
     '#type' => 'textfield',
     '#title' => t('Google username'),
-    '#description' => t('Only fill the Google username and password if you intend to retrieve a private (unpublished) spreadsheet. For a public spreadsheet, just enter its key below.'),
   );
   $form['password'] = array(
     '#type' => 'password',
@@ -219,7 +218,8 @@ function _sheetnode_google_import_do($spreadsheetService, $spreadsheet, $workshe
         global $_sheetnode_google_import_col, $_sheetnode_google_import_row;
         $_sheetnode_google_import_col = $c['pos'][0];
         $_sheetnode_google_import_row = $c['pos'][1];
-        $formula = preg_replace_callback('/R(\[(-?\d+)\])?C(\[(-?\d+)\])?/', '_sheetnode_google_import_formula_replace_coords', $value);
+        $formula = preg_replace_callback('/R(?:(\[)?(-?\d+)\]?)?C(?:(\[)?(-?\d+)\]?)?/', '_sheetnode_google_import_formula_replace_coords', $value);
+        $formula = str_replace(';', ',', $formula);
         $c['formula'] = substr($formula, 1);
         if ($numeric) _sheetnode_google_import_infer_valueformat($sc, $c, $content);
       } else if ($numeric) { // number
@@ -254,8 +254,22 @@ function _sheetnode_google_import_formula_replace_coords($matches) {
   global $_sheetnode_google_import_col, $_sheetnode_google_import_row;
   $col = $_sheetnode_google_import_col;
   $row = $_sheetnode_google_import_row;
-  if (@$matches[4]) $col += $matches[4];
-  if (@$matches[2]) $row += $matches[2];
+  if (@$matches[4]) {
+    if (@$matches[3] == '[') {
+      $col += $matches[4];
+    }
+    else {
+      $col = $matches[4];
+    }
+  }
+  if (@$matches[2]) {
+    if (@$matches[1] == '[') {
+      $row += $matches[2];
+    }
+    else {
+      $row = $matches[2];
+    }
+  }
   return socialcalc_cr_to_coord($col, $row);
 }
 
@@ -274,7 +288,7 @@ function _sheetnode_google_import_infer_valueformat(&$sc, &$c, $value) {
   
   // Create the value format and attach it to the cell.
   if (!isset($sc['valueformathash'][$valueformat])) {
-    $index = count($sc['valueformats'])+1;
+    $index = count(@$sc['valueformats'])+1;
     $sc['valueformats'][$index] = $valueformat;
     $sc['valueformathash'][$valueformat] = $index;
   }
