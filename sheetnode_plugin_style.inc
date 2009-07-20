@@ -269,12 +269,27 @@ EOS;
       if (!empty($fields)) foreach ($fields as $field) {
         if ($pos[$tangent] == $field['cell']['pos'][$tangent] && $pos[$normal] > $field['cell']['pos'][$normal]) {
           $pos[$normal] += $field['endpos'][$normal] - $field['cell']['pos'][$normal];
+          $ecell_changed = TRUE;
           break;
         }
       }
       $socialcalc['edit']['ecell']['pos'] = $pos;
       $socialcalc['edit']['ecell']['coord'] = socialcalc_cr_to_coord($pos[0], $pos[1]);
-      $socialcalc['highlights'] = array(socialcalc_cr_to_coord($pos[0], $pos[1]) => 'cursor');
+      
+      // Adjust row and column panes.
+      $panes = $tangent == SHEETNODE_EXPANSION_VERTICAL ? 'rowpanes' : 'colpanes';
+      foreach ($socialcalc['edit'][$panes] as $i => $pane) {
+        $delta = 0;
+        if (!empty($fields)) foreach ($fields as $field) {
+          if ($pane['last'] > $field['cell']['pos'][$normal]) {
+            $delta = max($delta, $field['endpos'][$normal] - $field['cell']['pos'][$normal]); 
+          }
+        }
+        if ($ecell_changed) {
+          $socialcalc['edit'][$panes][$i]['first'] += $delta;
+          $socialcalc['edit'][$panes][$i]['last']  += $delta;
+        }
+      }
     }
     else {
       // Hand-make default SocialCalc structure based on views results.
