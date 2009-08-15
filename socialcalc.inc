@@ -655,7 +655,7 @@ function socialcalc_cellformat_parsefont($cell, $sheet) {
 function socialcalc_cellformat_parsecolor($cell, $sheet, $color) {
   if (!isset($cell[$color])) return FALSE;
   $parts = array();
-  preg_match('/^rgb\((\d+?),(\d+?),(\d+?)\)\s*$/', $sheet['colors'][$cell[$color]], $parts);
+  preg_match('/^rgb\((\d+?),\s*(\d+?),\s*(\d+?)\)\s*$/', $sheet['colors'][$cell[$color]], $parts);
   return array(
     'r' => intval($parts[1]),
     'g' => intval($parts[2]),
