@@ -557,7 +557,7 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
       _sheetnode_xls_import_font($workbook, $font, $sc, $sheetnode);
       
       $fonthash = $sc['fonthash'][_sheetnode_xls_get_fontstyle($font)];
-      if ($fonthash != $sc['attribs']['defaultfont']) $c['font'] = $fonthash;
+      if (!isset($sc['attribs']['defaultfont']) || $fonthash != $sc['attribs']['defaultfont']) $c['font'] = $fonthash;
     }
     
     // Borders
@@ -578,7 +578,7 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
 
     // Layout (padding + vertical alignment)
     $layouthash = $sc['layouthash'][_sheetnode_xls_get_layout($cellstyle)];
-    if ($layouthash != $sc['attribs']['defaultlayout']) $c['layout'] = $layouthash;
+    if (!isset($sc['attribs']['defaultlayout']) || $layouthash != $sc['attribs']['defaultlayout']) $c['layout'] = $layouthash;
 
     // Color
     $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font));
@@ -598,7 +598,7 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
     $ntvf = _sheetnode_xls_get_valueformat(java_values($cellstyle->getDataFormatString()));
     if ($ntvf) {
       $ntvfhash = $sc['valueformathash'][$ntvf];
-      if ($ntvfhash != $sc['attribs']['defaultnontextvalueformat']) $c['nontextvalueformat'] = $ntvfhash;
+      if (!isset($sc['attribs']['defaultnontextvalueformat']) || $ntvfhash != $sc['attribs']['defaultnontextvalueformat']) $c['nontextvalueformat'] = $ntvfhash;
     }
   }
 
