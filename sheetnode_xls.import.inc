@@ -610,7 +610,7 @@ function _sheetnode_xls_import_font($workbook, $font, &$sc, $sheetnode) {
 
   $fontstyle = _sheetnode_xls_get_fontstyle($font);
   if (!isset($sc['fonthash'][$fontstyle])) {
-    $index = count($sc['fonts'])+1;
+    $index = isset($sc['fonts']) ? count($sc['fonts'])+1 : 0;
     $sc['fonts'][$index] = $fontstyle;
     $sc['fonthash'][$fontstyle] = $index;
   }
@@ -643,7 +643,7 @@ function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode
   // Layout (padding + vertical alignment)
   $layout = _sheetnode_xls_get_layout($cellstyle);
   if (!isset($sc['layouthash'][$layout])) {
-    $index = count($sc['layouts'])+1;
+    $index = isset($sc['layouts']) ? count($sc['layouts'])+1 : 0;
     $sc['layouts'][$index] = $layout;
     $sc['layouthash'][$layout] = $index;
   }
