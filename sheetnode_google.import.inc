@@ -190,10 +190,31 @@ function _sheetnode_google_import_do($spreadsheetService, $spreadsheet, $workshe
     
     $worksheet_key = array_pop(explode('/', $worksheet->id->text));
     $spreadsheet_key = array_pop(explode('/', $spreadsheet->id->text));
-    $query = new Zend_Gdata_Spreadsheets_CellQuery();
-    $query->setSpreadsheetKey($spreadsheet_key);
-    $query->setWorksheetId($worksheet_key);
-    $cells = $spreadsheetService->getCellFeed($query);
+    $row = 0;
+    $page = 100; // TODO: Compute a number instead of choosing an arbitrary one
+                 // We're paging because attempting to retrieve large sheets in one go
+                 // exhausts the memory.
+    $cell = array();
+    while ($row < $sc['attribs']['lastrow']-1) {
+      $query = new Zend_Gdata_Spreadsheets_CellQuery();
+      $query->setSpreadsheetKey($spreadsheet_key);
+      $query->setWorksheetId($worksheet_key);
+      $query->setMinRow($row);
+      $query->setMaxRow(min($sc['attribs']['lastrow']-1, $row+$page));
+      $feed = $spreadsheetService->getCellFeed($query);
+
+      foreach ($feed as $entry) {
+        $cells[] = array(
+          'col' => $entry->getCell()->getColumn(),
+          'row' => $entry->getCell()->getRow(),
+          'value' => $entry->getCell()->getInputValue(),
+          'numeric' => $entry->getCell()->getNumericValue(),
+          'content' => $entry->content->text,
+        );
+      }
+
+      $row += $page;
+    }
   }
   catch (Exception $e) {
     $msg = 'An error occurred when opening the worksheet. The error was:<br />%error';
@@ -206,10 +227,10 @@ function _sheetnode_google_import_do($spreadsheetService, $spreadsheet, $workshe
   if ($cells) foreach ($cells as $cell) {
     try {
       $c = array();
-      $c['pos'] = array($cell->getCell()->getColumn(), $cell->getCell()->getRow());
-      $value = $cell->getCell()->getInputValue();
-      $numeric = $cell->getCell()->getNumericValue();
-      $content = $cell->content->text;
+      $c['pos'] = array($cell['col'], $cell['row']);
+      $value = $cell['value'];
+      $numeric = $cell['numeric'];
+      $content = $cell['content'];
       if ($value[0] == '=') { // formula
         $c['datatype'] = 'f';
         $c['valuetype'] = $numeric ? 'n' : 't';
