@@ -295,18 +295,21 @@ function _sheetnode_google_import_formula_replace_coords($matches) {
 }
 
 function _sheetnode_google_import_infer_valueformat(&$sc, &$c, $value) {
-  // Infer the number format by finding non-digit characters.
-  // Then append those chars to the standard numeric format (#,##00).
   $matches = array();
-  if (!preg_match('/[^\d.,]+/', $value, $matches)) return;
-  $valueformat = '#,##0'; // default format
-  $pos = strpos($value, $matches[0]);
-  if ($pos == 0) { 
-    $valueformat = $matches[0] . $valueformat;
-  } else { // put it at the end
-    $valueformat = $valueformat . $matches[0];
+  if (preg_match('/[^\d.,]+/', $value, $matches,  PREG_OFFSET_CAPTURE)) {
+    $valueformat = '#,##0.00';
+    if ($matches[0][1] == 0) {
+      $valueformat = $matches[0][0] . $valueformat;
+    }
+    else {
+      $valueformat = $valueformat . $matches[0][0];
+    }
   }
-  
+  else if (preg_match('/^\d{1,2}([-\/\s])\d{1,2}\1\d{2,4}$/', $value, $matches)) {
+    $valueformat = 'mm'. $matches[1] .'dd'. $matches[1] .'yyyy';
+  }
+  else return;
+
   // Create the value format and attach it to the cell.
   if (!isset($sc['valueformathash'][$valueformat])) {
     $index = count(@$sc['valueformats'])+1;
