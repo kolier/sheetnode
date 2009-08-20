@@ -64,6 +64,8 @@ function _sheetnode_xls_import_form_validate($form, &$form_state) {
 }
 
 abstract class SheetnodeXLS {
+  protected $_workbook;
+  
   public static function create($workbook) {
     if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) {
       return new SheetnodeHSSF($workbook);
@@ -89,29 +91,13 @@ abstract class SheetnodeXLS {
   abstract public function importFormula($cell, &$c);
   abstract public function importColor($color);
   abstract protected function importProperties();
-
-  private $_cellstyles = array();
-  public function existsCellstyle($cellstyle) {
-    $index = java_values($cellstyle->getIndex()); 
-    if (isset($this->_cellstyles[$index])) return true;
-    $this->_cellstyles[$index] = true;
-    return false;
-  }
-
-  private $_fonts = array();
-  public function existsFont($font) {
-    $index = java_values($font->getIndex());
-    if (isset($this->_fonts[$index])) return true;
-    $this->_fonts[$index] = true;
-    return false;
-  }
-
-  protected $_workbook;
 }
 
 class SheetnodeHSSF extends SheetnodeXLS {
   public function SheetnodeHSSF($workbook) {
     $this->_workbook = $workbook;
+    $automatic = new java_class('org.apache.poi.hssf.util.HSSFColor$AUTOMATIC');
+    $this->_automatic = java_values($automatic->index); 
   }
   protected function importProperties() {
     $properties = array();
@@ -207,13 +193,16 @@ class SheetnodeHSSF extends SheetnodeXLS {
       break;
     }
   }
+  private $_colors;
+  private $_automatic;
   public function importColor($color) {
     $index = java_values($color);
     if ($index == java_values(org_apache_poi_hssf_usermodel_HSSFFont::type()->COLOR_NORMAL)) return FALSE;
-    $automatic = new java_class('org.apache.poi.hssf.util.HSSFColor$AUTOMATIC');
-    if ($index == java_values($automatic->index)) return FALSE;
+    if ($index == java_values($this->_automatic)) return FALSE;
+    if (isset($this->_colors[$index])) return $this->_colors[$index]; 
     $palette = $this->_workbook->getCustomPalette();
     $triplet = java_values($palette->getColor($index)->getTriplet());
+    $this->_colors[$index] = $triplet;
     return $triplet;
   }
 }
@@ -408,19 +397,19 @@ function _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode) {
   $sc['attribs']['lastcol'] = 1; // POI doesn't tell us last col, so we'll compute it
   
   // Rows
-  for ($rit = $sheet->rowIterator(); java_is_true($rit->hasNext()); ) {
+  for ($rit = $sheet->rowIterator(); java_is_TRUE($rit->hasNext()); ) {
     $row = $rit->next();
     $rowNum = intval(java_values($row->getRowNum()));
     $height = round(java_values($row->getHeightInPoints()), 2);
     if ($height != $sc['attribs']['defaultrowheight']) {
       $sc['rowattribs']['height'][$rowNum+1] = $height;
     }
-    if (java_is_true($row->getZeroHeight())) {
-      $sc['rowattribs']['hide'][$rowNum+1] = true;
+    if (java_is_TRUE($row->getZeroHeight())) {
+      $sc['rowattribs']['hide'][$rowNum+1] = TRUE;
     }
 
     // Columns and cells
-    for ($cit = $row->cellIterator(); java_is_true($cit->hasNext()); ) {
+    for ($cit = $row->cellIterator(); java_is_TRUE($cit->hasNext()); ) {
       $cell = $cit->next();
 
       $colNum = intval(java_values($cell->getColumnIndex()));
@@ -428,8 +417,8 @@ function _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode) {
       if ($width > 0 && $width != $sc['attribs']['defaultcolwidth']) {
         $sc['colattribs']['width'][$colNum+1] = $width;
       }
-//      if (java_is_true($sheet->IsColumnHidden($colNum))) {
-//        $sc['colattribs']['hide'][$colNum+1] = true;
+//      if (java_is_TRUE($sheet->IsColumnHidden($colNum))) {
+//        $sc['colattribs']['hide'][$colNum+1] = TRUE;
 //      }
       
       // Last column
@@ -458,7 +447,7 @@ function _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode) {
     $definition = str_replace("$sheetname!", '', $definition);
     $sc['names'][java_values($name->getNameName())] = array(
       'desc' => '',
-      'definition' => (java_is_true($name->isFunctionName()) ? '=' : ''). $definition,
+      'definition' => (java_is_TRUE($name->isFunctionName()) ? '=' : ''). $definition,
     );
   }
 
@@ -506,7 +495,7 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
         }
         $font = $r == 0 ? $sheetnode->getFont($cell->getCellStyle()) : $sheetnode->getFontOfFormattingRun($rtf, $r-1);
         $fontstyle = 'font:'. _sheetnode_xls_get_fontstyle($font) .';';
-        $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font), true);
+        $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font), TRUE);
         $colorstyle = $color ? 'color:'. $color .';': '';
         $c['datavalue'] .= "<span style=\"$fontstyle$colorstyle\">". substr($text, $i, $j-$i) .'</span>';
         $i = $j;
@@ -515,10 +504,12 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
 
       // Add text-html format
       $valueformat = 'text-html';
-      if (!($index = $sc['valueformathash'][$valueformat])) {
-        $index = count($sc['valueformats'])+1;
+      if (!isset($sc['valueformathash'][$valueformat])) {
+        $index = isset($sc['valueformats']) ? count($sc['valueformats'])+1 : 1;
         $sc['valueformats'][$index] = $valueformat;
         $sc['valueformathash'][$valueformat] = $index;
+      } else {
+        $index = $sc['valueformathash'][$valueformat];
       }
       $c['textvalueformat'] = $index;
     }
@@ -557,7 +548,7 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
       _sheetnode_xls_import_font($workbook, $font, $sc, $sheetnode);
       
       $fonthash = $sc['fonthash'][_sheetnode_xls_get_fontstyle($font)];
-      if (!isset($sc['attribs']['defaultfont']) || $fonthash != $sc['attribs']['defaultfont']) $c['font'] = $fonthash;
+      $c['font'] = $fonthash;
     }
     
     // Borders
@@ -578,27 +569,27 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
 
     // Layout (padding + vertical alignment)
     $layouthash = $sc['layouthash'][_sheetnode_xls_get_layout($cellstyle)];
-    if (!isset($sc['attribs']['defaultlayout']) || $layouthash != $sc['attribs']['defaultlayout']) $c['layout'] = $layouthash;
+    $c['layout'] = $layouthash;
 
     // Color
     $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font));
     if ($color) {
       $colorhash = $sc['colorhash'][$color];
-      if ($colorhash != $sc['attribs']['defaultcolor']) $c['color'] = $colorhash;
+      $c['color'] = $colorhash;
     }
 
     // Background color
     $bgcolor = _sheetnode_xls_get_color($sheetnode, $sheetnode->getFillForegroundColor($cellstyle));
     if ($bgcolor) {
       $bgcolorhash = $sc['colorhash'][$bgcolor];
-      if ($bgcolorhash != $sc['attribs']['defaultbgcolor']) $c['bgcolor'] = $bgcolorhash;
+      $c['bgcolor'] = $bgcolorhash;
     }
     
     // Non-text value format
     $ntvf = _sheetnode_xls_get_valueformat(java_values($cellstyle->getDataFormatString()));
     if ($ntvf) {
       $ntvfhash = $sc['valueformathash'][$ntvf];
-      if (!isset($sc['attribs']['defaultnontextvalueformat']) || $ntvfhash != $sc['attribs']['defaultnontextvalueformat']) $c['nontextvalueformat'] = $ntvfhash;
+      $c['nontextvalueformat'] = $ntvfhash;
     }
   }
 
@@ -606,26 +597,22 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
 }
 
 function _sheetnode_xls_import_font($workbook, $font, &$sc, $sheetnode) {
-  if ($sheetnode->existsFont($font)) return;
-
   $fontstyle = _sheetnode_xls_get_fontstyle($font);
   if (!isset($sc['fonthash'][$fontstyle])) {
-    $index = isset($sc['fonts']) ? count($sc['fonts'])+1 : 0;
+    $index = isset($sc['fonts']) ? count($sc['fonts'])+1 : 1;
     $sc['fonts'][$index] = $fontstyle;
     $sc['fonthash'][$fontstyle] = $index;
   }
   
   $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font));
   if ($color && !isset($sc['colorhash'][$color])) {
-    $index = count($sc['colors'])+1;
+    $index = isset($sc['colors']) ? count($sc['colors'])+1 : 1;
     $sc['colors'][$index] = $color;
     $sc['colorhash'][$color] = $index;
   }
 }
 
 function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode) {
-  if ($sheetnode->existsCellstyle($cellstyle)) return;
-
   // Border styles
   _sheetnode_xls_import_borderstyle($workbook, $cellstyle, 'Top', $sc, $sheetnode);
   _sheetnode_xls_import_borderstyle($workbook, $cellstyle, 'Right', $sc, $sheetnode);
@@ -635,7 +622,7 @@ function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode
   // Cell format (horizontal alignment)
   $cellformat = _sheetnode_xls_get_cellformat($cellstyle);
   if ($cellformat && !isset($sc['cellformathash'][$cellformat])) {
-    $index = count($sc['cellformats'])+1;
+    $index = isset($sc['cellformats']) ? count($sc['cellformats'])+1 : 1;
     $sc['cellformats'][$index] = $cellformat;
     $sc['cellformathash'][$cellformat] = $index;
   }
@@ -643,7 +630,7 @@ function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode
   // Layout (padding + vertical alignment)
   $layout = _sheetnode_xls_get_layout($cellstyle);
   if (!isset($sc['layouthash'][$layout])) {
-    $index = isset($sc['layouts']) ? count($sc['layouts'])+1 : 0;
+    $index = isset($sc['layouts']) ? count($sc['layouts'])+1 : 1;
     $sc['layouts'][$index] = $layout;
     $sc['layouthash'][$layout] = $index;
   }
@@ -651,7 +638,7 @@ function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode
   // Background color
   $bgcolor = _sheetnode_xls_get_color($sheetnode, $sheetnode->getFillForegroundColor($cellstyle));
   if ($bgcolor && !isset($sc['colorhash'][$bgcolor])) {
-    $index = count($sc['colorhash'])+1;
+    $index = isset($sc['colorhash']) ? count($sc['colorhash'])+1 : 1;
     $sc['colors'][$index] = $bgcolor;
     $sc['colorhash'][$bgcolor] = $index;
   }
@@ -659,7 +646,7 @@ function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode
   // Value format
   $valueformat = _sheetnode_xls_get_valueformat(java_values($cellstyle->getDataFormatString()));
   if ($valueformat && !isset($sc['valueformathash'][$valueformat])) {
-    $index = count($sc['valueformats'])+1;
+    $index = isset($sc['valueformats']) ? count($sc['valueformats'])+1 : 1;
     $sc['valueformats'][$index] = $valueformat;
     $sc['valueformathash'][$valueformat] = $index;
   }
@@ -668,14 +655,14 @@ function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode
 function _sheetnode_xls_import_borderstyle($workbook, $cellstyle, $pos, &$sc, $sheetnode) {
   $borderstyle = _sheetnode_xls_get_borderstyle($workbook, $cellstyle, $pos, $sheetnode);
   if ($borderstyle && !isset($sc['borderstylehash'][$borderstyle])) {
-    $index = count($sc['borderstyles'])+1;
+    $index = isset($sc['borderstyles']) ? count($sc['borderstyles'])+1 : 1;
     $sc['borderstyles'][$index] = $borderstyle;
     $sc['borderstylehash'][$borderstyle] = $index;
   }
 }
 
 function _sheetnode_xls_get_fontstyle($font) {
-  return (java_is_true($font->getItalic()) ? 'italic' : 'normal') .' '.
+  return (java_is_TRUE($font->getItalic()) ? 'italic' : 'normal') .' '.
          (java_values($font->getBoldWeight()) == java_values(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD) ? 'bold' : 'normal') .' '.
           java_values($font->getFontHeightInPoints()) .'pt '.
           java_values($font->getFontName());
@@ -727,12 +714,14 @@ function _sheetnode_xls_get_layout($cellstyle) {
   );
   $valignment = $valignments[java_values($cellstyle->getVerticalAlignment())];
   $padding_left = java_values($cellstyle->getIndention()) * WIDTH_CHAR_TO_PX; // simulate indentation with padding
-  return 'padding:* * * '. $padding_left .'px;vertical-align:'. $valignment .';';
+  $padding_left = empty($padding_left) ? '*' : $padding_left . 'px';
+  return 'padding:* * * '. $padding_left .';vertical-align:'. $valignment .';';
 }
 
-function _sheetnode_xls_get_valueformat($dataformat) {
-  if (strtolower($dataformat) == 'general') return FALSE;
-  return $dataformat;
+function _sheetnode_xls_get_valueformat($valueformat) {
+  if (strtolower($valueformat) == 'general') return FALSE;
+  $valueformat = str_replace(';@', '', $valueformat);
+  return strtolower($valueformat);
 }
 
 function _sheetnode_xls_get_color($sheetnode, $color, $hex = FALSE) {
