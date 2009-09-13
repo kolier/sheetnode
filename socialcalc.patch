@@ -1,8 +1,8 @@
-Common subdirectories: DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/images and socialcalc/images
-diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialcalc-3.js socialcalc/socialcalc-3.js
---- DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialcalc-3.js	2009-06-21 18:31:18.000000000 -0700
-+++ socialcalc/socialcalc-3.js	2009-06-23 12:18:58.000000000 -0700
-@@ -4283,6 +4283,7 @@
+Common subdirectories: DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/images and socialcalc/images
+diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalc-3.js socialcalc/socialcalc-3.js
+--- DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalc-3.js	2009-09-09 12:45:47.000000000 -0700
++++ socialcalc/socialcalc-3.js	2009-09-13 11:52:13.000000000 -0700
+@@ -4493,6 +4493,7 @@
     if (num) stylestr+="border-left:"+sheetobj.borderstyles[num]+";";
  
     if (cell.comment) {
@@ -10,7 +10,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        if (context.showGrid) {
           if (context.commentClassName) {
              result.className = (result.className ? result.className+" " : "") + context.commentClassName;
-@@ -4583,6 +4584,47 @@
+@@ -4793,6 +4794,47 @@
     }
  
  //
@@ -58,10 +58,10 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
  // LookupElement(element, array) - returns array element which is an object with "element" of element
  //
  
-diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
---- DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialcalcspreadsheetcontrol.js	2009-06-21 18:31:18.000000000 -0700
-+++ socialcalc/socialcalcspreadsheetcontrol.js	2009-06-23 12:18:58.000000000 -0700
-@@ -2656,6 +2656,7 @@
+diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
+--- DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalcspreadsheetcontrol.js	2009-09-09 12:45:47.000000000 -0700
++++ socialcalc/socialcalcspreadsheetcontrol.js	2009-09-13 11:52:13.000000000 -0700
+@@ -2707,6 +2707,7 @@
     var s=SocialCalc.GetSpreadsheetControlObject();
     s.ExecuteCommand("set %C comment "+SocialCalc.encodeForSave(document.getElementById(s.idPrefix+"commenttext").value));
     var cell=SocialCalc.GetEditorCellElement(s.editor, s.editor.ecell.row, s.editor.ecell.col);
@@ -69,9 +69,9 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
     s.editor.UpdateCellCSS(cell, s.editor.ecell.row, s.editor.ecell.col);
     SocialCalc.KeyboardFocus();
     }
-diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
---- DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialcalctableeditor.js	2009-06-21 18:31:18.000000000 -0700
-+++ socialcalc/socialcalctableeditor.js	2009-06-23 12:18:58.000000000 -0700
+diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
+--- DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalctableeditor.js	2009-09-09 12:45:47.000000000 -0700
++++ socialcalc/socialcalctableeditor.js	2009-09-13 11:52:13.000000000 -0700
 @@ -366,6 +366,9 @@
  
     this.range2 = {hasrange: false};
@@ -82,7 +82,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
     }
  
  // Methods:
-@@ -1352,8 +1355,8 @@
+@@ -1354,8 +1357,8 @@
     sizedisplay.style.width = "auto";
     sizedisplay.style.position = "absolute";
     sizedisplay.style.zIndex = 100;
@@ -93,7 +93,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
     sizedisplay.innerHTML = '<table cellpadding="0" cellspacing="0"><tr><td style="height:100px;'+
        'border:1px dashed black;background-color:white;width:' +
        (editor.context.colwidth[mouseinfo.mouseresizecolnum]-2) + 'px;">&nbsp;</td>'+
-@@ -1899,8 +1902,8 @@
+@@ -1901,8 +1904,8 @@
           delete result.coltoresize;
           return result;
           }
@@ -104,7 +104,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
                 clientX < editor.gridposition.left || clientY <= editor.gridposition.top) {
           return result;
           }
-@@ -2535,6 +2538,9 @@
+@@ -2537,6 +2540,9 @@
     editor.lastnonscrollingcol = editor.context.colpanes.length-1 > 0 ?
           editor.context.colpanes[editor.context.colpanes.length-2].last : 0;
  
@@ -114,7 +114,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
     // Now do the table controls
  
     editor.verticaltablecontrol.ComputeTableControlPositions();
-@@ -3193,8 +3199,8 @@
+@@ -3195,8 +3201,8 @@
        cell=SocialCalc.GetEditorCellElement(editor, editor.ecell.row, editor.ecell.col);
        if (cell) {
           position = SocialCalc.GetElementPosition(cell.element);
@@ -125,7 +125,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
           }
        inputecho.container.style.display = "block";
        if (inputecho.interval) window.clearInterval(inputecho.interval); // just in case
-@@ -3518,7 +3524,7 @@
+@@ -3520,7 +3526,7 @@
  
     var control = bobj.functionobj.control;
     var bposition = SocialCalc.GetElementPosition(bobj.element);
@@ -134,7 +134,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
     if (control.editor.busy) { // ignore if busy - wait for next repeat
        return;
        }
-@@ -3593,26 +3599,27 @@
+@@ -3595,26 +3601,27 @@
  SocialCalc.ComputeTableControlPositions = function(control) {
  
     var editor = control.editor;
@@ -174,7 +174,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        control.scrollareaend = control.morebuttonstart-1;
        control.scrollareasize = control.scrollareaend-control.scrollareastart+1;
        }
-@@ -3644,8 +3651,8 @@
+@@ -3646,8 +3653,8 @@
  
     if (dobj.vertical) {
        row = SocialCalc.Lookup(draginfo.clientY+dobj.functionobj.control.sliderthickness, editor.rowpositions);
@@ -185,7 +185,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        if (editor.context.rowpanes.length-1) { // has 2 already
           editor.context.SetRowPaneFirstLast(1, editor.context.rowpanes[0].last+1, editor.context.rowpanes[0].last+1);
           editor.FitToEditTable();
-@@ -3654,8 +3661,8 @@
+@@ -3656,8 +3663,8 @@
        }
     else {
        col = SocialCalc.Lookup(draginfo.clientX+dobj.functionobj.control.sliderthickness, editor.colpositions);
@@ -196,7 +196,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        if (editor.context.colpanes.length-1) { // has 2 already
           editor.context.SetColPaneFirstLast(1, editor.context.colpanes[0].last+1, editor.context.colpanes[0].last+1);
           editor.FitToEditTable();
-@@ -3681,20 +3688,20 @@
+@@ -3683,20 +3690,20 @@
     if (dobj.vertical) {
        max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetY; // restrict movement
        if (draginfo.clientY > max) draginfo.clientY = max;
@@ -221,7 +221,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        }
  
     SocialCalc.DragFunctionPosition(event, draginfo, dobj);
-@@ -3715,7 +3722,7 @@
+@@ -3717,7 +3724,7 @@
     if (dobj.vertical) {
        max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetY; // restrict movement
        if (draginfo.clientY > max) draginfo.clientY = max;
@@ -230,7 +230,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        if (draginfo.clientY < min) draginfo.clientY = min;
  
        row = SocialCalc.Lookup(draginfo.clientY+sliderthickness, editor.rowpositions);
-@@ -3737,7 +3744,7 @@
+@@ -3739,7 +3746,7 @@
     else {
        max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetX;
        if (draginfo.clientX > max) draginfo.clientX = max;
@@ -239,7 +239,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        if (draginfo.clientX < min) draginfo.clientX = min;
  
        col = SocialCalc.Lookup(draginfo.clientX+sliderthickness, editor.colpositions);
-@@ -3792,7 +3799,7 @@
+@@ -3794,7 +3801,7 @@
     if (dobj.vertical) {
        if (scc.TCTDFSthumbstatusvClass) draginfo.thumbstatus.className = scc.TCTDFSthumbstatusvClass;
        SocialCalc.setStyles(draginfo.thumbstatus, scc.TCTDFSthumbstatusvStyle);
@@ -248,7 +248,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        draginfo.thumbstatus.style.left = (control.controlborder-10-(editor.tablewidth/2))+"px";
        draginfo.thumbstatus.style.width = (editor.tablewidth/2)+"px";
  
-@@ -3813,7 +3820,7 @@
+@@ -3815,7 +3822,7 @@
        if (scc.TCTDFSthumbstatushClass) draginfo.thumbstatus.className = scc.TCTDFSthumbstatushClass;
        SocialCalc.setStyles(draginfo.thumbstatus, scc.TCTDFSthumbstatushStyle);
        draginfo.thumbstatus.style.top = (control.controlborder+scc.TCTDFStopOffseth)+"px";
@@ -257,7 +257,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
        editor.toplevel.appendChild(draginfo.thumbstatus);
        draginfo.thumbstatus.innerHTML = scc.s_TCTDFthumbstatusPrefixh+SocialCalc.rcColname(editor.firstscrollingcol);
        }
-@@ -3859,7 +3866,7 @@
+@@ -3861,7 +3868,7 @@
           draginfo.clientY = control.scrollareaend - draginfo.offsetY - control.thumbthickness + 2;
        if (draginfo.clientY < control.scrollareastart - draginfo.offsetY - 1)
           draginfo.clientY = control.scrollareastart - draginfo.offsetY - 1;
@@ -266,7 +266,7 @@ diff -uP DanBricklin-socialcalc-dc908a15ae31a450dbe5865dde14a8e3d69cb7f2/socialc
  
        first =
           ((draginfo.clientY+draginfo.offsetY-control.scrollareastart+1)/(control.scrollareasize-control.thumbthickness))
-@@ -3878,7 +3885,7 @@
+@@ -3880,7 +3887,7 @@
           draginfo.clientX = control.scrollareaend - draginfo.offsetX - control.thumbthickness + 2;
        if (draginfo.clientX < control.scrollareastart - draginfo.offsetX - 1)
           draginfo.clientX = control.scrollareastart - draginfo.offsetX - 1;
