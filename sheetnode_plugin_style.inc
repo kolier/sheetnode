@@ -34,10 +34,10 @@ class sheetnode_plugin_style extends views_plugin_style {
                            To place view results in the template, use the following syntax in the cells:
                            <ul>
                            <li><code>${field_label}</code> to indicate that this cell and subsequent ones should be filled with values of this field.</li>
-                           <li><code>${FUNCTION(@field_label@, @cell_ref@, ...)}</code> to indicate that this cell and subsequent ones should be filled with a calculation.
-                           Field names are replaced with the corresponding cell references, which are adjusted according to the expanded results.</li>
-                           <li><code>$[FUNCTION(@field_label@, @cell_ref@, ...)]</code> to indicate that a calculation should be placed in this cell. 
-                           Field names are replaced with the corresponding cell ranges, and cell references are adjusted according to the expanded results.</li>
+                           <li><code>${FUNCTION(@field_label@, $field_label$, @cell_reference@, ...)}</code> to indicate that this cell and subsequent ones should be filled with a calculation.
+                           <code>@field_label@</code> are replaced with the corresponding cell references, and <code>$field_label$</code> are replaced with actual field values.</li>
+                           <li><code>$[FUNCTION(@field_label@, @cell_reference@, ...)]</code> to indicate that a calculation should be placed in this cell. 
+                           <code>@field_label@</code> are replaced with the corresponding cell ranges.</li>
                            </ul>'),
       '#default_value' => $this->options['template'],
       '#weight' => 98,
@@ -131,17 +131,18 @@ EOS;
         $newcell = $fe['cell'];
         $pos = $newcell['pos'];
         $matches = array();
-        $count = preg_match_all('/@(.*?)@/', $fe['expression'], $matches);
+        $count = preg_match_all('/@(.*?)@|\$(.*?)\$/', $fe['expression'], $matches);
         foreach ($this->view->result as $j => $result) {
           $expression = $fe['expression'];
           $newcell['pos'] = $pos;
           for ($i=0; $i<$count; $i++) {
             $replace = NULL;
-            $field_name = $this->get_real_field_name($matches[1][$i]);
+            $match = !empty($matches[1][$i]) ? $matches[1][$i] : $matches[2][$i];
+            $field_name = $this->get_real_field_name($match);
             if (!$field_name || !isset($fields[$field_name])) {
               // Not a field: try a cell coordinate.
-              if (preg_match('/^\$?\w\w?\$?\d+$/', $matches[1][$i])) {
-                $refpos = socialcalc_coord_to_cr($matches[1][$i]);
+              if (preg_match('/^\$?\w\w?\$?\d+$/', $match)) {
+                $refpos = socialcalc_coord_to_cr($match);
                 foreach ($fields as $field) {
                   if ($refpos == $field['cell']['pos']) {
                     $replace = socialcalc_cr_to_coord(
@@ -153,12 +154,17 @@ EOS;
                 }
               }
             } else {
-              $replace = socialcalc_cr_to_coord(
-                $fields[$field_name]['cell']['pos'][0]+($j*$tangent_increment[$tangent]),
-                $fields[$field_name]['cell']['pos'][1]+($j*$tangent_increment[$normal])
-              );
+              if ($matches[0][$i][0] == '@') {
+                $replace = socialcalc_cr_to_coord(
+                  $fields[$field_name]['cell']['pos'][0]+($j*$tangent_increment[$tangent]),
+                  $fields[$field_name]['cell']['pos'][1]+($j*$tangent_increment[$normal])
+                );
+              }
+              else {
+                $replace = $fields[$field_name]['info']->theme($result);
+              }
             }
-            if ($replace) {
+            if (!is_null($replace)) {
               $expression = str_replace($matches[0][$i], $replace, $expression);
             }
           }
