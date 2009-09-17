@@ -161,7 +161,7 @@ EOS;
                 );
               }
               else {
-                $replace = $fields[$field_name]['info']->theme($result);
+                $replace = $result->{$fields[$field_name]['info']->field_alias};
               }
             }
             if (!is_null($replace)) {
