@@ -31,3 +31,71 @@ function sheetnode_views_plugins() {
   );
 }
 
+/**
+ * Implementation of hook_views_handlers().
+ */
+function sheetnode_views_handlers() {
+  return array(
+    'info' => array(
+      'path' => drupal_get_path('module', 'sheetnode'),
+    ),
+    'handlers' => array(
+      'sheetnode_handler_field_cell' => array(
+        'parent' => 'views_handler_field',
+      ),
+      'sheetnode_handler_field_range' => array(
+        'parent' => 'views_handler_field',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_views_data().
+ */
+function sheetnode_views_data() {
+  // Basic table information.
+  $data['sheetnode']['table']['group']  = t('Sheetnode');
+
+  // Explain how we join.
+  $data['sheetnode']['table']['join'] = array(
+    // Directly links to node table.
+    'node' => array(
+      'left_field' => 'nid',
+      'field' => 'nid',
+    ),
+  );
+
+  // Sheetnode field.
+  $data['sheetnode']['content'] = array(
+    'title' => t('Content'),
+    'help' => t('The raw content of the sheetnode.'),
+    'field' => array(
+      'field' => 'value',
+      'handler' => 'views_handler_field',
+    ),
+  );
+
+  // Cell field.
+  $data['sheetnode']['cell'] = array(
+    'title' => t('Cell'),
+    'help' => t('The value stored in a specific sheetnode cell.'),
+    'field' => array(
+      'field' => 'value',
+      'handler' => 'sheetnode_handler_field_cell',
+    ),
+  );
+
+  // Range field.
+  $data['sheetnode']['range'] = array(
+    'title' => t('Range'),
+    'help' => t('The values stored in a range of cells, including whole columns or whole rows.'),
+    'field' => array(
+      'field' => 'value',
+      'handler' => 'sheetnode_handler_field_range',
+    ),
+  );
+
+  return $data;
+}
+

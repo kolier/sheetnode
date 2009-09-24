@@ -300,6 +300,44 @@ function sheetnode_views_api() {
   );
 }
 
+/**
+ * Implementation of hook_theme().
+ */
+function sheetnode_theme($existing, $type, $theme, $path) {
+  return array(
+    'sheetnode_range' => array(
+      'arguments' => array('range' => NULL),
+    ),
+  );
+}
+
+function theme_sheetnode_range($range) {
+  if (empty($range)) return '';
+  require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
+  list($c, $r) = socialcalc_coord_to_cr(key($range));
+  $row = array();
+  $row[] = array('data' => $r, 'header' => TRUE);
+  $header = array();
+  $header[] = array();
+  $rows = array();
+  foreach ($range as $coord => $value) {
+    $pos = socialcalc_coord_to_cr($coord);
+    if ($pos[1] > $r) {
+      $rows[] = $row;
+      $r = $pos[1];
+      $row = array();
+      $row[] = array('data' => $r, 'header' => TRUE);
+    }
+    $row[] = $value;
+    if (empty($rows)) {
+      $coord = socialcalc_cr_to_coord($pos[0], $pos[1], TRUE);
+      $header[] = $coord[0];
+    }
+  }
+  $rows[] = $row;
+  return theme('table', $header, $rows);
+}
+
 function _sheetnode_ajax_value($nid = NULL, $cells = NULL) {
   require_once(drupal_get_path('module', 'sheetnode') .'/sheetnode.api.inc');
   if (!$nid) $nid = $_REQUEST['nid'];
