@@ -14,6 +14,7 @@ class sheetnode_handler_field_cell extends views_handler_field {
       '#type' => 'textfield',
       '#title' => t('Cell reference'),
       '#default_value' => $this->options['reference'],
+      '#description' => t('Use a cell coordinate such as A1 to refer to a specific cell.'),
     );
   }
 

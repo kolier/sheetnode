@@ -388,7 +388,7 @@ function socialcalc_parse_values($data) {
 
 function socialcalc_parse_cell_value($parts, $j) {
   $cell = array();
-  while ($t = $parts[$j++]) {
+  while ($t = @$parts[$j++]) {
     switch ($t) {
     case "v":
       $cell['datavalue'] = doubleval(socialcalc_decode_value($parts[$j++]));
