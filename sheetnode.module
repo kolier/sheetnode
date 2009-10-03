@@ -18,7 +18,7 @@ function sheetnode_node_info() {
  * Implementation of hook_perm().
  */
 function sheetnode_perm() {
-  return array('create sheetnode', 'edit own sheetnode', 'create sheet template');
+  return array('create sheetnode', 'edit own sheetnode', 'edit any sheetnode', 'create sheet template');
 }
 
 /**
@@ -30,7 +30,7 @@ function sheetnode_access($op, $node, $account) {
   }
 
   if ($op == 'update' || $op == 'delete') {
-    return user_access('edit own sheetnode', $account) && ($account->uid == $node->uid);
+    return user_access('edit any sheetnode', $account) || (user_access('edit own sheetnode', $account) && ($account->uid == $node->uid));
   }
 }
 
