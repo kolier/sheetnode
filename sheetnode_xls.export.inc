@@ -10,7 +10,7 @@ function _sheetnode_xls_export($type, $nid) {
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
 
-  return _sheetnode_xls_export_do($type, $node->title, socialcalc_parse(_sheetnode_load($nid)));
+  return _sheetnode_xls_export_do($type, $node->title, socialcalc_parse(_sheetnode_load($node->nid, $node->vid)));
 }
 
 function _sheetnode_xls_export_do($type, $title, $socialcalc) {

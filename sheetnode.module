@@ -73,7 +73,7 @@ function sheetnode_form(&$node) {
     $value = $_POST['sheetsave'];
   }
   else if (!empty($node->nid)) {
-    $value = _sheetnode_load($node->nid);
+    $value = _sheetnode_load($node->nid, $node->vid);
   }
   else {
     $value = '';
@@ -159,7 +159,7 @@ function _sheetnode_sanitize_js($value) {
  */
 function sheetnode_insert($node) {
   if ($node->sheetsave) {
-    _sheetnode_save($node->nid, $node->sheetsave);
+    _sheetnode_save($node->nid, $node->vid, $node->sheetsave);
   }
   if ($node->template && user_access('create sheet template')) {
     _sheetnode_template_save($node->template, $node->sheetsave);
@@ -171,7 +171,11 @@ function sheetnode_insert($node) {
  */
 function sheetnode_update($node) {
   if ($node->sheetsave) {
-    _sheetnode_save($node->nid, $node->sheetsave);
+    _sheetnode_save($node->nid, $node->vid, $node->sheetsave);
+  }
+  else if ($node->revision) {
+    // reverting a revision
+    db_query('INSERT INTO sheetnode (nid,vid,value) SELECT old.nid,%d,old.value FROM sheetnode AS old WHERE old.vid=%d',array($node->vid,$node->old_vid));
   }
   if ($node->template && user_access('create sheet template')) {
     _sheetnode_template_save($node->template, $node->sheetsave);
@@ -186,7 +190,7 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   
   // SocialCalc sheet.
   if (!$teaser) {
-    $value = _sheetnode_load($node->nid);
+    $value = _sheetnode_load($node->nid, $node->vid);
     $output = _sheetnode_inject($value, FALSE);
     $node->content['sheet']['#value'] = $output;
   }
@@ -203,7 +207,7 @@ function sheetnode_nodeapi($node, $op) {
   case 'update index':
     require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
     $output = '<table>';
-    $socialcalc = socialcalc_parse(_sheetnode_load($node->nid));
+    $socialcalc = socialcalc_parse(_sheetnode_load($node->nid, $node->vid));
     $sc = $socialcalc['sheet'];
     $row = -1;
     if (!empty($sc['cells'])) foreach ($sc['cells'] as $c) {
@@ -229,12 +233,7 @@ function sheetnode_nodeapi($node, $op) {
  */
 function sheetnode_menu() {
   $items = array();
-
-  $items['sheetnode/value'] = array(
-    'type' => MENU_CALLBACK,
-    'page callback' => '_sheetnode_ajax_value',
-    'access arguments' => array('access content'),
-  );
+  
   $items['sheetnode/load'] = array(
     'type' => MENU_CALLBACK,
     'page callback' => '_sheetnode_ajax_load',
@@ -338,23 +337,14 @@ function theme_sheetnode_range($range) {
   return theme('table', $header, $rows);
 }
 
-function _sheetnode_ajax_value($nid = NULL, $cells = NULL) {
-  require_once(drupal_get_path('module', 'sheetnode') .'/sheetnode.api.inc');
-  if (!$nid) $nid = $_REQUEST['nid'];
-  if (!$cells) $cells = $_REQUEST['cells'];
-  $cells = explode(';', $cells);
-  drupal_json(sheetnode_get_values($nid, $cells));
-  exit();
-}
-
-function _sheetnode_ajax_load($sheetname = NULL) {
+function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
   require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
   if (intval($sheetname) > 0) {
-    $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", intval($sheetname)));
+    $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d ORDER BY vid DESC LIMIT 1", intval($sheetname)));
   }
   else {
-    $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s'", db_escape_string(strtoupper($sheetname))));
+    $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s' ORDER BY s.vid DESC LIMIT 1", db_escape_string(strtoupper($sheetname))));
   }
   if ($value) {
     $parts = socialcalc_parse_parts($value);
@@ -365,14 +355,13 @@ function _sheetnode_ajax_load($sheetname = NULL) {
   exit();
 }
 
-function _sheetnode_load($nid) {
-  $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d", $nid));
+function _sheetnode_load($nid, $vid) {
+  $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d AND vid=%d", $nid, $vid));
   return $value ? unserialize($value) : NULL;
 }
 
-function _sheetnode_save($nid, $value) {
-  db_query("DELETE FROM {sheetnode} WHERE nid=%d", $nid);
-  db_query("INSERT INTO {sheetnode} (nid, value) VALUES (%d, '%s')", $nid, serialize(_sheetnode_sanitize_js($value)));
+function _sheetnode_save($nid, $vid, $value) {
+  db_query("INSERT INTO {sheetnode} (nid, vid, value) VALUES (%d, %d, '%s')", $nid, $vid, serialize(_sheetnode_sanitize_js($value)));
 }
 
 function _sheetnode_template_save($name, $value) {

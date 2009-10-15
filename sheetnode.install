@@ -18,6 +18,12 @@ function sheetnode_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE
       ),
+      'vid' => array(
+        'description' => t('The revision identifier for a node.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
       'value' => array(
         'description' => t('The serialized worksheet content.'),
         'type' => 'text',
@@ -25,7 +31,10 @@ function sheetnode_schema() {
         'not null' => TRUE,
       ),
     ),
-    'primary key' => array('nid'),
+    'primary key' => array('vid'),
+    'unique keys' => array(
+      'nid' => array('nid'),
+    ),
   );
   $schema['sheetnode_template'] = array(
     'fields' => array(
@@ -100,6 +109,20 @@ function sheetnode_update_6002(&$sandbox = NULL) {
       $ret[] = array('success' => FALSE !== db_query($sql, serialize(socialcalc_save($sc)), $template['tid']), 'query' => check_plain($sql));
     }
   }
+  return $ret;
+}
+
+function sheetnode_update_6003(&$sandbox = NULL) {
+  $ret = array();
+  $schema = sheetnode_schema();
+  db_add_field($ret, 'sheetnode', 'vid', $schema['sheetnode']['fields']['vid']);
+  
+  // set the vid of all existing sheetnode rows to the latest node_revisions.vid.
+  db_query('UPDATE {sheetnode} SET {sheetnode}.vid=(SELECT MAX(vid) FROM {node_revisions} WHERE {node_revisions}.nid={sheetnode}.nid GROUP BY {sheetnode}.nid)');
+  
+  db_drop_primary_key($ret, 'sheetnode');
+  db_add_primary_key($ret, 'sheetnode', array('vid'));
+  db_add_index($ret, 'sheetnode', 'nid', array('nid'));
   return $ret;
 }
 

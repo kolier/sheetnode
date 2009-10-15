@@ -61,8 +61,8 @@ function sheetnode_views_data() {
   $data['sheetnode']['table']['join'] = array(
     // Directly links to node table.
     'node' => array(
-      'left_field' => 'nid',
-      'field' => 'nid',
+      'left_field' => 'vid',
+      'field' => 'vid',
     ),
   );
 
