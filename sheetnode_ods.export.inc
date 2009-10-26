@@ -24,21 +24,20 @@ function _sheetnode_ods_cell_cmp($a, $b) {
 function _sheetnode_ods_export_do($title, $socialcalc) {
   $sc = $socialcalc['sheet'];
   $sheetname = $title;
-  $spreadsheet = org_odftoolkit_odfdom_doc_OdfSpreadsheetDocument::type()->createSpreadsheetDocument();
+  $spreadsheet = org_odftoolkit_odfdom_doc_OdfSpreadsheetDocument::type()->newSpreadsheetDocument();
   $dom = $spreadsheet->getContentDom();
-  $table = $dom->getElementsByTagNameNS(org_odftoolkit_odfdom_doc_element_table_OdfTable::type()->ELEMENT_NAME->getUri(), 
-                                        org_odftoolkit_odfdom_doc_element_table_OdfTable::type()->ELEMENT_NAME->getLocalName())->item(0);
+  $table = $dom->getElementsByTagNameNS(org_odftoolkit_odfdom_doc_table_OdfTable::type()->ELEMENT_NAME->getUri(), 
+                                        org_odftoolkit_odfdom_doc_table_OdfTable::type()->ELEMENT_NAME->getLocalName())->item(0);
   $table->removeChild($table->getFirstChild()->getNextSibling()); // ODFDOM creates first row by default
-  $table->setName($sheetname);
+  $table->setTableNameAttribute($sheetname);
   $root = $table->getParentNode();
 
   // Rows and columns
   $rows = array();
   for ($i=1; $i<=$sc['attribs']['lastrow']; $i++) {
-    $row = $table->appendChild(new org_odftoolkit_odfdom_doc_element_table_OdfTableRow($dom));
+    $row = $table->appendChild(new org_odftoolkit_odfdom_doc_table_OdfTableRow($dom));
     if (isset($sc['rowattribs']['height'][$i])) {
-      $row->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableRowProperties::type()->RowHeight, 
-        org_odftoolkit_odfdom_dom_util_OdfUnitConverter::type()->mapUnitToCm($sc['rowattribs']['height'][$i].'pt'));
+      $row->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTableRowProperties::type()->RowHeight, $sc['rowattribs']['height'][$i].'pt');
     }
     $rows[] = $row;
   }
@@ -46,8 +45,7 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
   for ($i=1; $i<=$sc['attribs']['lastcol']; $i++) {
     $col = $i==1 ? $table->getTableColumn(0) : $table->addTableColumn(); // ODFDOM creates first column by default
     if (isset($sc['colattribs']['width'][$i])) {
-      $col->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableColumnProperties::type()->ColumnWidth, 
-        org_odftoolkit_odfdom_dom_util_OdfUnitConverter::type()->mapUnitToCm($sc['colattribs']['width'][$i].'px'));
+      $col->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTableColumnProperties::type()->ColumnWidth, $sc['colattribs']['width'][$i].'px');
     }
     $cols[] = $col;
   }
@@ -63,58 +61,59 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
     }
 
     while ($colNum < $c['pos'][0]) { // append blank cells
-      $row->appendChild(new org_odftoolkit_odfdom_doc_element_table_OdfTableCell($dom));
+      $row->appendChild(new org_odftoolkit_odfdom_doc_table_OdfTableCell($dom));
       $colNum++;
     }
-    $cell = $row->appendChild(new org_odftoolkit_odfdom_doc_element_table_OdfTableCell($dom));
+    $cell = $row->appendChild(new org_odftoolkit_odfdom_doc_table_OdfTableCell($dom));
     
     // Value
-    $p = $cell->appendChild(new org_odftoolkit_odfdom_doc_element_text_OdfParagraph($dom));
+    $p = $cell->appendChild(new org_odftoolkit_odfdom_doc_text_OdfTextParagraph($dom));
+    $ovtav = new java_class('org.odftoolkit.odfdom.dom.element.table.TableTableCellElementBase$OfficeValueTypeAttributeValue');
     if (isset($c['datatype'])) switch ($c['datatype']) {
     case 't':
-      $cell->SetValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('STRING'));
+      $cell->setOfficeValueTypeAttribute($ovtav->valueOf('STRING'));
       if ($c['valuetype'] == 'th') { // text-html
-        $cell->setStringValue(strip_tags($c['datavalue']));
+        $cell->setOfficeStringValueAttribute(strip_tags($c['datavalue']));
         $p->appendChild($dom->createTextNode(strip_tags($c['datavalue'])));
       }
       else {
-        $cell->setStringValue($c['datavalue']);
+        $cell->setOfficeStringValueAttribute($c['datavalue']);
         $p->appendChild($dom->createTextNode($c['datavalue']));
       }
       break;
     case 'v':
       if (!isset($c['nontextvalueformat'])) { // default number type is float but the format might dictate another type
-        $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
-        $cell->setValue((float)$c['datavalue']);
+        $cell->setOfficeValueTypeAttribute($ovtav->valueOf('FLOAT'));
+        $cell->setOfficeValueAttribute((float)$c['datavalue']);
       }
       else {
         $formatinfo = socialcalc_parse_numberformat($sc['valueformats'][$c['nontextvalueformat']]);
         $sectioninfo = $formatinfo['sectioninfo'][0]; // TODO: Does it make sense to have sectioninfos with different cell types?
         if (!empty($sectioninfo['hascurrency'])) {
-          $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('CURRENCY'));
-          $cell->setValue($c['datavalue']);
+          $cell->setOfficeValueTypeAttribute($ovtav->valueOf('CURRENCY'));
+          $cell->setOfficeValueAttribute((float)$c['datavalue']);
         }
         else if (!empty($sectioninfo['hasdate'])) {
-          $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('DATE'));
-          $cell->setDateValue(org_odftoolkit_odfdom_dom_type_OdfDate::type()->valueOf($c['datavalue']));
+          $cell->setOfficeValueTypeAttribute($ovtav->valueOf('DATE'));
+          $cell->setOfficeDateValueAttribute($c['datavalue']);
         }
         else {
-          $cell->setValueType(org_odftoolkit_odfdom_dom_type_office_OdfValueType::type()->valueOf('FLOAT'));
-          $cell->setValue((float)$c['datavalue']);
+          $cell->setOfficeValueTypeAttribute($ovtav->valueOf('FLOAT'));
+          $cell->setOfficeValueAttribute((float)$c['datavalue']);
         }
         // TODO: handle OdfPercentageStyle
       }
       $p->appendChild($dom->createTextNode($c['datavalue']));
       break;
     case 'f':
-      $cell->SetFormula('='.str_replace(',', ';', $c['formula']));
+      $cell->setTableFormulaAttribute('='.str_replace(',', ';', $c['formula']));
       break;
     }
 
     // Comment
     if (!empty($c['comment'])) {
-      $note = $cell->appendChild(new org_odftoolkit_odfdom_doc_element_office_OdfAnnotation($dom));
-      $notep = $note->appendChild(new org_odftoolkit_odfdom_doc_element_text_OdfParagraph($dom));
+      $note = $cell->appendChild(new org_odftoolkit_odfdom_doc_office_OdfOfficeAnnotation($dom));
+      $notep = $note->appendChild(new org_odftoolkit_odfdom_doc_text_OdfTextParagraph($dom));
       $notep->appendChild($dom->createTextNode($c['comment']));
     }
 
@@ -122,30 +121,30 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
     _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p);
 
     // Cell merges
-    if (@$c['colspan'] > 1) $cell->setNumberColumnsSpanned($c['colspan']);
-    if (@$c['rowspan'] > 1) $cell->setNumberRowsSpanned($c['rowspan']);
+    if (@$c['colspan'] > 1) $cell->setTableNumberColumnsSpannedAttribute($c['colspan']);
+    if (@$c['rowspan'] > 1) $cell->setTableNumberRowsSpannedAttribute($c['rowspan']);
     
     $colNum++;
   }
 
   // Named expressions
   if (isset($sc['names'])) {
-    $names = $root->appendChild(new org_odftoolkit_odfdom_doc_element_table_OdfNamedExpressions($dom));
+    $names = $root->appendChild(new org_odftoolkit_odfdom_doc_table_OdfTableNamedExpressions($dom));
     foreach ($sc['names'] as $n => $info) {
       $definition = $info['definition'];
       if ($definition[0] == '=') { // formula
         $definition = str_replace('(', "($'$sheetname'.", $definition);
         $definition = str_replace(',', ";$'$sheetname'.", $definition);
-        $name = $names->appendChild(new org_odftoolkit_odfdom_doc_element_table_OdfNamedExpression($dom));
-        $name->setExpression($definition);
+        $name = $names->appendChild(new org_odftoolkit_odfdom_doc_table_OdfTableNamedExpression($dom));
+        $name->setTableExpressionAttribute($definition);
       }
       else {
         $definition = "$'$sheetname'.$definition";
-        $name = $names->appendChild(new org_odftoolkit_odfdom_doc_element_table_OdfNamedRange($dom));
-        $name->setCellRangeAddress(new org_odftoolkit_odfdom_dom_type_OdfCellRangeAddress($definition));
-        $name->setBaseCellAddress(new org_odftoolkit_odfdom_dom_type_OdfCellAddress($definition));
+        $name = $names->appendChild(new org_odftoolkit_odfdom_doc_table_OdfTableNamedRange($dom));
+        $name->setTableCellRangeAddressAttribute($definition);
+        $name->setTableBaseCellAddressAttribute($definition);
       }
-      $name->setName($n);
+      $name->setTableNameAttribute($n);
     }
   }
  
@@ -182,7 +181,7 @@ function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
   // Find cached cellstyle.
   $h = md5(implode(',', $cs));
   if (isset($cellstyles[$h])) {
-    $cell->setStyleName($cellstyles[$h]);
+    $cell->setTableStyleNameAttribute($cellstyles[$h]);
     return;
   }
 
@@ -190,19 +189,19 @@ function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
   $styles = $spreadsheet->getOrCreateDocumentStyles();
   $stylename = 'cell'.$stylecount++;
   $cellstyles[$h] = $stylename;
-  $style = $styles->createStyle($stylename, org_odftoolkit_odfdom_dom_style_OdfStyleFamily::type()->TableCell);
-  $cell->setStyleName($stylename);
+  $style = $styles->newStyle($stylename, org_odftoolkit_odfdom_dom_style_OdfStyleFamily::type()->TableCell);
+  $cell->setTableStyleNameAttribute($stylename);
   
   // Horizontal alignment
   if (isset($c['cellformat'])) {
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->TextAlign, $sc['cellformats'][$c['cellformat']]);
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->TextAlignSource, 'fix');
+    $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleParagraphProperties::type()->TextAlign, $sc['cellformats'][$c['cellformat']]);
+    $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTableCellProperties::type()->TextAlignSource, 'fix');
   }
 
   // Vertical alignment and padding
   $layout = socialcalc_cellformat_parselayout($c, $sc);
   if (isset($layout['alignvert'])) {
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->VerticalAlign, $layout['alignvert']);
+    $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTableCellProperties::type()->VerticalAlign, $layout['alignvert']);
   }
   $paddings = array(
     'padtop' => 'MarginTop',
@@ -212,10 +211,9 @@ function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
   );
   foreach ($paddings as $pad => $property) {
     if (!empty($layout[$pad])) {
-      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->$property, 
-        org_odftoolkit_odfdom_dom_util_OdfUnitConverter::type()->mapUnitToCm($layout[$pad].'px'));
-      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfParagraphProperties::type()->TextAlign, 'start');
-      $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->TextAlignSource, 'fix');
+      $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleParagraphProperties::type()->$property, $layout[$pad].'px');
+      $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleParagraphProperties::type()->TextAlign, 'start');
+      $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTableCellProperties::type()->TextAlignSource, 'fix');
     }
   }
 
@@ -223,22 +221,22 @@ function _sheetnode_ods_export_style($c, $sc, $spreadsheet, $cell, $p) {
   $bg = socialcalc_cellformat_parsecolor($c, $sc, 'bgcolor');
   if ($bg) {
     $color = sprintf('#%02X%02X%02X', $bg['r'], $bg['g'], $bg['b']);
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTableCellProperties::type()->BackgroundColor, $color);
+    $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTableCellProperties::type()->BackgroundColor, $color);
   }
 
   // Color
   $fg = socialcalc_cellformat_parsecolor($c, $sc, 'color');
   if ($fg) {
     $color = sprintf('#%02X%02X%02X', $fg['r'], $fg['g'], $fg['b']);
-    $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->Color, $color);
+    $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTextProperties::type()->Color, $color);
   }
 
   // Font
   $ff = socialcalc_cellformat_parsefont($c, $sc);
-  if (isset($ff['family'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontFamily, $ff['family']);
-  if (isset($ff['size'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontSize, $ff['size']);
-  if (!empty($ff['bold'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontWeight, 'bold');
-  if (!empty($ff['italic'])) $style->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->FontStyle, 'italic');
+  if (isset($ff['family'])) $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTextProperties::type()->FontFamily, $ff['family']);
+  if (isset($ff['size'])) $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTextProperties::type()->FontSize, $ff['size']);
+  if (!empty($ff['bold'])) $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTextProperties::type()->FontWeight, 'bold');
+  if (!empty($ff['italic'])) $style->setProperty(org_odftoolkit_odfdom_doc_style_OdfStyleTextProperties::type()->FontStyle, 'italic');
 
   // Number format
   if (isset($c['nontextvalueformat'])) {
@@ -262,16 +260,16 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $
 
     // Create parent style
     if (!empty($sectioninfo['hascurrency'])) {
-      $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfCurrencyStyle($dom);
+      $numstyle = new org_odftoolkit_odfdom_doc_number_OdfNumberCurrencyStyle($dom);
     }
     else if (!empty($sectioninfo['hasdate'])) {
-      $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfDateStyle($dom);
+      $numstyle = new org_odftoolkit_odfdom_doc_number_OdfNumberDateStyle($dom);
     }
     else {
-      $numstyle = new org_odftoolkit_odfdom_doc_element_number_OdfNumberStyle($dom);
+      $numstyle = new org_odftoolkit_odfdom_doc_number_OdfNumberStyle($dom);
     }
     // TODO: handle OdfPercentageStyle
-    $numstyle->setName(new org_odftoolkit_odfdom_dom_type_OdfStyleName($stylenames[$i]));
+    $numstyle->setStyleNameAttribute($stylenames[$i]);
 
     // Populate number format
     $minintdigits = 0;
@@ -283,24 +281,24 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $
       $operand  = current($o);
       
       if ($lasttext && $operator != SOCIALCALC_COMMANDS_COPY) {
-        $text = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_element_number_OdfText($dom));
+        $text = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_number_OdfNumberText($dom));
         $text->setTextContent($lasttext);
         $lasttext = '';
       }
       if ($lastnumber && !in_array($operator, array(SOCIALCALC_COMMANDS_INTEGERPLACEHOLDER, SOCIALCALC_COMMANDS_FRACTIONPLACEHOLDER, SOCIALCALC_COMMANDS_DECIMAL))) {
-        $number = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_element_number_OdfNumber($dom));
-        $number->setGrouping(new org_odftoolkit_odfdom_dom_type_OdfBoolean($sectioninfo['thousandssep']));
-        $number->setDecimalPlaces($sectioninfo['fractiondigits']);
-        $number->setMinIntegerDigits($minintdigits);
+        $number = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_number_OdfNumber($dom));
+        $number->setNumberGroupingAttribute($sectioninfo['thousandssep']);
+        $number->setNumberDecimalPlacesAttribute($sectioninfo['fractiondigits']);
+        $number->setNumberMinIntegerDigitsAttribute($minintdigits);
         $lastnumber = FALSE;
       }
 
       switch ($operator) {
       case SOCIALCALC_COMMANDS_CURRENCY:
-        $currencysymbol = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_element_number_OdfCurrencySymbol($dom));
+        $currencysymbol = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_number_OdfNumberCurrencySymbol($dom));
         $currencysymbol->appendChild($dom->createTextNode($operand));
-        $currencysymbol->setCountry('US'); // TODO
-        $currencysymbol->setLanguage('en'); // TODO
+        $currencysymbol->setNumberCountryAttribute('US'); // TODO
+        $currencysymbol->setNumberRfcLanguageTagAttribute('en'); // TODO
         break;
       case SOCIALCALC_COMMANDS_COPY:
         $lasttext .= $operand;
@@ -313,8 +311,8 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $
         $lastnumber = TRUE;
         break;
       case SOCIALCALC_COMMANDS_COLOR: // TODO
-        //$textprop = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_element_style_OdfTextProperties($dom));
-        //$numstyle->setProperty(org_odftoolkit_odfdom_doc_element_style_OdfTextProperties::type()->Color, $operand);
+        //$textprop = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_style_OdfTextProperties($dom));
+        //$numstyle->setProperty(org_odftoolkit_odfdom_doc_style_OdfTextProperties::type()->Color, $operand);
         break;
       case SOCIALCALC_COMMANDS_COMPARISON:
         $conditions[$i] = $operand;
@@ -325,20 +323,18 @@ function _sheetnode_ods_export_numberformat($c, $sc, $spreadsheet, &$cell, $p, $
     // Insert into spreadsheet
     $styles->appendChild($numstyle);
     if (($i+1) == $numsections) { // Last section connects to original cell style and to other sections
-      $style->setDataStyleName(new org_odftoolkit_odfdom_dom_type_OdfStyleNameRef($stylenames[$i]));
+      $style->setStyleDataStyleNameAttribute($stylenames[$i]);
       for ($j=0; $j<$i; $j++) {
-        $map = $numstyle->appendChild(new org_odftoolkit_odfdom_doc_element_style_OdfMap($dom));
-        $map->setApplyStyleName(new org_odftoolkit_odfdom_dom_type_OdfStyleNameRef($stylenames[$j]));
         $condition = isset($conditions[$j]) ? $conditions[$j] :
                      (($numsections == 2) ? '>=0' : 
                      (($numsections == 3 && $j == 0) ? '>0' :
                      (($numsections == 3 && $j == 1) ? '<0' : '=0'
                      )));
-        $map->setCondition('value()'.$condition);
+        $numstyle->newStyleMapElement($stylenames[$j], 'value()'.$condition);
       }
     }
     else { // Earlier sections get volatile=TRUE
-      $numstyle->setVolatile(new org_odftoolkit_odfdom_dom_type_OdfBoolean(TRUE));
+      $numstyle->setStyleVolatileAttribute(TRUE);
     }
   }
 
