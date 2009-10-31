@@ -80,7 +80,7 @@ abstract class SheetnodeXLS {
     if (!$this->_properties) {
       $this->_properties = $this->importProperties();
     }
-    return $field ? $this->_properties[$field]['value'] : $this->_properties;
+    return $field ? @$this->_properties[$field]['value'] : $this->_properties;
   }
 
   abstract public function getFont($cellstyle);
@@ -135,23 +135,28 @@ class SheetnodeHSSF extends SheetnodeXLS {
         'Manager' => t('Manager'),
       )),
     );
-    foreach ($fields_objects as $propertyset) {
-      $object = $propertyset['object'];
-      foreach ($propertyset['fields'] as $field => $label) {
-        $function = 'get'. $field;
-        $value = java_values($object->$function());
-        $null = null;
-        if (is_array($label)) {
-          if (isset($label['field'])) $field = $label['field'];
-          if (isset($label['null'])) $null = $label['null'];
-          if (isset($label['map'])) $value = $label['map'][$value];
-          $label = $label['label'];
+    try {
+      foreach ($fields_objects as $propertyset) {
+        $object = $propertyset['object'];
+        foreach ($propertyset['fields'] as $field => $label) {
+          $function = 'get'. $field;
+          $value = java_values($object->$function());
+          $null = null;
+          if (is_array($label)) {
+            if (isset($label['field'])) $field = $label['field'];
+            if (isset($label['null'])) $null = $label['null'];
+            if (isset($label['map'])) $value = $label['map'][$value];
+            $label = $label['label'];
+          }
+          if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
         }
-        if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
+      }
+      foreach ($dsi->getCustomProperties() as $field => $value) {
+        if (!java_is_null($value)) $properties[$field] = array('label' => t(java_values($value->getName())), 'value' => java_values($value->getValue()));
       }
     }
-    foreach ($dsi->getCustomProperties() as $field => $value) {
-      if (!java_is_null($value)) $properties[$field] = array('label' => t(java_values($value->getName())), 'value' => java_values($value->getValue()));
+    catch (Exception $e) {
+      watchdog('sheetnode', 'Error retrieving XLS document properties: %msg', array('%msg' => $e->getMessage()), WATCHDOG_WARNING);
     }
     return $properties;
   }
@@ -254,27 +259,32 @@ class SheetnodeXSSF extends SheetnodeXLS {
         'TotalTime' => array('label' => t('Total time spent on editing'), 'null' => 0),
       ),
     );
-    foreach ($fields_objects as $propertyset => $fields) {
-      $function = 'get'. $propertyset;
-      $object = $this->_workbook->getProperties()->$function()->getUnderlyingProperties();
-      foreach ($fields as $field => $label) {
-        if ($propertyset == 'CoreProperties') {
-          $function = 'get'. $field .'Property';
-          $value = java_values($object->$function()->getValue());
+    try {
+      foreach ($fields_objects as $propertyset => $fields) {
+        $function = 'get'. $propertyset;
+        $object = $this->_workbook->getProperties()->$function()->getUnderlyingProperties();
+        foreach ($fields as $field => $label) {
+          if ($propertyset == 'CoreProperties') {
+            $function = 'get'. $field .'Property';
+            $value = java_values($object->$function()->getValue());
+          }
+          else {
+            $function = 'get'. $field;
+            $value = java_values($object->$function());
+          }
+          $null = null;
+          if (is_array($label)) {
+            if (isset($label['field'])) $field = $label['field'];
+            if (isset($label['null'])) $null = $label['null'];
+            if (isset($label['map'])) $value = $label['map'][$value];
+            $label = $label['label'];
+          }
+          if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
         }
-        else {
-          $function = 'get'. $field;
-          $value = java_values($object->$function());
-        }
-        $null = null;
-        if (is_array($label)) {
-          if (isset($label['field'])) $field = $label['field'];
-          if (isset($label['null'])) $null = $label['null'];
-          if (isset($label['map'])) $value = $label['map'][$value];
-          $label = $label['label'];
-        }
-        if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
       }
+    }
+    catch (Exception $e) {
+      watchdog('sheetnode', 'Error retrieving XLSX document properties: %msg', array('%msg' => $e->getMessage()), WATCHDOG_WARNING);
     }
     return $properties;
   }

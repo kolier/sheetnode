@@ -60,12 +60,13 @@ function sheetnode_xls_menu() {
     'description' => 'Create a new sheetnode with content from an existing Excel (.xls or .xlsx) spreadsheet.',
     'file' => 'sheetnode_xls.import.inc',
   );
-  $items['admin/settings/xls'] = array(
+  $items['admin/settings/sheetnode/xls'] = array(
     'title' => 'Sheetnode XLS settings',
     'access arguments' => array('administer site configuration'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_xls_settings'),
     'description' => 'Administer settings for Sheetnode XLS.',
+    'type' => MENU_LOCAL_TASK,
   );
 
   return $items;

@@ -47,12 +47,13 @@ function sheetnode_ods_menu() {
     'file' => 'sheetnode_ods.import.inc',
   );
 */
-  $items['admin/settings/ods'] = array(
+  $items['admin/settings/sheetnode/ods'] = array(
     'title' => 'Sheetnode ODS settings',
     'access arguments' => array('administer site configuration'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_ods_settings'),
     'description' => 'Administer settings for Sheetnode ODS.',
+    'type' => MENU_LOCAL_TASK,
   );
 
   return $items;

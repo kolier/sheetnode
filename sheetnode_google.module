@@ -46,12 +46,13 @@ function sheetnode_google_menu() {
     'description' => 'Create a new sheetnode with content from an existing Google Spreadsheet.',
     'file' => 'sheetnode_google.import.inc',
   );
-  $items['admin/settings/googlesheet'] = array(
+  $items['admin/settings/sheetnode/google'] = array(
     'title' => 'Sheetnode Google Spreadsheets settings',
     'access arguments' => array('administer site configuration'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_google_settings'),
     'description' => 'Administer settings for Sheetnode Google Spreadsheets.',
+    'type' => MENU_LOCAL_TASK,
   );
 
   return $items;

@@ -57,7 +57,7 @@ function &_sheetnode_google_import_fetch(&$form, $form_state) {
     );
   }
   $options = array();
-  if (!empty($feed->entries)) foreach ($feed->entries as $entry) {
+  foreach ($feed->entries as $entry) {
     $id = array_pop(explode('/', $entry->id->text));
     $options[$id] = $entry->title->text;
   }
