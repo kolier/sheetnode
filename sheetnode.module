@@ -170,14 +170,14 @@ function sheetnode_insert($node) {
  * Implementation of hook_update().
  */
 function sheetnode_update($node) {
-  if ($node->sheetsave) {
+  if (!empty($node->sheetsave)) {
     _sheetnode_save($node->nid, $node->vid, $node->sheetsave);
   }
-  else if ($node->revision) {
+  else if (!empty($node->revision)) {
     // reverting a revision
     db_query('INSERT INTO sheetnode (nid,vid,value) SELECT old.nid,%d,old.value FROM sheetnode AS old WHERE old.vid=%d',array($node->vid,$node->old_vid));
   }
-  if ($node->template && user_access('create sheet template')) {
+  if (!empty($node->template) && user_access('create sheet template')) {
     _sheetnode_template_save($node->template, $node->sheetsave);
   }
 }
