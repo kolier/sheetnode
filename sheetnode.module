@@ -361,6 +361,7 @@ function _sheetnode_load($nid, $vid) {
 }
 
 function _sheetnode_save($nid, $vid, $value) {
+  db_query("DELETE FROM {sheetnode} WHERE vid=%d", $vid);
   db_query("INSERT INTO {sheetnode} (nid, vid, value) VALUES (%d, %d, '%s')", $nid, $vid, serialize(_sheetnode_sanitize_js($value)));
 }
 
