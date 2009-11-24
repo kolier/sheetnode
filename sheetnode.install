@@ -32,7 +32,7 @@ function sheetnode_schema() {
       ),
     ),
     'primary key' => array('vid'),
-    'unique keys' => array(
+    'indexes' => array(
       'nid' => array('nid'),
     ),
   );
