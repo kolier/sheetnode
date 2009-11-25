@@ -108,7 +108,7 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
       $msg = 'Failed to export formula %formula: %error';
       $arg = array('%formula' => $c['formula'], '%error' => $e->getMessage());
       drupal_set_message(t($msg, $arg), 'error');
-      watchdog('sheetnode', $msg, $arg, $WATCHDOG_WARNING);
+      watchdog('sheetnode', $msg, $arg, WATCHDOG_WARNING);
     }
     $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_FORMULA);
     break;
