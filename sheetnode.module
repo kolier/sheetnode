@@ -346,6 +346,16 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
   else {
     $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s' ORDER BY s.vid DESC LIMIT 1", db_escape_string(strtoupper($sheetname))));
   }
+  if (!$value && module_exists('views')) { // Try a view feed with our SocialCalc output plugin style
+    $view = views_get_view($sheetname);
+    if ($view) foreach (array_keys($view->display) as $display_name) {
+      $display = $view->display[$display_name];
+      if (isset($display->display_options['style_plugin']) && $display->display_options['style_plugin'] == 'sheet_raw') {
+        $value = $view->render($display->id);
+        header('Content-type: text/html'); // Our style plugin sets this to text/plain
+      } 
+    }
+  }
   if ($value) {
     $parts = socialcalc_parse_parts($value);
     if (isset($parts['sheet'])) {

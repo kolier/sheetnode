@@ -27,6 +27,16 @@ function sheetnode_views_plugins() {
           drupal_get_path('module', 'sheetnode').'/sheetnode.js',
         ),
       ),
+      'sheet_raw' => array(
+        'title' => t('SocialCalc format'),
+        'help' => t('Render the view as a raw SocialCalc spreadsheet.'),
+        'handler' => 'sheetnode_raw_plugin_style',
+        'parent' => 'sheet',
+        'uses row plugin' => FALSE,
+        'uses fields' => TRUE,
+        'uses options' => TRUE,
+        'type' => 'feed',
+      ),
     ),
   );
 }
