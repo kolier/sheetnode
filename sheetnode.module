@@ -136,15 +136,8 @@ function _sheetnode_inject($value, $edit) {
                                            'sheetsave' => 'edit-sheetsave',
                                            'editMode' => $edit ? TRUE : FALSE,
   )), 'setting');
-  return <<<EOS
-<div class="sheetview" id="sheetview">
-<script language="javascript" type="text/javascript">
-  Drupal.behaviors.sheetnode = function(context) {
-    Drupal.sheetnode.start();
-  }
-</script>
-</div>
-EOS;
+  drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(); }', 'inline');
+  return '<div class="sheetview" id="sheetview"></div>';
 }
 
 function _sheetnode_sanitize_js($value) {

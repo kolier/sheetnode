@@ -378,20 +378,17 @@ EOS;
     drupal_add_js(drupal_get_path('module', 'sheetnode').'/sheetnode.js');
     drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
     drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
-    $imagePrefix = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
+    $image = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
     $value = drupal_to_js(socialcalc_save($this->render_sheet()));
-    $output = <<<EOS
-<div class="sheetview" id="sheetview">
-<script language="javascript" type="text/javascript">
-  Drupal.behaviors.sheetnode = function(context) {
-    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $imagePrefix, "element": "sheetview", "sheetsave": "edit-style-options-sheetsave", "editMode": false } });
-    SocialCalc.Popup.Controls = {};
-    Drupal.sheetnode.start();
-  }
-</script>
-</div>
+    $javascript = <<<EOS
+Drupal.behaviors.sheetnode = function(context) {
+  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $image, "element": "sheetview", "sheetsave": "edit-style-options-sheetsave", "editMode": false } });
+  SocialCalc.Popup.Controls = {};
+  Drupal.sheetnode.start();
+}
 EOS;
-    return $output;
+    drupal_add_js($javascript, 'inline');
+    return '<div class="sheetview" id="sheetview"></div>';
   }
 
   function get_real_field_name($field_name) {
