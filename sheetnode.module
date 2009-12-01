@@ -132,11 +132,11 @@ function _sheetnode_inject($value, $edit) {
   drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
   drupal_add_js(array('sheetnode' => array('value' => $value, 
                                            'imagePrefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-',
-                                           'element' => 'sheetview',
-                                           'sheetsave' => 'edit-sheetsave',
+                                           'viewId' => 'sheetview',
+                                           'editId' => 'edit-sheetsave',
                                            'editMode' => $edit ? TRUE : FALSE,
   )), 'setting');
-  drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(); }', 'inline');
+  drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
   return '<div class="sheetview" id="sheetview"></div>';
 }
 

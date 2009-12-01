@@ -106,9 +106,13 @@ Drupal.sheetnode.focusSetup = function() {
   });
 }
 
-Drupal.sheetnode.start = function() {
+Drupal.sheetnode.start = function(context) {
+  // Just exit if the sheetnode is not in the new context or if it has already been processed.
+  if ($('div#'+Drupal.settings.sheetnode.viewId, context).length == 0) return;
+  if ($('div.'+Drupal.settings.sheetnode.viewId+'-processed', context).length != 0) return;
+
   // DOM initialization.
-  $('#'+Drupal.settings.sheetnode.sheetsave).parents('form').submit(function() {
+  $('#'+Drupal.settings.sheetnode.editId, context).parents('form').submit(function() {
     Drupal.sheetnode.save();
     return true;
   });
@@ -128,10 +132,10 @@ Drupal.sheetnode.start = function() {
   });
 
   // SocialCalc initialization.
+  SocialCalc.Popup.Controls = {};
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"commentbg.gif);"
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
-
   this.spreadsheet = new SocialCalc.SpreadsheetControl();
 
   // Remove audit tab.
@@ -152,10 +156,23 @@ Drupal.sheetnode.start = function() {
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.element, 700);
+  this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.viewId, 700);
   if (parts && parts.edit) {
     this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
   }
+
+  // Special handling for Views AJAX.
+  try {
+    $('input[type=submit]', Drupal.settings.views.ajax.id).click(function() {
+      Drupal.sheetnode.save();
+    });
+  }
+  catch (e) {
+    // Do nothing.
+  }
+
+  // Signal that we've processed this instance of sheetnode.
+  $('div#'+Drupal.settings.sheetnode.viewId, context).addClass(Drupal.settings.sheetnode.viewId+'-processed');
 
   Drupal.sheetnode.focusSetup();
   Drupal.sheetnode.functionsSetup();
@@ -172,7 +189,7 @@ Drupal.sheetnode.resize = function() {
 }
 
 Drupal.sheetnode.save = function() {
-  $('#'+Drupal.settings.sheetnode.sheetsave).val(this.spreadsheet.CreateSpreadsheetSave());
+  $('#'+Drupal.settings.sheetnode.editId).val(this.spreadsheet.CreateSpreadsheetSave());
   log = $('#edit-log').val();
   if (log != undefined) {
     audit = this.spreadsheet.sheet.CreateAuditString();

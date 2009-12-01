@@ -50,15 +50,8 @@ class sheetnode_plugin_style extends views_plugin_style {
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
   Drupal.behaviors.sheetnode = function(context) {
-    if ($('div.sheetview').length == 0) return;
-
-    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $imagePrefix, "element": "sheetview", "sheetsave": "edit-style-options-sheetsave", "editMode": true } });
-    var ajax_area = Drupal.settings.views.ajax.id;
-    $('input[type=submit]', ajax_area).click(function() {
-      Drupal.sheetnode.save();
-    });
-    SocialCalc.Popup.Controls = {};
-    Drupal.sheetnode.start();
+    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $imagePrefix, "viewId": "sheetview", "editId": "edit-style-options-sheetsave", "editMode": true } });
+    Drupal.sheetnode.start(context);
   }
 </script>
 </div>
@@ -291,7 +284,7 @@ EOS;
             $delta = max($delta, $field['endpos'][$normal] - $field['cell']['pos'][$normal]); 
           }
         }
-        if ($ecell_changed) {
+        if (@$ecell_changed) {
           $socialcalc['edit'][$panes][$i]['first'] += $delta;
           $socialcalc['edit'][$panes][$i]['last']  += $delta;
         }
@@ -382,9 +375,8 @@ EOS;
     $value = drupal_to_js(socialcalc_save($this->render_sheet()));
     $javascript = <<<EOS
 Drupal.behaviors.sheetnode = function(context) {
-  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $image, "element": "sheetview", "sheetsave": "edit-style-options-sheetsave", "editMode": false } });
-  SocialCalc.Popup.Controls = {};
-  Drupal.sheetnode.start();
+  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $image, "viewId": "sheetview", "editId": "edit-style-options-sheetsave", "editMode": false } });
+  Drupal.sheetnode.start(context);
 }
 EOS;
     drupal_add_js($javascript, 'inline');
