@@ -333,7 +333,7 @@ function theme_sheetnode_range($range) {
 function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
   require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];
-  if (intval($sheetname) > 0) {
+  if (is_numeric($sheetname)) {
     $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d ORDER BY vid DESC LIMIT 1", intval($sheetname)));
   }
   else {
