@@ -330,6 +330,14 @@ function theme_sheetnode_range($range) {
   return theme('table', $header, $rows);
 }
 
+/**
+ * Implementation of hook_init().
+ */
+function sheetnode_init() {
+  drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
+  drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
+}
+
 function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
   require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
   if (!$sheetname) $sheetname = $_REQUEST['sheetname'];

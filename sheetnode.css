@@ -11,5 +11,24 @@
   padding: 0;
   margin: 0;
   line-height: normal;
+  border-width: 0;
+  border-collapse: separate;
+  width: auto;
+  background: transparent;
+}
+
+.sheetview tr:hover {
+  background: transparent;
+}
+
+.sheetview img {
+  display: inline !important;
+}
+
+/*
+ * TODO: Open Atrium-specific style to avoid chopping sheet.
+ */
+body.one-sidebar #content {
+    overflow: visible !important;
 }
 

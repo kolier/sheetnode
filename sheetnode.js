@@ -138,7 +138,8 @@ Drupal.sheetnode.start = function(context) {
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
   this.spreadsheet = new SocialCalc.SpreadsheetControl();
 
-  // Remove audit tab.
+  // Remove unwanted tabs.
+  this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
   this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
   this.spreadsheet.tabnums = {};
   for (var i=0; i<this.spreadsheet.tabs.length; i++) {
@@ -161,6 +162,17 @@ Drupal.sheetnode.start = function(context) {
     this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
   }
 
+  // Fix DOM where needed.
+  $('div#SocialCalc-edittools', context).parent('div').attr('id', 'SocialCalc-toolbar');
+  $('td#SocialCalc-edittab', context).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
+  $('div#'+Drupal.settings.sheetnode.viewId+' input:text', context).addClass('form-text');
+  $('div#'+Drupal.settings.sheetnode.viewId+' input:radio', context).addClass('form-radio');
+  $('div#'+Drupal.settings.sheetnode.viewId+' input:checkbox', context).addClass('form-checkbox');
+  $('div#'+Drupal.settings.sheetnode.viewId+' textarea', context).addClass('form-textarea');
+  $('div#'+Drupal.settings.sheetnode.viewId+' select', context).addClass('form-select');
+  $('div#'+Drupal.settings.sheetnode.viewId+' input:button', context).addClass('form-submit');
+  $('div#SocialCalc-sorttools td:first').css('width', 'auto');
+
   // Special handling for Views AJAX.
   try {
     $('input[type=submit]', Drupal.settings.views.ajax.id).click(function() {
@@ -171,12 +183,13 @@ Drupal.sheetnode.start = function(context) {
     // Do nothing.
   }
 
-  // Signal that we've processed this instance of sheetnode.
-  $('div#'+Drupal.settings.sheetnode.viewId, context).addClass(Drupal.settings.sheetnode.viewId+'-processed');
-
+  // Call our setup functions.
   Drupal.sheetnode.focusSetup();
   Drupal.sheetnode.functionsSetup();
   Drupal.sheetnode.loadsheetSetup();
+
+  // Signal that we've processed this instance of sheetnode.
+  $('div#'+Drupal.settings.sheetnode.viewId, context).addClass(Drupal.settings.sheetnode.viewId+'-processed');
 
   this.spreadsheet.ExecuteCommand('recalc');
 }
