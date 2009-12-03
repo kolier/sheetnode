@@ -25,6 +25,11 @@
   display: inline !important;
 }
 
+.sheetview input {
+  display: inline !important;
+  width: auto !important;
+}
+
 /*
  * TODO: Open Atrium-specific style to avoid chopping sheet.
  */
