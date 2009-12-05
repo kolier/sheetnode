@@ -242,16 +242,23 @@ function _sheetnode_google_import_do($spreadsheetService, $spreadsheet, $workshe
         $formula = preg_replace_callback('/R(?:(\[)?(-?\d+)\]?)?C(?:(\[)?(-?\d+)\]?)?/', '_sheetnode_google_import_formula_replace_coords', $value);
         $formula = str_replace(';', ',', $formula);
         $c['formula'] = substr($formula, 1);
-        if ($numeric) _sheetnode_google_import_infer_valueformat($sc, $c, $content);
+        if ($numeric) _sheetnode_google_import_infer_valueformat($sc, $c, $numeric, $trim($content));
       } else if ($numeric) { // number
         $c['datatype'] = 'v';
         $c['valuetype'] = 'n';
         $c['datavalue'] = $numeric;
-        _sheetnode_google_import_infer_valueformat($sc, $c, $value);
+        _sheetnode_google_import_infer_valueformat($sc, $c, $numeric, trim($value));
       } else { // text, probably :-)
+        $html = _filter_url($value, NULL);
+        if ($html != $value) {
+          $c['valuetype'] = 'th';
+          $c['datavalue'] = $html;
+        }
+        else {
+          $c['valuetype'] = 't';
+          $c['datavalue'] = $value;
+        }
         $c['datatype'] = 't';
-        $c['valuetype'] = 't';
-        $c['datavalue'] = $value;
       }
       $sc['cells'][socialcalc_cr_to_coord($c['pos'][0],$c['pos'][1])] = $c;
     }
@@ -294,19 +301,55 @@ function _sheetnode_google_import_formula_replace_coords($matches) {
   return socialcalc_cr_to_coord($col, $row);
 }
 
-function _sheetnode_google_import_infer_valueformat(&$sc, &$c, $value) {
-  $matches = array();
-  if (preg_match('/[^\d.,]+/', $value, $matches,  PREG_OFFSET_CAPTURE)) {
+/**
+ * Helper function to infer a numeric format given a formatted number.
+ * Possible formats: number, date, time, percentage
+ */
+function _sheetnode_google_import_infer_valueformat(&$sc, &$c, $value, $display) {
+  if (preg_match('/^-?[\d.]+$/', $display)) { // Regular number
+    return;
+  }
+  if (preg_match('/^-?[\d.,]+$/', $display)) { // Formatted number
     $valueformat = '#,##0.00';
-    if ($matches[0][1] == 0) {
-      $valueformat = $matches[0][0] . $valueformat;
-    }
-    else {
-      $valueformat = $valueformat . $matches[0][0];
+  }
+  else if (preg_match('/^-?[\d.,]+%$/', $display)) { // Percent
+    $valueformat = '0.00%';
+  }
+  else if (preg_match('/^-?[\d.,]+([^\d.,]+)$/', $display, $matches)) { // Currency right
+    $valueformat = '#,##0.00' . $matches[1];
+  }
+  else if (preg_match('/^-?([^\d.,]+)[\d.,]+$/', $display, $matches)) { // Currency left
+    $valueformat = $matches[1] . '#,##0.00';
+  }
+  else if (preg_match('/^\d{1,2}([-\/\s])\d{1,2}\1\d{2,4}((?:\s+\d{2}:\d{2}:\d{2}){0,1})$/', $display, $matches)) { // Datetime mm-dd-yyyy hh:mm:ss
+    $valueformat = 'mm'. $matches[1] .'dd'. $matches[1] .'yyyy';
+    if (@$matches[2]) {
+      $valueformat .= ' hh:mm:ss';
     }
   }
-  else if (preg_match('/^\d{1,2}([-\/\s])\d{1,2}\1\d{2,4}$/', $value, $matches)) {
-    $valueformat = 'mm'. $matches[1] .'dd'. $matches[1] .'yyyy';
+  else if (preg_match('/^\d{2,4}([-\/\s])\d{1,2}\1\d{1,2}((?:\s+\d{2}:\d{2}:\d{2}){0,1})$/', $display, $matches)) { // Datetime yyyy-mm-dd hh:mm:ss
+    $valueformat = 'yyyy'. $matches[1] .'mm'. $matches[1] .'dd';
+    if (@$matches[2]) {
+      $valueformat .= ' hh:mm:ss';
+    }
+  }
+  else if (preg_match('/^\d{1,2}-\w{3}-\d{2,4}$/', $display)) { // Date d-mmm-yyyy
+    $valueformat = 'd-mmm-yyyy';
+  }
+  else if (preg_match('/^\w+\s+\d{1,2},\s*\d{2,4}$/', $display)) { // Date mmmm d, yyyy
+    $valueformat = 'mmmm d, yyyy';
+  }
+  else if (preg_match('/^\d{1,2}:\d{1,2}(:\d{1,2}){0,1}((?:\s*\w{1,2}){0,1})$/', $display, $matches)) { // Time
+    $valueformat = 'hh:mm';
+    if (@$matches[1]) {
+      $valueformat .= ':ss';
+    }
+    if (@$matches[2]) {
+      $valueformat .= ' AM/PM';
+    }
+  }
+  else if (preg_match('/^-?[\d.]+E[+-]?\d+$/', $display)) { // Scientific
+    $valueformat = '0.00e+000';
   }
   else return;
 

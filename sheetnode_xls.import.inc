@@ -492,7 +492,7 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
   case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_STRING):
     $rtf = $cell->getRichStringCellValue();
     $runs = java_values($rtf->numFormattingRuns());
-    if ($runs > 1) { // it is rich text
+    if ($runs) { // it is rich text
       $c['datavalue'] = '';
       $text = java_values($rtf->getString());
       $i = 0;
@@ -511,21 +511,18 @@ function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
         $i = $j;
       }
       $c['valuetype'] = 'th';
-
-      // Add text-html format
-      $valueformat = 'text-html';
-      if (!isset($sc['valueformathash'][$valueformat])) {
-        $index = isset($sc['valueformats']) ? count($sc['valueformats'])+1 : 1;
-        $sc['valueformats'][$index] = $valueformat;
-        $sc['valueformathash'][$valueformat] = $index;
-      } else {
-        $index = $sc['valueformathash'][$valueformat];
-      }
-      $c['textvalueformat'] = $index;
     }
     else { // it is plain text
-      $c['datavalue'] = java_values($cell->getStringCellValue());
-      $c['valuetype'] = 't';
+      $text = java_values($cell->getStringCellValue());
+      $filtered = _filter_url($text, NULL);
+      if ($text == $filtered) {
+        $c['datavalue'] = $text;
+        $c['valuetype'] = 't';
+      }
+      else {
+        $c['datavalue'] = $filtered;
+        $c['valuetype'] = 'th';
+      }
     }
     $c['datatype'] = 't';
     break;
