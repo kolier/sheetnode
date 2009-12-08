@@ -69,8 +69,7 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
     // Value
     $p = $cell->appendChild(new org_odftoolkit_odfdom_doc_text_OdfTextParagraph($dom));
     $ovtav = new java_class('org.odftoolkit.odfdom.dom.element.table.TableTableCellElementBase$OfficeValueTypeAttributeValue');
-    if (isset($c['datatype'])) switch ($c['datatype']) {
-    case 't':
+    if (@$c['datatype'] == 't' || (@$c['datatype'] == 'f' && $c['valuetype'] != 'n')) {
       $cell->setOfficeValueTypeAttribute($ovtav->valueOf('STRING'));
       if ($c['valuetype'] == 'th') { // text-html
         $cell->setOfficeStringValueAttribute(strip_tags($c['datavalue']));
@@ -80,8 +79,8 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
         $cell->setOfficeStringValueAttribute($c['datavalue']);
         $p->appendChild($dom->createTextNode($c['datavalue']));
       }
-      break;
-    case 'v':
+    }
+    else if (@$c['datatype'] == 'v' || (@$c['datatype'] == 'f' && $c['valuetype'] == 'n')) {
       if (!isset($c['nontextvalueformat'])) { // default number type is float but the format might dictate another type
         $cell->setOfficeValueTypeAttribute($ovtav->valueOf('FLOAT'));
         $cell->setOfficeValueAttribute((float)$c['datavalue']);
@@ -104,10 +103,9 @@ function _sheetnode_ods_export_do($title, $socialcalc) {
         // TODO: handle OdfPercentageStyle
       }
       $p->appendChild($dom->createTextNode($c['datavalue']));
-      break;
-    case 'f':
+    }
+    if (@$c['datatype'] == 'f' && strpos($c['formula'], '!') === FALSE) {
       $cell->setTableFormulaAttribute('='.str_replace(',', ';', $c['formula']));
-      break;
     }
 
     // Comment

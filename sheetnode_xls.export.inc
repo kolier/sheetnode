@@ -86,8 +86,7 @@ function _sheetnode_xls_export_do($type, $title, $socialcalc) {
 
 function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $sc) {
   // Cell data
-  if (isset($c['datatype'])) switch ($c['datatype']) {
-  case 't':
+  if (@$c['datatype'] == 't' || (@$c['datatype'] == 'f' && $c['valuetype'] != 'n')) {
     if ($c['valuetype'] == 'th') { // text-html
       $cell->setCellValue(strip_tags($c['datavalue']));
     }
@@ -95,12 +94,12 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
       $cell->setCellValue($c['datavalue']);
     }
     $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_STRING);
-    break;
-  case 'v':
+  }
+  else if (@$c['datatype'] == 'v' || (@$c['datatype'] == 'f' && $c['valuetype'] == 'n')) {
     $cell->setCellValue((float)$c['datavalue']);
     $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_NUMERIC);
-    break;
-  case 'f':
+  }
+  if (@$c['datatype'] == 'f' && strpos($c['formula'], '!') === FALSE) {
     try { // Not 100% safe
       $cell->setCellFormula($c['formula']);
     }
@@ -111,7 +110,6 @@ function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $s
       watchdog('sheetnode', $msg, $arg, WATCHDOG_WARNING);
     }
     $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_FORMULA);
-    break;
   }
 
   // Comment
