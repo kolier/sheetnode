@@ -126,3 +126,11 @@ function sheetnode_update_6003(&$sandbox = NULL) {
   return $ret;
 }
 
+function sheetnode_update_6004(&$sandbox = NULL) {
+  $ret = array();
+  db_drop_unique_key($ret, 'sheetnode', 'nid');
+  if (!$ret[0]['success']) return array();
+  db_add_index($ret, 'sheetnode', 'nid', array('nid'));
+  return $ret;
+}
+
