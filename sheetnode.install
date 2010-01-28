@@ -16,13 +16,13 @@ function sheetnode_schema() {
         'description' => t('The primary identifier for a node.'),
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
       'vid' => array(
         'description' => t('The revision identifier for a node.'),
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
       'value' => array(
         'description' => t('The serialized worksheet content.'),
@@ -57,6 +57,12 @@ function sheetnode_schema() {
         'size' => 'big',
         'not null' => TRUE,
         'serialize' => TRUE,
+      ),
+      'vid' => array(
+        'description' => t('The original node version for this template.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
       ),
     ),
     'primary key' => array('tid'),
@@ -131,6 +137,13 @@ function sheetnode_update_6004(&$sandbox = NULL) {
   db_drop_unique_key($ret, 'sheetnode', 'nid');
   if (!$ret[0]['success']) return array();
   db_add_index($ret, 'sheetnode', 'nid', array('nid'));
+  return $ret;
+}
+
+function sheetnode_update_6005(&$sandbox = NULL) {
+  $ret = array();
+  $schema = sheetnode_schema();
+  db_add_field($ret, 'sheetnode_template', 'vid', $schema['sheetnode_template']['fields']['vid']);
   return $ret;
 }
 
