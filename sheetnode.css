@@ -31,10 +31,3 @@
   width: auto !important;
 }
 
-/*
- * TODO: Open Atrium-specific style to avoid chopping sheet.
- */
-body.one-sidebar #content {
-    overflow: visible !important;
-}
-

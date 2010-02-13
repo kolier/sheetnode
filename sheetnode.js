@@ -187,7 +187,12 @@ Drupal.sheetnode.start = function(context) {
   $('div#'+Drupal.settings.sheetnode.viewId+' select', context).addClass('form-select');
   $('div#'+Drupal.settings.sheetnode.viewId+' input:button', context).addClass('form-submit');
   $('div#SocialCalc-sorttools td:first').css('width', 'auto');
-
+  $('div#'+Drupal.settings.sheetnode.viewId).parents('div').each(function() {
+    if (($(this).css('overflow')) == 'hidden') {
+      $(this).css('overflow', 'visible');
+    }
+  });
+  
   // Signal that we've processed this instance of sheetnode.
   $('div#'+Drupal.settings.sheetnode.viewId, context).addClass(Drupal.settings.sheetnode.viewId+'-processed');
 
