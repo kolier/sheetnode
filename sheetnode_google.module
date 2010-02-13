@@ -52,7 +52,6 @@ function sheetnode_google_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_google_settings'),
     'description' => 'Administer settings for Sheetnode Google Spreadsheets.',
-    'type' => MENU_LOCAL_TASK,
   );
 
   return $items;
