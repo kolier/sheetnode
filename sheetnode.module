@@ -381,7 +381,7 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
 
 function _sheetnode_load($nid, $vid) {
   $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d AND vid=%d", $nid, $vid));
-  return $value ? unserialize($value) : NULL;
+  return $value ? unserialize($value) : '';
 }
 
 function _sheetnode_save($nid, $vid, $value) {
