@@ -174,7 +174,7 @@ function sheetnode_update($node) {
   }
   else if (!empty($node->revision)) {
     // reverting a revision
-    db_query('INSERT INTO sheetnode (nid,vid,value) SELECT old.nid,%d,old.value FROM sheetnode AS old WHERE old.vid=%d',array($node->vid,$node->old_vid));
+    db_query('INSERT INTO {sheetnode} (nid,vid,value) SELECT old.nid,%d,old.value FROM sheetnode AS old WHERE old.vid=%d',array($node->vid,$node->old_vid));
   }
   if (!empty($node->template) && user_access('create sheet template')) {
     _sheetnode_template_save($node->vid, $node->template, $node->sheetsave);
