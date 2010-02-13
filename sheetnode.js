@@ -157,7 +157,7 @@ Drupal.sheetnode.start = function(context) {
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.viewId, 700);
+  this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.viewId, 700, $('div#'+Drupal.settings.sheetnode.viewId).width());
   if (parts && parts.edit) {
     this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
   }
@@ -187,11 +187,6 @@ Drupal.sheetnode.start = function(context) {
   $('div#'+Drupal.settings.sheetnode.viewId+' select', context).addClass('form-select');
   $('div#'+Drupal.settings.sheetnode.viewId+' input:button', context).addClass('form-submit');
   $('div#SocialCalc-sorttools td:first').css('width', 'auto');
-  $('div#'+Drupal.settings.sheetnode.viewId).parents('div').each(function() {
-    if (($(this).css('overflow')) == 'hidden') {
-      $(this).css('overflow', 'visible');
-    }
-  });
   
   // Signal that we've processed this instance of sheetnode.
   $('div#'+Drupal.settings.sheetnode.viewId, context).addClass(Drupal.settings.sheetnode.viewId+'-processed');
@@ -200,6 +195,7 @@ Drupal.sheetnode.start = function(context) {
 }
 
 Drupal.sheetnode.resize = function() {
+  this.spreadsheet.requestedWidth = $('div#'+Drupal.settings.sheetnode.viewId).width();
   if (this.spreadsheet.SizeSSDiv()) {
     this.spreadsheet.editor.ResizeTableEditor(this.spreadsheet.width, this.spreadsheet.height-
       (this.spreadsheet.spreadsheetDiv.firstChild.offsetHeight + this.spreadsheet.formulabarDiv.offsetHeight));
