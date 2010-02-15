@@ -187,6 +187,7 @@ Drupal.sheetnode.start = function(context) {
   $('div#'+Drupal.settings.sheetnode.viewId+' select', context).addClass('form-select');
   $('div#'+Drupal.settings.sheetnode.viewId+' input:button', context).addClass('form-submit');
   $('div#SocialCalc-sorttools td:first').css('width', 'auto');
+  $('div#SocialCalc-settingsview').css('border', 'none').css('width', 'auto').css('height', 'auto');
 
   // Prepare for fullscreen handling when clicking the SocialCalc icon.
   $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img').attr('title', Drupal.t('Fullscreen')).click(function() {

@@ -1,7 +1,6 @@
-Common subdirectories: DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/images and socialcalc/images
-diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalc-3.js socialcalc/socialcalc-3.js
---- DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalc-3.js	2009-09-09 12:45:47.000000000 -0700
-+++ socialcalc/socialcalc-3.js	2009-09-13 11:52:13.000000000 -0700
+diff -ruP DanBricklin-socialcalc-b294728/socialcalc-3.js socialcalc/socialcalc-3.js
+--- DanBricklin-socialcalc-b294728/socialcalc-3.js	2009-11-03 06:37:04.000000000 -0800
++++ socialcalc/socialcalc-3.js	2010-02-14 22:41:43.000000000 -0800
 @@ -4493,6 +4493,7 @@
     if (num) stylestr+="border-left:"+sheetobj.borderstyles[num]+";";
  
@@ -58,10 +57,52 @@ diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialc
  // LookupElement(element, array) - returns array element which is an object with "element" of element
  //
  
-diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
---- DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalcspreadsheetcontrol.js	2009-09-09 12:45:47.000000000 -0700
-+++ socialcalc/socialcalcspreadsheetcontrol.js	2009-09-13 11:52:13.000000000 -0700
-@@ -2707,6 +2707,7 @@
+diff -ruP DanBricklin-socialcalc-b294728/socialcalcpopup.js socialcalc/socialcalcpopup.js
+--- DanBricklin-socialcalc-b294728/socialcalcpopup.js	2009-11-03 06:37:04.000000000 -0800
++++ socialcalc/socialcalcpopup.js	2010-02-14 22:45:09.000000000 -0800
+@@ -316,8 +316,10 @@
+ 
+    pos = SocialCalc.GetElementPositionWithScroll(spcdata.mainele);
+ 
+-   main.style.top = (pos.top+spcdata.mainele.offsetHeight)+"px";
+-   main.style.left = (pos.left)+"px";
++   editor = SocialCalc.CurrentSpreadsheetControlObject.editor;
++
++   main.style.top = (pos.top+spcdata.mainele.offsetHeight-editor.relativeoffset.top)+"px";
++   main.style.left = (pos.left-editor.relativeoffset.left)+"px";
+    main.style.zIndex = 100;
+    main.style.backgroundColor = "#FFF";
+    main.style.border = "1px solid black";
+@@ -561,7 +563,7 @@
+    var spc = sp.Controls;
+ 
+    var spcid = {type: type, value: "", display: "", data: {}};
+-   if (spc[id]) {alert("Already created "+id); return;}
++   //if (spc[id]) {alert("Already created "+id); return;}
+    spc[id] = spcid;
+    var spcdata = spcid.data;
+ 
+@@ -965,7 +967,7 @@
+    var spc = sp.Controls;
+ 
+    var spcid = {type: type, value: "", display: "", data: {}};
+-   if (spc[id]) {alert("Already created "+id); return;}
++   //if (spc[id]) {alert("Already created "+id); return;}
+    spc[id] = spcid;
+    var spcdata = spcid.data;
+ 
+diff -ruP DanBricklin-socialcalc-b294728/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
+--- DanBricklin-socialcalc-b294728/socialcalcspreadsheetcontrol.js	2009-11-03 06:37:04.000000000 -0800
++++ socialcalc/socialcalcspreadsheetcontrol.js	2010-02-14 22:44:33.000000000 -0800
+@@ -1042,6 +1042,7 @@
+       v.style.display = "none";
+       v.style.width = spreadsheet.width + "px";
+       v.style.height = spreadsheet.viewheight + "px";
++      v.id = spreadsheet.idPrefix + views[vname].name + "view";
+ 
+       html = SCLocSS(html); // localize with %loc!string!, etc.
+ 
+@@ -2707,6 +2708,7 @@
     var s=SocialCalc.GetSpreadsheetControlObject();
     s.ExecuteCommand("set %C comment "+SocialCalc.encodeForSave(document.getElementById(s.idPrefix+"commenttext").value));
     var cell=SocialCalc.GetEditorCellElement(s.editor, s.editor.ecell.row, s.editor.ecell.col);
@@ -69,9 +110,9 @@ diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialc
     s.editor.UpdateCellCSS(cell, s.editor.ecell.row, s.editor.ecell.col);
     SocialCalc.KeyboardFocus();
     }
-diff -uP DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
---- DanBricklin-socialcalc-e1e2f360d576b0aa911be27273be41a51d275a5f/socialcalctableeditor.js	2009-09-09 12:45:47.000000000 -0700
-+++ socialcalc/socialcalctableeditor.js	2009-09-13 11:52:13.000000000 -0700
+diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
+--- DanBricklin-socialcalc-b294728/socialcalctableeditor.js	2009-11-03 06:37:04.000000000 -0800
++++ socialcalc/socialcalctableeditor.js	2010-02-14 22:41:43.000000000 -0800
 @@ -366,6 +366,9 @@
  
     this.range2 = {hasrange: false};
