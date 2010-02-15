@@ -109,7 +109,7 @@ Drupal.sheetnode.focusSetup = function() {
 Drupal.sheetnode.start = function(context) {
   // Just exit if the sheetnode is not in the new context or if it has already been processed.
   if ($('div#'+Drupal.settings.sheetnode.viewId, context).length == 0) return;
-  if ($('div.'+Drupal.settings.sheetnode.viewId+'-processed', context).length != 0) return;
+  if ($('div.sheetview-processed', context).length != 0) return;
 
   // DOM initialization.
   $('#'+Drupal.settings.sheetnode.editId, context).parents('form').submit(function() {
@@ -187,9 +187,35 @@ Drupal.sheetnode.start = function(context) {
   $('div#'+Drupal.settings.sheetnode.viewId+' select', context).addClass('form-select');
   $('div#'+Drupal.settings.sheetnode.viewId+' input:button', context).addClass('form-submit');
   $('div#SocialCalc-sorttools td:first').css('width', 'auto');
+
+  // Prepare for fullscreen handling when clicking the SocialCalc icon.
+  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img').click(function() {
+    div = $('div#'+Drupal.settings.sheetnode.viewId);
+    if (div.hasClass('sheetview-fullscreen')) { // Going back to normal:
+      // Restore saved values.
+      Drupal.sheetnode.parentElement.append(div);
+      div.removeClass('sheetview-fullscreen');
+      Drupal.sheetnode.spreadsheet.requestedHeight = Drupal.sheetnode.requestedHeight;
+      Drupal.sheetnode.resize();
+      window.scroll(Drupal.sheetnode.scrollPos.x, Drupal.sheetnode.scrollPos.y);
+    }
+    else { // Going fullscreen:
+      // Save current values.
+      Drupal.sheetnode.parentElement = div.parent();
+      Drupal.sheetnode.scrollPos = {x: window.pageXOffset, y: window.pageYOffset};
+      Drupal.sheetnode.requestedHeight = Drupal.sheetnode.spreadsheet.requestedHeight;
+
+      // Set values needed to go fullscreen.
+      $('body').append(div);
+      div.addClass('sheetview-fullscreen');
+      Drupal.sheetnode.spreadsheet.requestedHeight = $('div#'+Drupal.settings.sheetnode.viewId).height();
+      Drupal.sheetnode.resize();
+      window.scroll(0,0);
+    }
+  });
   
   // Signal that we've processed this instance of sheetnode.
-  $('div#'+Drupal.settings.sheetnode.viewId, context).addClass(Drupal.settings.sheetnode.viewId+'-processed');
+  $('div#'+Drupal.settings.sheetnode.viewId, context).addClass('sheetview-processed');
 
   this.spreadsheet.ExecuteCommand('recalc');
 }
