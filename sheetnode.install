@@ -147,3 +147,14 @@ function sheetnode_update_6005(&$sandbox = NULL) {
   return $ret;
 }
 
+function _sheetnode_patch() {
+  drupal_set_message(t('An update has been made to the SocialCalc patch. Please follow the <a href="@patch">instructions online</a> to apply this patch.',
+    array('@patch' => 'http://drupal.org/project/sheetnode#patch')
+  ), 'warning');
+}
+
+function sheetnode_update_6006(&$sandbox = NULL) {
+  _sheetnode_patch();
+  return array();
+}
+
