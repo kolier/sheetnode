@@ -202,6 +202,7 @@ Drupal.sheetnode.start = function(context) {
       }
       Drupal.sheetnode.spreadsheet.requestedHeight = Drupal.sheetnode.beforeFullscreen.requestedHeight;
       Drupal.sheetnode.resize();
+      $('body').css('overflow', 'auto');
       window.scroll(Drupal.sheetnode.beforeFullscreen.x, Drupal.sheetnode.beforeFullscreen.y);
     }
     else { // Going fullscreen:
@@ -214,7 +215,7 @@ Drupal.sheetnode.start = function(context) {
       };
 
       // Set values needed to go fullscreen.
-      $('body').append(div);
+      $('body').append(div).css('overflow', 'hidden');
       div.addClass('sheetview-fullscreen');
       Drupal.sheetnode.resize();
       window.scroll(0,0);
