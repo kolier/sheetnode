@@ -178,24 +178,28 @@ Drupal.sheetnode.start = function(context) {
   Drupal.sheetnode.loadsheetSetup();
 
   // Fix DOM where needed.
-  $('div#SocialCalc-edittools', context).parent('div').attr('id', 'SocialCalc-toolbar');
-  $('td#SocialCalc-edittab', context).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
-  $('div#'+Drupal.settings.sheetnode.viewId+' input:text', context).addClass('form-text');
-  $('div#'+Drupal.settings.sheetnode.viewId+' input:radio', context).addClass('form-radio');
-  $('div#'+Drupal.settings.sheetnode.viewId+' input:checkbox', context).addClass('form-checkbox');
-  $('div#'+Drupal.settings.sheetnode.viewId+' textarea', context).addClass('form-textarea');
-  $('div#'+Drupal.settings.sheetnode.viewId+' select', context).addClass('form-select');
-  $('div#'+Drupal.settings.sheetnode.viewId+' input:button', context).addClass('form-submit');
-  $('div#SocialCalc-sorttools td:first').css('width', 'auto');
-  $('div#SocialCalc-settingsview').css('border', 'none').css('width', 'auto').css('height', 'auto');
+  div = $('div#'+Drupal.settings.sheetnode.viewId, context);
+  $('div#SocialCalc-edittools', div).parent('div').attr('id', 'SocialCalc-toolbar');
+  $('td#SocialCalc-edittab', div).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
+  $('input:text', div).addClass('form-text');
+  $('input:radio', div).addClass('form-radio');
+  $('input:checkbox', div).addClass('form-checkbox');
+  $('textarea', div).addClass('form-textarea');
+  $('select', div).addClass('form-select');
+  $('input:button', div).addClass('form-submit');
+  $('div#SocialCalc-sorttools td:first', div).css('width', 'auto');
+  $('div#SocialCalc-settingsview', div).css('border', 'none').css('width', 'auto').css('height', 'auto');
 
   // Prepare for fullscreen handling when clicking the SocialCalc icon.
-  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img').attr('title', Drupal.t('Fullscreen')).click(function() {
-    div = $('div#'+Drupal.settings.sheetnode.viewId);
+  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', div).attr('title', Drupal.t('Fullscreen')).click(function() {
     if (div.hasClass('sheetview-fullscreen')) { // Going back to normal:
       // Restore saved values.
       div.removeClass('sheetview-fullscreen');
-      Drupal.sheetnode.beforeFullscreen.parentElement.append(div);
+      if (Drupal.sheetnode.beforeFullscreen.index >= Drupal.sheetnode.beforeFullscreen.parentElement.children().length) {
+        Drupal.sheetnode.beforeFullscreen.parentElement.append(div);
+      } else {
+        div.insertBefore(Drupal.sheetnode.beforeFullscreen.parentElement.children().get(Drupal.sheetnode.beforeFullscreen.index));
+      }
       Drupal.sheetnode.spreadsheet.requestedHeight = Drupal.sheetnode.beforeFullscreen.requestedHeight;
       Drupal.sheetnode.resize();
       window.scroll(Drupal.sheetnode.beforeFullscreen.x, Drupal.sheetnode.beforeFullscreen.y);
@@ -204,6 +208,7 @@ Drupal.sheetnode.start = function(context) {
       // Save current values.
       Drupal.sheetnode.beforeFullscreen = {
         parentElement: div.parent(),
+        index: div.parent().children().index(div),
         x: window.pageXOffset, y: window.pageYOffset,
         requestedHeight: Drupal.sheetnode.spreadsheet.requestedHeight
       };
@@ -217,7 +222,7 @@ Drupal.sheetnode.start = function(context) {
   });
   
   // Signal that we've processed this instance of sheetnode.
-  $('div#'+Drupal.settings.sheetnode.viewId, context).addClass('sheetview-processed');
+  div.addClass('sheetview-processed');
 
   this.spreadsheet.ExecuteCommand('recalc');
 }
