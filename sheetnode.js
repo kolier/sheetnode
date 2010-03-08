@@ -210,7 +210,7 @@ Drupal.sheetnode.start = function(context) {
       Drupal.sheetnode.beforeFullscreen = {
         parentElement: div.parent(),
         index: div.parent().children().index(div),
-        x: window.pageXOffset, y: window.pageYOffset,
+        x: $(window).scrollLeft(), y: $(window).scrollTop(),
         requestedHeight: Drupal.sheetnode.spreadsheet.requestedHeight
       };
 
