@@ -51,29 +51,9 @@ function sheetnode_delete(&$node) {
 function sheetnode_form(&$node) {
   $type = node_get_types('type', $node);
 
-  // We need to define form elements for the node's title and body.
-  $form['title'] = array(
-    '#type' => 'textfield',
-    '#title' => check_plain($type->title_label),
-    '#required' => TRUE,
-    '#default_value' => $node->title,
-    '#weight' => -5
-  );
-  
-  if (!empty($type->body_label)) {
-    // We want the body and filter elements to be adjacent. We could try doing
-    // this by setting their weights, but another module might add elements to the
-    // form with the same weights and end up between ours. By putting them into a
-    // sub-array together, we're able force them to be rendered together.
-    $form['body_filter']['body'] = array(
-      '#type' => 'textarea',
-      '#title' => check_plain($type->body_label),
-      '#default_value' => $node->body,
-      '#required' => FALSE
-    );
-    $form['body_filter']['filter'] = filter_form($node->format);
-  }
-  
+  // Generate the default title and body.
+  $form = node_content_form($node, NULL);
+ 
   // SocialCalc sheet.
   if (isset($_POST['sheetsave'])) {
     $value = $_POST['sheetsave'];
