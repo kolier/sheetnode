@@ -65,7 +65,7 @@ function sheetnode_form(&$node) {
     $value = '';
   }
   $output = _sheetnode_inject($value, TRUE);
-  $form['sheet']['sheetview']['#value'] = $output; 
+  $form['sheet']['sheetview'] = array('#value' => $output, '#weight' => -1);
   $form['sheet']['sheetsave'] = array('#type' => 'hidden');
 
   // Template.
@@ -171,7 +171,7 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   if (!$teaser) {
     $value = _sheetnode_load($node->nid, $node->vid);
     $output = _sheetnode_inject($value, FALSE);
-    $node->content['sheet']['#value'] = $output;
+    $node->content['sheet'] = array('#value' => $output, '#weight' => -1);
   }
 
   return $node;
@@ -329,6 +329,21 @@ function theme_sheetnode_range($range) {
 function sheetnode_init() {
   drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
   drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
+}
+
+/**
+ * Implementation of hook_content_extra_fields().
+ */
+function sheetnode_content_extra_fields($type_name) {
+  $extra = array();
+  if ($type_name == 'sheetnode') {
+    $extra['sheet'] = array(
+      'label' => t('Sheetview'),
+      'description' => t('Sheetnode module form.'),
+      'weight' => -1,
+    );
+  }
+  return $extra;
 }
 
 function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
