@@ -242,7 +242,7 @@ function _sheetnode_google_import_do($spreadsheetService, $spreadsheet, $workshe
         $formula = preg_replace_callback('/R(?:(\[)?(-?\d+)\]?)?C(?:(\[)?(-?\d+)\]?)?/', '_sheetnode_google_import_formula_replace_coords', $value);
         $formula = str_replace(';', ',', $formula);
         $c['formula'] = substr($formula, 1);
-        if ($numeric) _sheetnode_google_import_infer_valueformat($sc, $c, $numeric, $trim($content));
+        if ($numeric) _sheetnode_google_import_infer_valueformat($sc, $c, $numeric, trim($content));
       } else if ($numeric) { // number
         $c['datatype'] = 'v';
         $c['valuetype'] = 'n';
