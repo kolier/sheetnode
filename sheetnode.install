@@ -73,7 +73,7 @@ function sheetnode_schema() {
   return $schema;
 }
 
-function sheetnode_update_6001(&$sandbox = NULL) {
+function sheetnode_update_6001(&$sandbox) {
   $ret = array();
   $schema = sheetnode_schema();
   db_create_table($ret, 'sheetnode_template', $schema['sheetnode_template']);
@@ -81,7 +81,7 @@ function sheetnode_update_6001(&$sandbox = NULL) {
   return $ret;
 }
 
-function sheetnode_update_6002(&$sandbox = NULL) {
+function sheetnode_update_6002(&$sandbox) {
   drupal_load('module', 'sheetnode');
   require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
   $ret = array();
@@ -118,7 +118,7 @@ function sheetnode_update_6002(&$sandbox = NULL) {
   return $ret;
 }
 
-function sheetnode_update_6003(&$sandbox = NULL) {
+function sheetnode_update_6003(&$sandbox) {
   $ret = array();
   $schema = sheetnode_schema();
   db_add_field($ret, 'sheetnode', 'vid', $schema['sheetnode']['fields']['vid']);
@@ -132,7 +132,7 @@ function sheetnode_update_6003(&$sandbox = NULL) {
   return $ret;
 }
 
-function sheetnode_update_6004(&$sandbox = NULL) {
+function sheetnode_update_6004(&$sandbox) {
   $ret = array();
   db_drop_unique_key($ret, 'sheetnode', 'nid');
   if (!$ret[0]['success']) return array();
@@ -140,7 +140,7 @@ function sheetnode_update_6004(&$sandbox = NULL) {
   return $ret;
 }
 
-function sheetnode_update_6005(&$sandbox = NULL) {
+function sheetnode_update_6005(&$sandbox) {
   $ret = array();
   $schema = sheetnode_schema();
   db_add_field($ret, 'sheetnode_template', 'vid', $schema['sheetnode_template']['fields']['vid']);
@@ -153,7 +153,7 @@ function _sheetnode_patch() {
   ), 'warning');
 }
 
-function sheetnode_update_6006(&$sandbox = NULL) {
+function sheetnode_update_6006(&$sandbox) {
   _sheetnode_patch();
   return array();
 }
