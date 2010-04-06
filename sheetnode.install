@@ -10,67 +10,7 @@ function sheetnode_uninstall() {
 }
 
 function sheetnode_schema() {
-  $schema['sheetnode'] = array(
-    'fields' => array(
-      'nid' => array(
-        'description' => t('The primary identifier for a node.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'vid' => array(
-        'description' => t('The revision identifier for a node.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'value' => array(
-        'description' => t('The serialized worksheet content.'),
-        'type' => 'text',
-        'size' => 'big',
-        'not null' => TRUE,
-      ),
-    ),
-    'primary key' => array('vid'),
-    'indexes' => array(
-      'nid' => array('nid'),
-    ),
-  );
-  $schema['sheetnode_template'] = array(
-    'fields' => array(
-      'tid' => array(
-        'description' => t('The primary identifier for the template.'),
-        'type' => 'serial',
-        'unsigned' => TRUE,
-        'not null' => TRUE
-      ),
-      'name' => array(
-        'type' => 'varchar',
-        'length' => '32',
-        'default' => '',
-        'not null' => TRUE,
-        'description' => t('The unique name of the template. May only be alphanumeric characters plus underscores.'),
-      ),
-      'value' => array(
-        'description' => t('The serialized worksheet template content.'),
-        'type' => 'text',
-        'size' => 'big',
-        'not null' => TRUE,
-        'serialize' => TRUE,
-      ),
-      'vid' => array(
-        'description' => t('The original node version for this template.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => FALSE,
-      ),
-    ),
-    'primary key' => array('tid'),
-    'unique keys' => array(
-      'key_name' => array('name'),
-    ),
-  );
-  return $schema;
+  return sheetnode_schema_6005();
 }
 
 function sheetnode_schema_6001() {
