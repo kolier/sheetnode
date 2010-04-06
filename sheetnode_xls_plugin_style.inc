@@ -7,9 +7,10 @@ class sheetnode_xls_plugin_style extends sheetnode_feed_plugin_style {
     $this->feed_image = drupal_get_path('module', 'sheetnode_xls') . '/images/xls.gif';
   }
 
-  function options(&$options) {
-    parent::options($options);
+  function option_definition() {
+    $options = parent::option_definition();
     $options['format'] = 'xls';
+    return $options;
   }
 
   function options_form(&$form, &$form_values) {

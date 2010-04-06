@@ -7,11 +7,12 @@ define('SHEETNODE_EXPANSION_VERTICAL', 0);
 define('SHEETNODE_EXPANSION_HORIZONTAL', 1);
 
 class sheetnode_plugin_style extends views_plugin_style {
-  function options(&$options) {
-    parent::options($options);
-    $options['expansion'] = SHEETNODE_EXPANSION_VERTICAL; 
-    $options['template'] = FALSE;
-    $options['sheetsave'] = '';
+  function option_definition() {
+    $options = parent::option_definition();
+    $options['expansion'] = array('default' => SHEETNODE_EXPANSION_VERTICAL); 
+    $options['template'] = array('default' => FALSE);
+    $options['sheetsave'] = array('default' => '');
+    return $options;
   }
 
   function options_form(&$form, &$form_values) {
@@ -404,9 +405,10 @@ EOS;
 }
 
 class sheetnode_feed_plugin_style extends sheetnode_plugin_style {
-  function options(&$options) {
-    parent::options($options);
-    $options['inherit'] = TRUE;
+  function option_definition() {
+    $options = parent::option_definition();
+    $options['inherit'] = array('default' => TRUE);
+    return $options;
   }
 
   function options_form(&$form, &$form_values) {
