@@ -240,6 +240,7 @@ function sheetnode_import_template(&$form_state) {
     '#title' => t('Template'),
     '#description' => t('Please select the template to load into your new sheetnode.'),
     '#options' => $options, 
+    '#default_value' => 0,
   );
   $form['submit'] = array(
     '#type' => 'submit',
