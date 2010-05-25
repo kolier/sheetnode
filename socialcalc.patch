@@ -1,7 +1,7 @@
-diff -ruP DanBricklin-socialcalc-b294728/socialcalc-3.js socialcalc/socialcalc-3.js
---- DanBricklin-socialcalc-b294728/socialcalc-3.js	2009-11-03 06:37:04.000000000 -0800
-+++ socialcalc/socialcalc-3.js	2010-02-14 22:41:43.000000000 -0800
-@@ -4493,6 +4493,7 @@
+diff -ruP socialcalc/socialcalc-3.js socialcalc.new/socialcalc-3.js
+--- socialcalc/socialcalc-3.js	2010-05-13 18:39:28.000000000 +0300
++++ socialcalc.new/socialcalc-3.js	2010-05-25 18:40:38.000000000 +0300
+@@ -4635,6 +4635,7 @@
     if (num) stylestr+="border-left:"+sheetobj.borderstyles[num]+";";
  
     if (cell.comment) {
@@ -9,7 +9,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalc-3.js socialcalc/socialcalc-3
        if (context.showGrid) {
           if (context.commentClassName) {
              result.className = (result.className ? result.className+" " : "") + context.commentClassName;
-@@ -4793,6 +4794,47 @@
+@@ -4935,6 +4936,47 @@
     }
  
  //
@@ -57,9 +57,9 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalc-3.js socialcalc/socialcalc-3
  // LookupElement(element, array) - returns array element which is an object with "element" of element
  //
  
-diff -ruP DanBricklin-socialcalc-b294728/socialcalcpopup.js socialcalc/socialcalcpopup.js
---- DanBricklin-socialcalc-b294728/socialcalcpopup.js	2009-11-03 06:37:04.000000000 -0800
-+++ socialcalc/socialcalcpopup.js	2010-02-14 22:45:09.000000000 -0800
+diff -ruP socialcalc/socialcalcpopup.js socialcalc.new/socialcalcpopup.js
+--- socialcalc/socialcalcpopup.js	2010-05-13 18:39:28.000000000 +0300
++++ socialcalc.new/socialcalcpopup.js	2010-05-21 10:18:22.000000000 +0300
 @@ -316,8 +316,10 @@
  
     pos = SocialCalc.GetElementPositionWithScroll(spcdata.mainele);
@@ -91,9 +91,9 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalcpopup.js socialcalc/socialcal
     spc[id] = spcid;
     var spcdata = spcid.data;
  
-diff -ruP DanBricklin-socialcalc-b294728/socialcalcspreadsheetcontrol.js socialcalc/socialcalcspreadsheetcontrol.js
---- DanBricklin-socialcalc-b294728/socialcalcspreadsheetcontrol.js	2009-11-03 06:37:04.000000000 -0800
-+++ socialcalc/socialcalcspreadsheetcontrol.js	2010-02-14 22:44:33.000000000 -0800
+diff -ruP socialcalc/socialcalcspreadsheetcontrol.js socialcalc.new/socialcalcspreadsheetcontrol.js
+--- socialcalc/socialcalcspreadsheetcontrol.js	2010-05-13 18:39:28.000000000 +0300
++++ socialcalc.new/socialcalcspreadsheetcontrol.js	2010-05-21 10:18:22.000000000 +0300
 @@ -1042,6 +1042,7 @@
        v.style.display = "none";
        v.style.width = spreadsheet.width + "px";
@@ -102,7 +102,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalcspreadsheetcontrol.js socialc
  
        html = SCLocSS(html); // localize with %loc!string!, etc.
  
-@@ -2707,6 +2708,7 @@
+@@ -2710,6 +2711,7 @@
     var s=SocialCalc.GetSpreadsheetControlObject();
     s.ExecuteCommand("set %C comment "+SocialCalc.encodeForSave(document.getElementById(s.idPrefix+"commenttext").value));
     var cell=SocialCalc.GetEditorCellElement(s.editor, s.editor.ecell.row, s.editor.ecell.col);
@@ -110,10 +110,10 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalcspreadsheetcontrol.js socialc
     s.editor.UpdateCellCSS(cell, s.editor.ecell.row, s.editor.ecell.col);
     SocialCalc.KeyboardFocus();
     }
-diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/socialcalctableeditor.js
---- DanBricklin-socialcalc-b294728/socialcalctableeditor.js	2009-11-03 06:37:04.000000000 -0800
-+++ socialcalc/socialcalctableeditor.js	2010-02-14 22:41:43.000000000 -0800
-@@ -366,6 +366,9 @@
+diff -ruP socialcalc/socialcalctableeditor.js socialcalc.new/socialcalctableeditor.js
+--- socialcalc/socialcalctableeditor.js	2010-05-13 18:39:28.000000000 +0300
++++ socialcalc.new/socialcalctableeditor.js	2010-05-25 17:45:41.000000000 +0300
+@@ -381,6 +381,9 @@
  
     this.range2 = {hasrange: false};
  
@@ -123,7 +123,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
     }
  
  // Methods:
-@@ -1354,8 +1357,8 @@
+@@ -1399,8 +1402,8 @@
     sizedisplay.style.width = "auto";
     sizedisplay.style.position = "absolute";
     sizedisplay.style.zIndex = 100;
@@ -134,18 +134,22 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
     sizedisplay.innerHTML = '<table cellpadding="0" cellspacing="0"><tr><td style="height:100px;'+
        'border:1px dashed black;background-color:white;width:' +
        (editor.context.colwidth[mouseinfo.mouseresizecolnum]-2) + 'px;">&nbsp;</td>'+
-@@ -1901,8 +1904,8 @@
+@@ -2104,12 +2107,12 @@
           delete result.coltoresize;
           return result;
           }
--      else if (clientX >= editor.verticaltablecontrol.controlborder ||
--               clientY >= editor.horizontaltablecontrol.controlborder ||
-+      else if (clientX >= editor.verticaltablecontrol.controlborder+editor.relativeoffset.left ||
-+               clientY >= editor.horizontaltablecontrol.controlborder+editor.relativeoffset.top ||
-                clientX < editor.gridposition.left || clientY <= editor.gridposition.top) {
+-      else if (clientX >= editor.verticaltablecontrol.controlborder) {
++      else if (clientX >= editor.verticaltablecontrol.controlborder+editor.relativeoffset.left) {
+          result.rowfooter = true;
+          result.distance = clientX - editor.verticaltablecontrol.controlborder;
           return result;
           }
-@@ -2537,6 +2540,9 @@
+-      else if (clientY >= editor.horizontaltablecontrol.controlborder) {
++      else if (clientY >= editor.horizontaltablecontrol.controlborder+editor.relativeoffset.top) {
+          result.colfooter = true;
+          result.distance = clientY - editor.horizontaltablecontrol.controlborder;
+          return result;
+@@ -2759,6 +2762,9 @@
     editor.lastnonscrollingcol = editor.context.colpanes.length-1 > 0 ?
           editor.context.colpanes[editor.context.colpanes.length-2].last : 0;
  
@@ -155,7 +159,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
     // Now do the table controls
  
     editor.verticaltablecontrol.ComputeTableControlPositions();
-@@ -3195,8 +3201,8 @@
+@@ -3425,8 +3431,8 @@
        cell=SocialCalc.GetEditorCellElement(editor, editor.ecell.row, editor.ecell.col);
        if (cell) {
           position = SocialCalc.GetElementPosition(cell.element);
@@ -166,7 +170,91 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
           }
        inputecho.container.style.display = "block";
        if (inputecho.interval) window.clearInterval(inputecho.interval); // just in case
-@@ -3520,7 +3526,7 @@
+@@ -3592,31 +3598,31 @@
+       if (row < editor.firstscrollingrow) break;
+       if (col < editor.firstscrollingcol) break;
+ 
+-      if (editor.rowpositions[row+1]+20>editor.horizontaltablecontrol.controlborder) {
++      if (editor.rowpositions[row+1]+20>editor.horizontaltablecontrol.controlborder+editor.relativeoffset.top) {
+          break;
+          }
+       if (editor.rowpositions[row+1]-10<editor.headposition.top) {
+          break;
+          }
+-      if (editor.colpositions[col+1]+20>editor.verticaltablecontrol.controlborder) {
++      if (editor.colpositions[col+1]+20>editor.verticaltablecontrol.controlborder+editor.relativeoffset.left) {
+          break;
+          }
+       if (editor.colpositions[col+1]-30<editor.headposition.left) {
+          break;
+          }
+ 
+-      cellhandles.draghandle.style.left = (editor.colpositions[col+1]-1)+"px";
+-      cellhandles.draghandle.style.top = (editor.rowpositions[row+1]-1)+"px";
++      cellhandles.draghandle.style.left = (editor.colpositions[col+1]-editor.relativeoffset.left-1)+"px";
++      cellhandles.draghandle.style.top = (editor.rowpositions[row+1]-editor.relativeoffset.top-1)+"px";
+       cellhandles.draghandle.style.display = "block";
+ 
+       if (moveshow) {
+          cellhandles.draghandle.style.display = "none";
+-         cellhandles.dragpalette.style.left = (editor.colpositions[col+1]-45)+"px";
+-         cellhandles.dragpalette.style.top = (editor.rowpositions[row+1]-45)+"px";
++         cellhandles.dragpalette.style.left = (editor.colpositions[col+1]-editor.relativeoffset.left-45)+"px";
++         cellhandles.dragpalette.style.top = (editor.rowpositions[row+1]-editor.relativeoffset.top-45)+"px";
+          cellhandles.dragpalette.style.display = "block";
+          viewport = SocialCalc.GetViewportInfo();
+-         cellhandles.dragtooltip.style.right = (viewport.width-(editor.colpositions[col+1]-1))+"px";
+-         cellhandles.dragtooltip.style.bottom = (viewport.height-(editor.rowpositions[row+1]-1))+"px";
++         cellhandles.dragtooltip.style.right = (viewport.width-(editor.colpositions[col+1]-editor.relativeoffset.left-1))+"px";
++         cellhandles.dragtooltip.style.bottom = (viewport.height-(editor.rowpositions[row+1]-editor.relativeoffset.top-1))+"px";
+          cellhandles.dragtooltip.style.display = "none";
+          }
+ 
+@@ -3650,6 +3656,9 @@
+    var cellhandles = editor.cellhandles;
+    if (!cellhandles.editor) return true; // no handles
+ 
++   clientX -= editor.relativeoffset.left;
++   clientY -= editor.relativeoffset.top;
++
+    if (!editor.cellhandles.mouseDown) {
+       editor.cellhandles.ShowCellHandles(true, true); // show move handles, too
+ 
+@@ -3856,9 +3865,11 @@
+    if (!editor) return true; // we're not handling it -- let browser do default
+ 
+    if (editor.busy) return; // don't do anything when busy (is this correct?)
+-
+    var cellhandles = editor.cellhandles;
+ 
++   clientX -= editor.relativeoffset.left;
++   clientY -= editor.relativeoffset.top;
++
+    if (cellhandles.timer) { // cancel timer
+       window.clearTimeout(cellhandles.timer);
+       cellhandles.timer = null;
+@@ -4111,8 +4122,8 @@
+       }
+ 
+ 
+-   cellhandles.fillinghandle.style.left = (clientX)+"px";
+-   cellhandles.fillinghandle.style.top = (clientY - 17)+"px";
++   cellhandles.fillinghandle.style.left = (clientX-editor.relativeoffset.left)+"px";
++   cellhandles.fillinghandle.style.top = (clientY-editor.relativeoffset.top - 17)+"px";
+    cellhandles.fillinghandle.innerHTML = scc.s_CHindicatorOperationLookup[cellhandles.dragtype]+
+                                          (scc.s_CHindicatorDirectionLookup[editor.cellhandles.filltype] || "");
+    cellhandles.fillinghandle.style.display = "block";
+@@ -4236,6 +4247,9 @@
+    if (!editor) return; // not us, ignore
+    var cellhandles = editor.cellhandles;
+ 
++   clientX -= editor.relativeoffset.left;
++   clientY -= editor.relativeoffset.top;
++
+    element = mouseinfo.element;
+ 
+    mouseinfo.ignore = false;
+@@ -4607,7 +4621,7 @@
  
     var control = bobj.functionobj.control;
     var bposition = SocialCalc.GetElementPosition(bobj.element);
@@ -175,7 +263,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
     if (control.editor.busy) { // ignore if busy - wait for next repeat
        return;
        }
-@@ -3595,26 +3601,27 @@
+@@ -4682,26 +4696,27 @@
  SocialCalc.ComputeTableControlPositions = function(control) {
  
     var editor = control.editor;
@@ -215,7 +303,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        control.scrollareaend = control.morebuttonstart-1;
        control.scrollareasize = control.scrollareaend-control.scrollareastart+1;
        }
-@@ -3646,8 +3653,8 @@
+@@ -4733,8 +4748,8 @@
  
     if (dobj.vertical) {
        row = SocialCalc.Lookup(draginfo.clientY+dobj.functionobj.control.sliderthickness, editor.rowpositions);
@@ -226,7 +314,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        if (editor.context.rowpanes.length-1) { // has 2 already
           editor.context.SetRowPaneFirstLast(1, editor.context.rowpanes[0].last+1, editor.context.rowpanes[0].last+1);
           editor.FitToEditTable();
-@@ -3656,8 +3663,8 @@
+@@ -4743,8 +4758,8 @@
        }
     else {
        col = SocialCalc.Lookup(draginfo.clientX+dobj.functionobj.control.sliderthickness, editor.colpositions);
@@ -237,7 +325,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        if (editor.context.colpanes.length-1) { // has 2 already
           editor.context.SetColPaneFirstLast(1, editor.context.colpanes[0].last+1, editor.context.colpanes[0].last+1);
           editor.FitToEditTable();
-@@ -3683,20 +3690,20 @@
+@@ -4770,20 +4785,20 @@
     if (dobj.vertical) {
        max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetY; // restrict movement
        if (draginfo.clientY > max) draginfo.clientY = max;
@@ -262,7 +350,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        }
  
     SocialCalc.DragFunctionPosition(event, draginfo, dobj);
-@@ -3717,7 +3724,7 @@
+@@ -4804,7 +4819,7 @@
     if (dobj.vertical) {
        max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetY; // restrict movement
        if (draginfo.clientY > max) draginfo.clientY = max;
@@ -271,7 +359,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        if (draginfo.clientY < min) draginfo.clientY = min;
  
        row = SocialCalc.Lookup(draginfo.clientY+sliderthickness, editor.rowpositions);
-@@ -3739,7 +3746,7 @@
+@@ -4826,7 +4841,7 @@
     else {
        max = control.morebuttonstart - control.minscrollingpanesize - draginfo.offsetX;
        if (draginfo.clientX > max) draginfo.clientX = max;
@@ -280,7 +368,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        if (draginfo.clientX < min) draginfo.clientX = min;
  
        col = SocialCalc.Lookup(draginfo.clientX+sliderthickness, editor.colpositions);
-@@ -3794,7 +3801,7 @@
+@@ -4888,7 +4903,7 @@
     if (dobj.vertical) {
        if (scc.TCTDFSthumbstatusvClass) draginfo.thumbstatus.className = scc.TCTDFSthumbstatusvClass;
        SocialCalc.setStyles(draginfo.thumbstatus, scc.TCTDFSthumbstatusvStyle);
@@ -289,7 +377,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        draginfo.thumbstatus.style.left = (control.controlborder-10-(editor.tablewidth/2))+"px";
        draginfo.thumbstatus.style.width = (editor.tablewidth/2)+"px";
  
-@@ -3815,7 +3822,7 @@
+@@ -4909,7 +4924,7 @@
        if (scc.TCTDFSthumbstatushClass) draginfo.thumbstatus.className = scc.TCTDFSthumbstatushClass;
        SocialCalc.setStyles(draginfo.thumbstatus, scc.TCTDFSthumbstatushStyle);
        draginfo.thumbstatus.style.top = (control.controlborder+scc.TCTDFStopOffseth)+"px";
@@ -298,7 +386,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
        editor.toplevel.appendChild(draginfo.thumbstatus);
        draginfo.thumbstatus.innerHTML = scc.s_TCTDFthumbstatusPrefixh+SocialCalc.rcColname(editor.firstscrollingcol);
        }
-@@ -3861,7 +3868,7 @@
+@@ -4955,7 +4970,7 @@
           draginfo.clientY = control.scrollareaend - draginfo.offsetY - control.thumbthickness + 2;
        if (draginfo.clientY < control.scrollareastart - draginfo.offsetY - 1)
           draginfo.clientY = control.scrollareastart - draginfo.offsetY - 1;
@@ -307,7 +395,7 @@ diff -ruP DanBricklin-socialcalc-b294728/socialcalctableeditor.js socialcalc/soc
  
        first =
           ((draginfo.clientY+draginfo.offsetY-control.scrollareastart+1)/(control.scrollareasize-control.thumbthickness))
-@@ -3880,7 +3887,7 @@
+@@ -4974,7 +4989,7 @@
           draginfo.clientX = control.scrollareaend - draginfo.offsetX - control.thumbthickness + 2;
        if (draginfo.clientX < control.scrollareastart - draginfo.offsetX - 1)
           draginfo.clientX = control.scrollareastart - draginfo.offsetX - 1;
