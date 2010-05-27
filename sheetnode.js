@@ -108,11 +108,11 @@ Drupal.sheetnode.focusSetup = function() {
 
 Drupal.sheetnode.start = function(context) {
   // Just exit if the sheetnode is not in the new context or if it has already been processed.
-  if ($('div#'+Drupal.settings.sheetnode.viewId, context).length == 0) return;
+  if ($('div#'+Drupal.settings.sheetnode.view_id, context).length == 0) return;
   if ($('div.sheetview-processed', context).length != 0) return;
-
+  
   // DOM initialization.
-  $('#'+Drupal.settings.sheetnode.editId, context).parents('form').submit(function() {
+  $('#'+Drupal.settings.sheetnode.edit_id, context).parents('form').submit(function() {
     Drupal.sheetnode.save();
     return true;
   });
@@ -133,23 +133,26 @@ Drupal.sheetnode.start = function(context) {
 
   // SocialCalc initialization.
   SocialCalc.Popup.Controls = {};
-  SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.imagePrefix;
-  SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.imagePrefix +"commentbg.gif);"
+  SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.image_prefix;
+  SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"commentbg.gif);"
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
-  this.spreadsheet = new SocialCalc.SpreadsheetControl();
+  this.spreadsheet = Drupal.settings.sheetnode.editing ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
 
-  // Remove unwanted tabs.
-  this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
-  this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
-  this.spreadsheet.tabnums = {};
-  for (var i=0; i<this.spreadsheet.tabs.length; i++) {
-    this.spreadsheet.tabnums[this.spreadsheet.tabs[i].name] = i;
-  }
-  
-  // Hide toolbar if we're just viewing.
-  if (!Drupal.settings.sheetnode.editMode) {
-    this.spreadsheet.tabbackground="display:none;";
-    this.spreadsheet.toolbarbackground="display:none;";
+  if (Drupal.settings.sheetnode.editing) {
+    // Remove unwanted tabs.
+    this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
+    this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
+    this.spreadsheet.tabnums = {};
+    for (var i=0; i<this.spreadsheet.tabs.length; i++) {
+      this.spreadsheet.tabnums[this.spreadsheet.tabs[i].name] = i;
+    }
+/*    
+    // Hide toolbar if we're just viewing.
+    if (!Drupal.settings.sheetnode.editing) {
+      this.spreadsheet.tabbackground="display:none;";
+      this.spreadsheet.toolbarbackground="display:none;";
+    }
+*/
   }
 
   // Read in data and recompute.
@@ -157,7 +160,12 @@ Drupal.sheetnode.start = function(context) {
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.viewId, 700, $('div#'+Drupal.settings.sheetnode.viewId).width());
+  if (Drupal.settings.sheetnode.editing) {
+    this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.view_id, 700, $('div#'+Drupal.settings.sheetnode.view_id).width());
+  }
+  else {
+    this.spreadsheet.InitializeSpreadsheetViewer(Drupal.settings.sheetnode.view_id, 700, $('div#'+Drupal.settings.sheetnode.view_id).width());
+  }
   if (parts && parts.edit) {
     this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
   }
@@ -178,7 +186,7 @@ Drupal.sheetnode.start = function(context) {
   Drupal.sheetnode.loadsheetSetup();
 
   // Fix DOM where needed.
-  div = $('div#'+Drupal.settings.sheetnode.viewId, context);
+  div = $('div#'+Drupal.settings.sheetnode.view_id, context);
   $('div#SocialCalc-edittools', div).parent('div').attr('id', 'SocialCalc-toolbar');
   $('td#SocialCalc-edittab', div).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
   $('input:text', div).addClass('form-text');
@@ -225,26 +233,22 @@ Drupal.sheetnode.start = function(context) {
   // Signal that we've processed this instance of sheetnode.
   div.addClass('sheetview-processed');
 
-  this.spreadsheet.ExecuteCommand('recalc');
+  // Force a recalc to refresh all values and scrollbars.
+  this.spreadsheet.editor.EditorScheduleSheetCommands("recalc");
 }
 
 Drupal.sheetnode.resize = function() {
   // Adjust width and height if needed.
-  div = $('div#'+Drupal.settings.sheetnode.viewId);
+  div = $('div#'+Drupal.settings.sheetnode.view_id);
   if (div.hasClass('sheetview-fullscreen')) {
     this.spreadsheet.requestedHeight = div.height();
   }
   this.spreadsheet.requestedWidth = div.width();
-  
-  // Call SocialCalc for resizing.
-  if (this.spreadsheet.SizeSSDiv()) {
-    this.spreadsheet.editor.ResizeTableEditor(this.spreadsheet.width, this.spreadsheet.height-
-      (this.spreadsheet.spreadsheetDiv.firstChild.offsetHeight + this.spreadsheet.formulabarDiv.offsetHeight));
-  }
+  this.spreadsheet.DoOnResize();
 }
 
 Drupal.sheetnode.save = function() {
-  $('#'+Drupal.settings.sheetnode.editId).val(this.spreadsheet.CreateSpreadsheetSave());
+  $('#'+Drupal.settings.sheetnode.edit_id).val(this.spreadsheet.CreateSpreadsheetSave());
   log = $('#edit-log').val();
   if (log != undefined) {
     audit = this.spreadsheet.sheet.CreateAuditString();

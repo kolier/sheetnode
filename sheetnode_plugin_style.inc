@@ -51,7 +51,7 @@ class sheetnode_plugin_style extends views_plugin_style {
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
   Drupal.behaviors.sheetnode = function(context) {
-    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $imagePrefix, "viewId": "sheetview", "editId": "edit-style-options-sheetsave", "editMode": true } });
+    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $imagePrefix, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": true } });
     Drupal.sheetnode.start(context);
   }
 </script>
@@ -376,7 +376,7 @@ EOS;
     $value = drupal_to_js(socialcalc_save($this->render_sheet()));
     $javascript = <<<EOS
 Drupal.behaviors.sheetnode = function(context) {
-  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "imagePrefix": $image, "viewId": "sheetview", "editId": "edit-style-options-sheetsave", "editMode": false } });
+  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": false } });
   Drupal.sheetnode.start(context);
 }
 EOS;
