@@ -121,7 +121,8 @@ function _sheetnode_inject($value, $edit) {
                                            'image_prefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-',
                                            'view_id' => 'sheetview',
                                            'edit_id' => 'edit-sheetsave',
-                                           'editing' => $edit ? TRUE : FALSE,
+                                           'editing' => empty($edit) ? FALSE : TRUE,
+                                           'fiddle' => variable_get('sheetnode_fiddle', TRUE),
   )), 'setting');
   drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
   return '<div class="sheetview" id="sheetview"></div>';
@@ -226,8 +227,25 @@ function sheetnode_menu() {
     'page arguments' => array('sheetnode_import_template'),
     'description' => 'Create a new sheetnode from an existing template.',
   );
+  $items['admin/settings/sheetnode'] = array(
+    'title' => 'Sheetnode settings',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sheetnode_admin_settings'),
+    'description' => 'Sheetnode module settings',
+  );
 
   return $items;
+}
+
+function sheetnode_admin_settings() {
+  $form['sheetnode_fiddle'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Fiddle mode'),
+    '#description' => t('Allow users to interact with spreadsheet in view mode.'),
+    '#default_value' => variable_get('sheetnode_fiddle', TRUE),
+  );
+  return system_settings_form($form);
 }
 
 function sheetnode_import_template(&$form_state) {

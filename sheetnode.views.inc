@@ -24,6 +24,7 @@ function sheetnode_views_plugins() {
           drupal_get_path('module', 'sheetnode').'/socialcalc/formula1.js',
           drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcpopup.js',
           drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcspreadsheetcontrol.js',
+          drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcviewer.js',
           drupal_get_path('module', 'sheetnode').'/sheetnode.js',
         ),
       ),

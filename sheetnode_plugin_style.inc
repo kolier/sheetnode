@@ -44,14 +44,15 @@ class sheetnode_plugin_style extends views_plugin_style {
       '#weight' => 98,
     );
     global $base_url;
-    $imagePrefix = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
+    $image = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
     $value = drupal_to_js($this->options['sheetsave']);
+    $fiddle = variable_get('sheetnode_fiddle', TRUE) ? 'true' : 'false';
     $form['sheetview']['#weight'] = 99;
     $form['sheetview']['#value'] = <<<EOS
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
   Drupal.behaviors.sheetnode = function(context) {
-    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $imagePrefix, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": true } });
+    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": true, "fiddle": $fiddle } });
     Drupal.sheetnode.start(context);
   }
 </script>
@@ -369,14 +370,16 @@ EOS;
     drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/formula1.js');
     drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcpopup.js');
     drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcspreadsheetcontrol.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcviewer.js');
     drupal_add_js(drupal_get_path('module', 'sheetnode').'/sheetnode.js');
     drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
     drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
     $image = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
     $value = drupal_to_js(socialcalc_save($this->render_sheet()));
+    $fiddle = variable_get('sheetnode_fiddle', TRUE) ? 'true' : 'false';
     $javascript = <<<EOS
 Drupal.behaviors.sheetnode = function(context) {
-  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": false } });
+  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": false, "fiddle": $fiddle } });
   Drupal.sheetnode.start(context);
 }
 EOS;

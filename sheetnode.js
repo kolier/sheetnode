@@ -136,9 +136,9 @@ Drupal.sheetnode.start = function(context) {
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.image_prefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"commentbg.gif);"
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
-  this.spreadsheet = Drupal.settings.sheetnode.editing ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
+  this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddle) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
 
-  if (Drupal.settings.sheetnode.editing) {
+  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddle) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
@@ -146,13 +146,12 @@ Drupal.sheetnode.start = function(context) {
     for (var i=0; i<this.spreadsheet.tabs.length; i++) {
       this.spreadsheet.tabnums[this.spreadsheet.tabs[i].name] = i;
     }
-/*    
+    
     // Hide toolbar if we're just viewing.
     if (!Drupal.settings.sheetnode.editing) {
       this.spreadsheet.tabbackground="display:none;";
       this.spreadsheet.toolbarbackground="display:none;";
     }
-*/
   }
 
   // Read in data and recompute.
@@ -160,7 +159,7 @@ Drupal.sheetnode.start = function(context) {
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  if (Drupal.settings.sheetnode.editing) {
+  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddle) {
     this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.view_id, 700, $('div#'+Drupal.settings.sheetnode.view_id).width());
   }
   else {
