@@ -1,7 +1,7 @@
 <?php
 // $Id$
 
-require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
+require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
 
 define('SHEETNODE_EXPANSION_VERTICAL', 0);
 define('SHEETNODE_EXPANSION_HORIZONTAL', 1);
@@ -44,7 +44,7 @@ class sheetnode_plugin_style extends views_plugin_style {
       '#weight' => 98,
     );
     global $base_url;
-    $image = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
+    $image = drupal_to_js($base_url . '/' .drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-');
     $value = drupal_to_js($this->options['sheetsave']);
     $fiddle = variable_get('sheetnode_fiddle', TRUE) ? 'true' : 'false';
     $form['sheetview']['#weight'] = 99;
@@ -52,7 +52,7 @@ class sheetnode_plugin_style extends views_plugin_style {
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
   Drupal.behaviors.sheetnode = function(context) {
-    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": true, "fiddle": $fiddle } });
+    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": true, "fiddling": $fiddle } });
     Drupal.sheetnode.start(context);
   }
 </script>

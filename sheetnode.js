@@ -5,13 +5,40 @@
 Drupal.sheetnode = Drupal.sheetnode || {};
 
 Drupal.sheetnode.functionsSetup = function() {
+  // SUMPRODUCT function.
   SocialCalc.Formula.FunctionList["SUMPRODUCT"] = [Drupal.sheetnode.functionSumProduct, -1, "rangen", "", "stat"];
   SocialCalc.Constants.s_fdef_SUMPRODUCT = 'Sums the pairwise products of 2 or more ranges. The ranges must be of equal length.';
   SocialCalc.Constants.s_farg_rangen = 'range1, range2, ...';
 
   // Override IF function to allow optional false value.
   SocialCalc.Formula.FunctionList["IF"] = [Drupal.sheetnode.functionIf, -2, "iffunc2", "", "test"];
-  SocialCalc.Constants.s_farg_iffunc2 = "logical-expression, true-value[, false-value]";
+  SocialCalc.Constants.s_farg_iffunc2 = 'logical-expression, true-value[, false-value]';
+
+  // DRUPALFIELD server-side function.
+  SocialCalc.Formula.FunctionList["DRUPALFIELD"] = [Drupal.sheetnode.functionDrupalField, 3, "drupalfield"];
+  SocialCalc.Constants.s_fdef_DRUPALFIELD = 'Returns a field from the specified Drupal entity (node, user, etc.)';
+  SocialCalc.Constants.s_farg_drupalfield = 'oid, entity-name, field-name';
+}
+
+Drupal.sheetnode.functionDrupalField = function(fname, operand, foperand, sheet) {
+  var scf = SocialCalc.Formula;
+  var oid, entity, field;
+
+  oid = scf.OperandValueAndType(sheet, foperand);
+  entity = scf.OperandValueAndType(sheet, foperand);
+  field = scf.OperandValueAndType(sheet, foperand);
+
+  $.ajax({
+    type: 'POST',
+    url: Drupal.settings.basePath+'sheetnode/field',
+    data: 'oid='+oid.value+'&entity='+escape(entity.value)+'&field='+escape(field.value),
+    datatype: 'json',
+    async: false,
+    success: function (data) {
+      var result = Drupal.parseJson(data);
+      operand.push(result);
+    }
+  });
 }
 
 Drupal.sheetnode.functionIf = function(fname, operand, foperand, sheet) {
@@ -39,7 +66,6 @@ Drupal.sheetnode.functionIf = function(fname, operand, foperand, sheet) {
   }
   
   operand.push(cond.value ? op1 : op2);
-  return;
 }
 
 Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) {
@@ -136,9 +162,9 @@ Drupal.sheetnode.start = function(context) {
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.image_prefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"commentbg.gif);"
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
-  this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddle) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
+  this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
 
-  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddle) {
+  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
@@ -159,7 +185,7 @@ Drupal.sheetnode.start = function(context) {
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddle) {
+  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) {
     this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.view_id, 700, $('div#'+Drupal.settings.sheetnode.view_id).width());
   }
   else {
