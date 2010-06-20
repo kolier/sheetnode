@@ -44,15 +44,21 @@ class sheetnode_plugin_style extends views_plugin_style {
       '#weight' => 98,
     );
     global $base_url;
-    $image = drupal_to_js($base_url . '/' .drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-');
-    $value = drupal_to_js($this->options['sheetsave']);
-    $fiddle = variable_get('sheetnode_fiddle', TRUE) ? 'true' : 'false';
+    $settings = drupal_to_js(array('sheetnode' => array(
+      'value' => $this->options['sheetsave'],
+      'image_prefix' => $base_url . '/' . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
+      'view_id' => 'sheetview',
+      'edit_id' => 'edit-style-options-sheetsave',
+      'editing' => TRUE,
+      'fiddling' => variable_get('sheetnode_fiddle', TRUE) ? TRUE : FALSE,
+      'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
+    )));
     $form['sheetview']['#weight'] = 99;
     $form['sheetview']['#value'] = <<<EOS
 <div class="sheetview" id="sheetview">
 <script language="javascript" type="text/javascript">
   Drupal.behaviors.sheetnode = function(context) {
-    jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": true, "fiddling": $fiddle } });
+    jQuery.extend(Drupal.settings, $settings);
     Drupal.sheetnode.start(context);
   }
 </script>
@@ -363,23 +369,29 @@ EOS;
     }
 
     global $base_url;
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcconstants.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc-3.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalctableeditor.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/formatnumber2.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/formula1.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcpopup.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcspreadsheetcontrol.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcviewer.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode').'/sheetnode.js');
-    drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
-    drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
-    $image = drupal_to_js($base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-');
-    $value = drupal_to_js(socialcalc_save($this->render_sheet()));
-    $fiddle = variable_get('sheetnode_fiddle', TRUE) ? 'true' : 'false';
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formatnumber2.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formula1.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcpopup.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcspreadsheetcontrol.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcviewer.js');
+    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/sheetnode.js');
+    drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
+    drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
+    $settings = drupal_to_js(array('sheetnode' => array(
+      'value' => socialcalc_save($this->render_sheet()),
+      'image_prefix' => $base_url . '/' . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
+      'view_id' => 'sheetview',
+      'edit_id' => 'edit-style-options-sheetsave',
+      'editing' => FALSE,
+      'fiddling' => variable_get('sheetnode_fiddle', TRUE) ? TRUE : FALSE,
+      'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
+    )));
     $javascript = <<<EOS
 Drupal.behaviors.sheetnode = function(context) {
-  jQuery.extend(Drupal.settings, { "sheetnode": { "value": $value, "image_prefix": $image, "view_id": "sheetview", "edit_id": "edit-style-options-sheetsave", "editing": false, "fiddle": $fiddle } });
+  jQuery.extend(Drupal.settings, $settings);
   Drupal.sheetnode.start(context);
 }
 EOS;
@@ -420,7 +432,9 @@ class sheetnode_feed_plugin_style extends sheetnode_plugin_style {
       '#type' => 'checkbox',
       '#title' => t('Inherit spreadsheet settings'),
       '#default_value' => $this->options['inherit'],
-      '#description' => t('If this feed is attached to a display that has a Spreadsheet style, this option lets you inherit the settings of that style, including the spreadsheet formatting. The settings below are then ignored.'),
+      '#description' => t('If this feed is attached to a display that has a Spreadsheet style, 
+                           this option lets you inherit the settings of that style, including the spreadsheet formatting. 
+                           The settings below are then ignored.'),
     );
   }
 

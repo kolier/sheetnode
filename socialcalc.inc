@@ -364,6 +364,9 @@ function socialcalc_parse_cell($parts, $j) {
     case "comment":
       $cell['comment'] = strval(socialcalc_decode_value($parts[$j++]));
       break;
+    case "ro":
+      $cell['readonly'] = strcmp(strtolower(strval(socialcalc_decode_value($parts[$j++]))), "yes") == 0;
+      break;
     }
   }
   return $cell;
@@ -564,6 +567,9 @@ function socialcalc_save_cell($cell) {
   }
   if (isset($cell['errors'])) {
     $line .= ':e:'. socialcalc_encode_value($cell['errors']);
+  }
+  if (!empty($cell['readonly'])) {
+    $line .= ':ro:yes';
   }
   $t = @$cell['bt'];
   $r = @$cell['br'];

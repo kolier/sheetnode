@@ -18,7 +18,15 @@ function sheetnode_node_info() {
  * Implementation of hook_perm().
  */
 function sheetnode_perm() {
-  return array('create sheetnode', 'edit own sheetnode', 'edit any sheetnode', 'delete own sheetnode', 'delete any sheetnode', 'create sheet template');
+  return array(
+    'create sheetnode', 
+    'edit own sheetnode', 
+    'edit any sheetnode', 
+    'delete own sheetnode', 
+    'delete any sheetnode', 
+    'create sheet template',
+    'unlock sheet cells',
+  );
 }
 
 /**
@@ -104,25 +112,27 @@ function sheetnode_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
-function _sheetnode_inject($value, $edit, $edit_id = 'edit-sheetsave') {
+function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave') {
   global $base_url;
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcconstants.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc-3.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalctableeditor.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/formatnumber2.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/formula1.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcpopup.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcspreadsheetcontrol.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalcviewer.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode').'/sheetnode.js');
-  drupal_add_css(drupal_get_path('module', 'sheetnode').'/socialcalc/socialcalc.css');
-  drupal_add_css(drupal_get_path('module', 'sheetnode').'/sheetnode.css');
-  drupal_add_js(array('sheetnode' => array('value' => $value, 
-                                           'image_prefix' => $base_url .'/' .drupal_get_path('module', 'sheetnode') .'/socialcalc/images/sc-',
-                                           'view_id' => 'sheetview',
-                                           'edit_id' => $edit_id,
-                                           'editing' => empty($edit) ? FALSE : TRUE,
-                                           'fiddling' => variable_get('sheetnode_fiddle', TRUE) ? TRUE : FALSE,
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formatnumber2.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formula1.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcpopup.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcspreadsheetcontrol.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcviewer.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/sheetnode.js');
+  drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
+  drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
+  drupal_add_js(array('sheetnode' => array(
+    'value' => $value, 
+    'image_prefix' => $base_url . '/' . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
+    'view_id' => 'sheetview',
+    'edit_id' => $edit_id,
+    'editing' => empty($editing) ? FALSE : TRUE,
+    'fiddling' => variable_get('sheetnode_fiddle', TRUE) ? TRUE : FALSE,
+    'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
   )), 'setting');
   drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
   return '<div class="sheetview" id="sheetview"></div>';
@@ -186,7 +196,7 @@ function sheetnode_nodeapi($node, $op) {
   if ($node->type != 'sheetnode') return;
   switch ($op) {
   case 'update index':
-    require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
+    require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
     $output = '<table>';
     $socialcalc = socialcalc_parse(_sheetnode_load($node->nid, $node->vid));
     $sc = $socialcalc['sheet'];
@@ -358,7 +368,7 @@ function theme_sheetnode_range($range) {
  * Implementation of hook_init().
  */
 function sheetnode_init() {
-  // TODO: Put this back in inject().
+  // TODO: This is here for the view admin page. Find another way to include them or at least restrict the path.
   drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
   drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
 }
@@ -495,8 +505,12 @@ function sheetnode_elements() {
       '#delta' => 0,
       '#process' => array('sheetfield_spreadsheet_process'),
       '#autocomplete_path' => FALSE,
+//      '#value_callback' => 'sheetfield_spreadsheet_value',
     ),
   );
+}
+
+function sheetfield_spreadsheet_value($element, $edit = FALSE) {
 }
 
 function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
@@ -573,6 +587,7 @@ function _sheetnode_ajax_field($oid = NULL, $entity = NULL, $field = NULL) {
     $object = call_user_func($entity . '_load', $oid);
     $value = NULL;
     if ($object) {
+      // Try CCK field.
       if ($entity == 'node' && module_exists('content')) {
         $field_info = content_fields($field, $object->type);
         if ($field_info) {
@@ -580,6 +595,8 @@ function _sheetnode_ajax_field($oid = NULL, $entity = NULL, $field = NULL) {
           $value = content_view_field($field_info, $object, FALSE, TRUE);
         }
       }
+
+      // Try rendered node field.
       if (!$value && $entity == 'node') {
         $node = drupal_clone($object);
         $node = node_build_content($node);
@@ -587,6 +604,8 @@ function _sheetnode_ajax_field($oid = NULL, $entity = NULL, $field = NULL) {
           $value = drupal_render($node->content[$field]);
         }
       }
+
+      // Try raw object field.
       if (!$value && isset($object->$field)) {
         if (is_object($object->$field) || is_array($object->$field)) {
           $value = print_r($object->$field, TRUE);
@@ -595,6 +614,8 @@ function _sheetnode_ajax_field($oid = NULL, $entity = NULL, $field = NULL) {
           $value = $object->$field;
         }
       }
+
+      // If found, send it back.
       if ($value) {
         require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
         drupal_json(array(

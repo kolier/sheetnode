@@ -162,6 +162,8 @@ Drupal.sheetnode.start = function(context) {
   SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.image_prefix;
   SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"commentbg.gif);"
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
+  SocialCalc.Constants.defaultReadonlyStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"lockbg.gif);"
+  SocialCalc.Constants.defaultReadonlyClass = "readonly";
   this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
 
   if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) {
@@ -222,6 +224,11 @@ Drupal.sheetnode.start = function(context) {
   $('input:button', div).addClass('form-submit');
   $('div#SocialCalc-sorttools td:first', div).css('width', 'auto');
   $('div#SocialCalc-settingsview', div).css('border', 'none').css('width', 'auto').css('height', 'auto');
+
+  // Lock cells requires special permission.
+  if (Drupal.settings.sheetnode.editing && !Drupal.settings.sheetnode.perm_unlock_sheet_cells) {
+    $('#'+Drupal.sheetnode.spreadsheet.idPrefix+'locktools').css('display', 'none');
+  }
 
   // Prepare for fullscreen handling when clicking the SocialCalc icon.
   $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', div).attr('title', Drupal.t('Fullscreen')).click(function() {
