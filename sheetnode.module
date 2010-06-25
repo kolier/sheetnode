@@ -427,9 +427,6 @@ function sheetnode_field($op, &$node, $field, &$items, $teaser, $page) {
   switch ($op) {
   case 'insert':
   case 'update':
-    foreach ($items as $delta => $item) {
-      $items[$delta]['value'] = $items[$delta]['value']['sheetsave'];
-    }
     break;
   }
 }
@@ -505,21 +502,17 @@ function sheetnode_elements() {
       '#delta' => 0,
       '#process' => array('sheetfield_spreadsheet_process'),
       '#autocomplete_path' => FALSE,
-//      '#value_callback' => 'sheetfield_spreadsheet_value',
     ),
   );
-}
-
-function sheetfield_spreadsheet_value($element, $edit = FALSE) {
 }
 
 function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $field_key = $element['#columns'][0];
   $delta = $element['#delta'];
   $value = isset($element['#value'][$field_key]) && is_string($element['#value'][$field_key]) ? $element['#value'][$field_key] : '';
-  $output = _sheetnode_inject($value, TRUE, $element['#id'] . '-value-sheetsave');
-  $element[$field_key]['sheetview'] = array('#value' => $output, '#weight' => -1);
-  $element[$field_key]['sheetsave'] = array('#type' => 'hidden');
+  $output = _sheetnode_inject($value, TRUE, $element['#id'] . '-value');
+  $element['sheetview'] = array('#value' => $output, '#weight' => -1);
+  $element[$field_key] = array('#type' => 'hidden');
   return $element;
 }
 
