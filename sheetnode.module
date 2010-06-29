@@ -534,6 +534,9 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
   if (is_numeric($sheetname)) {
     $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d ORDER BY vid DESC LIMIT 1", intval($sheetname)));
   }
+  else {
+    $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s' ORDER BY s.vid DESC LIMIT 1", db_escape_string(strtoupper($sheetname))));
+  }
 
   // Try to find a sheetfield.
   if (!$value && module_exists('content')) {
