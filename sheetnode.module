@@ -302,8 +302,8 @@ function sheetnode_import_template_submit($form, &$form_state) {
   $form_state_node['values']['op'] = t('Save');
   
   // Allow other modules to modify the new node's creation parameters.
-  // Hook signature: hook_sheetnode_template_alter(&$form_state_node, $template, $form, $form_state);
-  drupal_alter('sheetnode_template', $form_state_node, $template, $form, $form_state);
+  // Hook signature: hook_sheetnode_alter(&$form_state_node, $form, $form_state);
+  drupal_alter('sheetnode', $form_state_node, $form, $form_state);
 
   drupal_execute('sheetnode_node_form', $form_state_node, (object)$node);
   if (isset($form_state_node['nid'])) {

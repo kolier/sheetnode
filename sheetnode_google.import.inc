@@ -168,6 +168,11 @@ function _sheetnode_google_import_form_submit($form, &$form_state) {
       $form_state_node['values']['book']['plid'] = $book->book['mlid'];
       $form_state_node['values']['book']['weight'] = $s;
     }
+
+    // Allow other modules to modify the new node's creation parameters.
+    // Hook signature: hook_sheetnode_alter(&$form_state_node, $form, $form_state);
+    drupal_alter('sheetnode', $form_state_node, $form, $form_state);
+
     drupal_execute('sheetnode_node_form', $form_state_node, (object)$node);
     $s++;
   }
