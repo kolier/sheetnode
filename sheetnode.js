@@ -127,7 +127,7 @@ Drupal.sheetnode.loadsheetSetup = function() {
 }
 
 Drupal.sheetnode.focusSetup = function() {
-  $(".form-text,.form-textarea,.form-select").focus(function(e) {
+  $('.form-text,.form-textarea,.form-select').not('.socialcalc-input').focus(function(e) {
     SocialCalc.CmdGotFocus(this);
   });
 }
@@ -216,12 +216,12 @@ Drupal.sheetnode.start = function(context) {
   div = $('div#'+Drupal.settings.sheetnode.view_id, context);
   $('div#SocialCalc-edittools', div).parent('div').attr('id', 'SocialCalc-toolbar');
   $('td#SocialCalc-edittab', div).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
-  $('input:text', div).addClass('form-text');
-  $('input:radio', div).addClass('form-radio');
-  $('input:checkbox', div).addClass('form-checkbox');
-  $('textarea', div).addClass('form-textarea');
-  $('select', div).addClass('form-select');
-  $('input:button', div).addClass('form-submit');
+  $('input:text', div).addClass('form-text socialcalc-input');
+  $('input:radio', div).addClass('form-radio socialcalc-input');
+  $('input:checkbox', div).addClass('form-checkbox socialcalc-input');
+  $('textarea', div).addClass('form-textarea socialcalc-input');
+  $('select', div).addClass('form-select socialcalc-input');
+  $('input:button', div).addClass('form-submit socialcalc-input');
   $('div#SocialCalc-sorttools td:first', div).css('width', 'auto');
   $('div#SocialCalc-settingsview', div).css('border', 'none').css('width', 'auto').css('height', 'auto');
 
