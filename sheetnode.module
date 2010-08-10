@@ -131,7 +131,7 @@ function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave') {
     'view_id' => 'sheetview',
     'edit_id' => $edit_id,
     'editing' => empty($editing) ? FALSE : TRUE,
-    'fiddling' => variable_get('sheetnode_fiddle', TRUE) ? TRUE : FALSE,
+    'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
     'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
   )), 'setting');
   drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
@@ -253,12 +253,21 @@ function sheetnode_menu() {
   return $items;
 }
 
+define('SHEETNODE_VIEW_READONLY', 0);
+define('SHEETNODE_VIEW_FIDDLE',   1);
+define('SHEETNODE_VIEW_HTML',     2);
+
 function sheetnode_admin_settings() {
   $form['sheetnode_fiddle'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Fiddle mode'),
-    '#description' => t('Allow users to interact with spreadsheet in view mode.'),
-    '#default_value' => variable_get('sheetnode_fiddle', TRUE),
+    '#type' => 'radios',
+    '#title' => t('View mode'),
+    '#description' => t('Select the way sheetnodes should be displayed in view mode.'),
+    '#options' => array(
+      SHEETNODE_VIEW_READONLY => t('Read-only spreadsheet'),
+      SHEETNODE_VIEW_FIDDLE   => t('Fiddle mode (interactive spreadsheet without save functionality)'),
+      SHEETNODE_VIEW_HTML     => t('HTML table'),
+    ),
+    '#default_value' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
   );
   return system_settings_form($form);
 }

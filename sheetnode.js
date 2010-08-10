@@ -132,6 +132,12 @@ Drupal.sheetnode.focusSetup = function() {
   });
 }
 
+Drupal.sheetnode.viewModes = {
+  readOnly: 0,
+  fiddleMode: 1,
+  htmlTable: 2
+}
+
 Drupal.sheetnode.start = function(context) {
   // Just exit if the sheetnode is not in the new context or if it has already been processed.
   if ($('div#'+Drupal.settings.sheetnode.view_id, context).length == 0) return;
@@ -164,9 +170,9 @@ Drupal.sheetnode.start = function(context) {
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
   SocialCalc.Constants.defaultReadonlyStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"lockbg.gif);"
   SocialCalc.Constants.defaultReadonlyClass = "readonly";
-  this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
+  this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
 
-  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) {
+  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
@@ -187,7 +193,7 @@ Drupal.sheetnode.start = function(context) {
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling) {
+  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) {
     this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.view_id, 700, $('div#'+Drupal.settings.sheetnode.view_id).width());
   }
   else {
@@ -195,6 +201,9 @@ Drupal.sheetnode.start = function(context) {
   }
   if (parts && parts.edit) {
     this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
+  }
+  if (!Drupal.settings.sheetnode.editing && Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.htmlTable) {
+    $('div#'+Drupal.settings.sheetnode.view_id).html(SocialCalc.SpreadsheetViewerCreateSheetHTML(this.spreadsheet));
   }
 
   // Special handling for Views AJAX.

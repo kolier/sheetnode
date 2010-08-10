@@ -50,7 +50,7 @@ class sheetnode_plugin_style extends views_plugin_style {
       'view_id' => 'sheetview',
       'edit_id' => 'edit-style-options-sheetsave',
       'editing' => TRUE,
-      'fiddling' => variable_get('sheetnode_fiddle', TRUE) ? TRUE : FALSE,
+      'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
       'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
     )));
     $form['sheetview']['#weight'] = 99;
