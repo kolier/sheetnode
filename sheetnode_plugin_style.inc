@@ -386,7 +386,7 @@ EOS;
       'view_id' => 'sheetview',
       'edit_id' => 'edit-style-options-sheetsave',
       'editing' => FALSE,
-      'fiddling' => variable_get('sheetnode_fiddle', TRUE) ? TRUE : FALSE,
+      'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
       'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
     )));
     $javascript = <<<EOS
