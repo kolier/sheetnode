@@ -176,6 +176,9 @@ Drupal.sheetnode.start = function(context) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
+    if (!Drupal.settings.sheetnode.perm_edit_sheet_settings) {
+      this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.settings, 1);
+    }
     this.spreadsheet.tabnums = {};
     for (var i=0; i<this.spreadsheet.tabs.length; i++) {
       this.spreadsheet.tabnums[this.spreadsheet.tabs[i].name] = i;
@@ -235,7 +238,7 @@ Drupal.sheetnode.start = function(context) {
   $('div#SocialCalc-settingsview', div).css('border', 'none').css('width', 'auto').css('height', 'auto');
 
   // Lock cells requires special permission.
-  if (Drupal.settings.sheetnode.editing && !Drupal.settings.sheetnode.perm_unlock_sheet_cells) {
+  if (Drupal.settings.sheetnode.editing && !Drupal.settings.sheetnode.perm_edit_sheet_settings) {
     $('#'+Drupal.sheetnode.spreadsheet.idPrefix+'locktools').css('display', 'none');
   }
 

@@ -51,7 +51,7 @@ class sheetnode_plugin_style extends views_plugin_style {
       'edit_id' => 'edit-style-options-sheetsave',
       'editing' => TRUE,
       'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
-      'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
+      'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
     )));
     $form['sheetview']['#weight'] = 99;
     $form['sheetview']['#value'] = <<<EOS
@@ -387,7 +387,7 @@ EOS;
       'edit_id' => 'edit-style-options-sheetsave',
       'editing' => FALSE,
       'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
-      'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
+      'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
     )));
     $javascript = <<<EOS
 Drupal.behaviors.sheetnode = function(context) {

@@ -216,6 +216,12 @@ function socialcalc_parse_sheet($data) {
         case "needsrecalc":
           $sheet['attribs']['needsrecalc'] = $parts[$j++];
           break;
+        case "usermaxcol":
+          $sheet['attribs']['usermaxcol'] = intval($parts[$j++]);
+          break;
+        case "usermaxrow":
+          $sheet['attribs']['usermaxrow'] = intval($parts[$j++]);
+          break;
         default:
           $j += 1;
           break;
@@ -531,6 +537,8 @@ function socialcalc_save_sheet($sheet) {
     'circularreferencecell' => 'circularreferencecell', 
     'recalc' => 'recalc', 
     'needsrecalc' => 'needsrecalc'
+    'usermaxcol' => 'usermaxcol',
+    'usermaxrow' => 'usermaxrow',
   );
   $sheetattribs = array();
   foreach ($sheetfields as $key => $attrib) {

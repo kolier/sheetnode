@@ -25,7 +25,7 @@ function sheetnode_perm() {
     'delete own sheetnode', 
     'delete any sheetnode', 
     'create sheet template',
-    'unlock sheet cells',
+    'edit sheet settings',
   );
 }
 
@@ -132,7 +132,7 @@ function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave') {
     'edit_id' => $edit_id,
     'editing' => empty($editing) ? FALSE : TRUE,
     'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
-    'perm_unlock_sheet_cells' => user_access('unlock sheet cells') ? TRUE : FALSE,
+    'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
   )), 'setting');
   drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
   return '<div class="sheetview" id="sheetview"></div>';
@@ -519,9 +519,10 @@ function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $field_key = $element['#columns'][0];
   $delta = $element['#delta'];
   $value = isset($element['#value'][$field_key]) && is_string($element['#value'][$field_key]) ? $element['#value'][$field_key] : '';
-  $output = _sheetnode_inject($value, TRUE, $element['#id'] . '-value');
+  $output = _sheetnode_inject($value, TRUE, $element['#id'] . '-' . $field_key);
   $element['sheetview'] = array('#value' => $output, '#weight' => -1);
   $element[$field_key] = array('#type' => 'hidden');
+  $element['#tree'] = TRUE;
   return $element;
 }
 
