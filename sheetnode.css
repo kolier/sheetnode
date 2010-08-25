@@ -14,7 +14,7 @@
   border-width: 0;
   border-collapse: separate;
   width: auto;
-  background: transparent;
+  background: #fff;
   vertical-align: top;
 }
 
@@ -29,6 +29,10 @@
 .sheetview input {
   display: inline !important;
   width: auto !important;
+}
+
+.sheetview #te_griddiv {
+  background-image: url('images/stripe.png');
 }
 
 .sheetview-fullscreen {
