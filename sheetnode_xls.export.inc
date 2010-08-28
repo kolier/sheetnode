@@ -16,7 +16,7 @@ function _sheetnode_xls_export($type, $nid) {
 function _sheetnode_xls_export_do($type, $title, $socialcalc) {
   // Create the Excel sheet
   $workbook = $type == 'xls' ? new org_apache_poi_hssf_usermodel_HSSFWorkbook() : new org_apache_poi_xssf_usermodel_XSSFWorkbook();
-  $sheetname = $title;
+  $sheetname = str_replace('/', '_', $title);
   $sheet = $workbook->createSheet($sheetname);
   $patriarch = $sheet->createDrawingPatriarch();
   $sc = $socialcalc['sheet'];
