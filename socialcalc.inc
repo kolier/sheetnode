@@ -536,7 +536,7 @@ function socialcalc_save_sheet($sheet) {
     'defaultbgcolor' => 'bgcolor',
     'circularreferencecell' => 'circularreferencecell', 
     'recalc' => 'recalc', 
-    'needsrecalc' => 'needsrecalc'
+    'needsrecalc' => 'needsrecalc',
     'usermaxcol' => 'usermaxcol',
     'usermaxrow' => 'usermaxrow',
   );
