@@ -42,7 +42,7 @@ function sheetnode_html_import_form_submit($form, &$form_state) {
   module_load_include('inc', 'node', 'node.pages');
   $url = $form_state['values']['url'];
   $querypath = $form_state['values']['querypath'];
-  list($title, $sc) = sheetnode_html_import($url, $querypath);
+  list($title, $sc) = sheetnode_html_import($url, $querypath, variable_get('sheetnode_html_ignore_spans', FALSE));
   $node = array('type' => 'sheetnode');
   $form_state_node = array();
   $form_state_node['values']['title'] = $title;
@@ -62,7 +62,7 @@ function sheetnode_html_import_form_submit($form, &$form_state) {
 /**
  * API function to import a URL.
  */
-function sheetnode_html_import($url, $querypath) {
+function sheetnode_html_import($url, $querypath, $ignore_spans = FALSE) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   $doc = new DOMDocument('1.0');
   @$doc->loadHTMLFile($url);
@@ -70,7 +70,7 @@ function sheetnode_html_import($url, $querypath) {
   $title = $qp->find('title')->text();
   $sheet = array();
   foreach ($qp->top($querypath)->find('table') as $table) {
-    sheetnode_html_import_table($table, $sheet);
+    sheetnode_html_import_table($table, $sheet, $ignore_spans);
   }
   $socialcalc = array(
     'sheet' => $sheet,
@@ -83,8 +83,7 @@ function sheetnode_html_import($url, $querypath) {
 /**
  * API function to import a single table.
  */
-function sheetnode_html_import_table($table, &$sheet) {
-  $ignore_spans = variable_get('sheetnode_html_ignore_spans', FALSE);
+function sheetnode_html_import_table($table, &$sheet, $ignore_spans = FALSE) {
   $cell = $cells = $spans = array();
   $pos = $maxpos = array(1, @$sheet['attribs']['lastrow'] + 1); // col, row
   foreach ($table->find('tr') as $row) {
@@ -135,6 +134,7 @@ function sheetnode_html_import_table($table, &$sheet) {
 function _sheetnode_html_import_value($val) {
   $val = str_replace(html_entity_decode('&nbsp;', ENT_COMPAT, 'UTF-8'), ' ', $val);
   $val = trim($val);
-  return $val; 
+  $num = parse_formatted_number($val);
+  return $num === FALSE ? $val : $num; 
 }
 
