@@ -69,7 +69,10 @@ function sheetnode_form(&$node) {
   else if (!empty($node->nid)) {
     $value = _sheetnode_load($node->nid, $node->vid);
   }
-  else {
+  else if ($node->clone_from_original_nid) { // support node_clone.module
+    $original_node = node_load($node->clone_from_original_nid);
+    $value = _sheetnode_load($original_node->nid, $original_node->vid);
+  } else {
     $value = '';
   }
   $output = _sheetnode_inject($value, TRUE);
