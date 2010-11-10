@@ -521,7 +521,7 @@ function sheetnode_elements() {
 function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $field_key = $element['#columns'][0];
   $delta = $element['#delta'];
-  $value = isset($element['#default_value']) ? (isset($element['#default_value']['value']) ? $element['#default_value']['value'] : $element['#default_value']) : (
+  $value = isset($element['#default_value']) ? (is_array($element['#default_value']) ? $element['#default_value']['value'] : $element['#default_value']) : (
            isset($element['#value'][$field_key]) && is_string($element['#value'][$field_key]) ? $element['#value'][$field_key] : '');
   $output = _sheetnode_inject($value, TRUE, $element['#id'] . '-' . $field_key);
   $element['sheetview'] = array('#value' => $output, '#weight' => -1);
