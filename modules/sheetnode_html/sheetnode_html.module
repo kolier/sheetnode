@@ -43,7 +43,10 @@ function sheetnode_html_import_form_submit($form, &$form_state) {
   global $user;
   $url = $form_state['values']['url'];
   $querypath = $form_state['values']['querypath'];
-  list($title, $sc) = sheetnode_html_import($url, $querypath, variable_get('sheetnode_html_ignore_spans', FALSE));
+  $options = array(
+    'ignore_spans' => variable_get('sheetnode_html_ignore_spans', FALSE),
+  );
+  list($title, $sc) = sheetnode_html_import($url, $querypath, $options);
   $node = array('type' => 'sheetnode');
   $form_state_node = array();
   $form_state_node['values']['title'] = $title;
@@ -63,7 +66,7 @@ function sheetnode_html_import_form_submit($form, &$form_state) {
 /**
  * API function to import a URL.
  */
-function sheetnode_html_import($url, $querypath, $ignore_spans = FALSE) {
+function sheetnode_html_import($url, $querypath, $options = array()) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   $doc = new DOMDocument('1.0');
   @$doc->loadHTMLFile($url);
@@ -71,7 +74,7 @@ function sheetnode_html_import($url, $querypath, $ignore_spans = FALSE) {
   $title = $qp->find('title')->text();
   $sheet = array();
   foreach ($qp->top($querypath)->find('table') as $table) {
-    sheetnode_html_import_table($table, $sheet, $ignore_spans);
+    sheetnode_html_import_table($table, $sheet, $options);
   }
   $socialcalc = array(
     'sheet' => $sheet,
@@ -84,7 +87,7 @@ function sheetnode_html_import($url, $querypath, $ignore_spans = FALSE) {
 /**
  * API function to import a single table.
  */
-function sheetnode_html_import_table($table, &$sheet, $ignore_spans = FALSE) {
+function sheetnode_html_import_table($table, &$sheet, $options = array()) {
   $cell = $cells = $spans = array();
   $pos = $maxpos = array(1, @$sheet['attribs']['lastrow'] + 1); // col, row
   foreach ($table->find('tr') as $row) {
@@ -102,12 +105,12 @@ function sheetnode_html_import_table($table, &$sheet, $ignore_spans = FALSE) {
       $colspan = 1;
       if ($element->attr('colspan') > 1) {
         $colspan = $element->attr('colspan');
-        if (!$ignore_spans) $cell['colspan'] = $colspan;
+        if (empty($options['ignore_spans'])) $cell['colspan'] = $colspan;
       }
       $rowspan = 1;
       if ($element->attr('rowspan') > 1) {
         $rowspan = $element->attr('rowspan');
-        if (!$ignore_spans) $cell['rowspan'] = $rowspan;
+        if (empty($options['ignore_spans'])) $cell['rowspan'] = $rowspan;
       }
       if (!empty($value)) {
         $cells[socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
