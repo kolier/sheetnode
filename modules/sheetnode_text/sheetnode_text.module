@@ -89,7 +89,7 @@ function sheetnode_text_import_table($table, &$sheet, $options = array()) {
   //    Consider row with maximum number of ranges = header
   $rows = array();
   $maxcols = 0;
-  foreach (preg_split("/(\r?\n)/", $table) as $line) {
+  foreach (preg_split("/(\r?\n)|<br\s*\/>/", $table) as $line) {
     $elements = preg_split("/\s{2,}/", $line, -1, PREG_SPLIT_OFFSET_CAPTURE | PREG_SPLIT_NO_EMPTY);
     $row = array();
     foreach ($elements as $element) {
