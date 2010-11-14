@@ -40,6 +40,7 @@ function sheetnode_html_import_form() {
  */
 function sheetnode_html_import_form_submit($form, &$form_state) {
   module_load_include('inc', 'node', 'node.pages');
+  global $user;
   $url = $form_state['values']['url'];
   $querypath = $form_state['values']['querypath'];
   list($title, $sc) = sheetnode_html_import($url, $querypath, variable_get('sheetnode_html_ignore_spans', FALSE));
