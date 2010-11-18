@@ -697,7 +697,7 @@ function socialcalc_cellformat_parseborder($cell, $sheet, $attrib) {
   $border['thickness'] = $parts[1];
   $border['style'] = $parts[2];
   $color = array();
-  preg_match('/^rgb\((\d+?),(\d+?),(\d+?)\)\s*$/', $parts[3], $color);
+  preg_match('/^rgb\((\d+?),\s*(\d+?),\s*(\d+?)\)\s*$/', $parts[3], $color);
   $border['color'] = array(
     'r' => intval($color[1]),
     'g' => intval($color[2]),
