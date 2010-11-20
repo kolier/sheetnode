@@ -1,41 +1,34 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_requirements().
+ */
 function sheetnode_xls_requirements($phase) {
   $requirements = array();
   $t = get_t();
 
   if ($phase == 'runtime') {
-    $poi = TRUE;
-    $JAVA_BASE = variable_get('pjb_java_base', '');
-    if (file_exists("$JAVA_BASE/java/Java.inc")) {
-      require_once("$JAVA_BASE/java/Java.inc");
-      try {
-        java_require(variable_get('sheetnode_xls_jar', NULL));
-        $Version = new JavaClass('org.apache.poi.Version');
-        $poi_version = $Version->getVersion();
-      }
-      catch (Exception $e) {
-        $poi = $e->getMessage();
-      }
-    }
-    else { // !file_exists
-      $poi = $t('PHP/Java Bridge is not properly installed.');
-    }
-    $requirements['sheetnode_xls_jar'] = array(
-      'title' => $t('Apache POI'),
-      'value' => $poi === TRUE ? 
-        $t("Apache POI $poi_version is found.") : 
-        $t("Apache POI is NOT found: $poi"),
-      'severity' => $poi === TRUE ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+    $dir = rtrim(variable_get('sheetnode_xls_library_path', ''), '/');
+    $satisfied = is_dir($dir) && is_file($dir . '/Classes/PHPExcel.php');
+    $requirements['sheetnode_xls_library'] = array(
+      'title' => $t('PHP Excel library'),
+      'value' => $satisfied ? 
+        $t("PHP Excel is found.") : 
+        $t("PHP Excel is NOT found at !dir.", array('!dir' => $dir)),
+      'severity' => $satisfied ? REQUIREMENT_OK : REQUIREMENT_ERROR,
     );
   }
 
   return $requirements;
 }
 
+/**
+ * Implementation of hook_uninstall().
+ */
 function sheetnode_xls_uninstall() {
   variable_del('sheetnode_xls_jar');
   variable_del('sheetnode_xls_jar_path');
+  variable_del('sheetnode_xls_library_path');
 }
 

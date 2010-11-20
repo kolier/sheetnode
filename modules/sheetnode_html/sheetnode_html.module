@@ -6,11 +6,11 @@
  */
 function sheetnode_html_menu() {
   $items['node/add/sheetnode_html'] = array(
-    'title' => 'Sheetnode import from HTML tables',
+    'title' => 'Sheetnode import from HTML page',
     'access arguments' => array('create sheetnode'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('sheetnode_html_import_form'),
-    'description' => 'Create a new sheetnode with content from HTML tables.',
+    'description' => 'Create a new sheetnode with table from HTML page.',
   );
   return $items;
 }

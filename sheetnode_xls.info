@@ -1,7 +1,6 @@
 ; $Id$
 name = Sheetnode XLS
 description = Provides XLS import/export support for Sheetnode.
-package = Other
+package = Sheetnode
 dependencies[] = sheetnode 
-dependencies[] = php_java_bridge
 core = 6.x

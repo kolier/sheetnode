@@ -1,12 +1,9 @@
 <?php
 // $Id$
 
-require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
-$JAVA_BASE = variable_get('pjb_java_base', NULL);
-require_once("$JAVA_BASE/java/Java.inc");
-java_autoload(variable_get('sheetnode_xls_jar', NULL));
-
 function _sheetnode_xls_export($type, $nid) {
+  require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+
   $node = node_load($nid);
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
 
@@ -14,267 +11,77 @@ function _sheetnode_xls_export($type, $nid) {
 }
 
 function _sheetnode_xls_export_do($type, $title, $socialcalc) {
-  // Create the Excel sheet
-  $workbook = $type == 'xls' ? new org_apache_poi_hssf_usermodel_HSSFWorkbook() : new org_apache_poi_xssf_usermodel_XSSFWorkbook();
-  $sheetname = str_replace('/', '_', $title);
-  $sheet = $workbook->createSheet($sheetname);
-  $patriarch = $sheet->createDrawingPatriarch();
+  require_once(variable_get('sheetnode_xls_library_path', '') . '/Classes/PHPExcel.php');
+
+  // Create new PHPExcel object
   $sc = $socialcalc['sheet'];
-  
+  $workbook = new PHPExcel();
+
+  // Title
+  try {
+    // TODO: Split titles with format "Spreadsheet > Workbook" and sanitize.
+    $workbook->getActiveSheet()->SetTitle($title);
+  }
+  catch (Exception $e) {
+    watchdog('sheetnode_xls', 'Error setting worksheet title to "!title": @error', array('!title' => $title, '@error' => $e->getMessage()), WATCHDOG_WARNING);
+  }
+
+/*
+  // Properties
+  $workbook->getProperties()->setCreator("Maarten Balliauw")
+                 ->setLastModifiedBy("Maarten Balliauw")
+                 ->setTitle("Office 2007 XLSX Test Document")
+                 ->setSubject("Office 2007 XLSX Test Document")
+                 ->setDescription("Test document for Office 2007 XLSX, generated using PHP classes.")
+                 ->setKeywords("office 2007 openxml php")
+                 ->setCategory("Test result file");
+*/
   // Names
-  if (isset($sc['names'])) foreach ($sc['names'] as $n => $info) {
-    $name = $workbook->createName();
-    $name->setNameName($n);
-    $definition = $info['definition'];
-    if (strncmp('=', $definition, 1) == 0) { // formula
-      $definition = substr($definition, 1);
-      if (strpos($definition, '!') === FALSE) {
-        $definition = str_replace('(', "('$sheetname'!", $definition);
-        $definition = str_replace(',', ",'$sheetname'!", $definition);
-      }
-    }
-    else if (strpos($definition, '!') === FALSE) {
-      $definition = "'$sheetname'!$definition";
-    }
-    try { // Not 100% safe
-      $name->setRefersToFormula($definition);
-    }
-    catch (Exception $e) {
-      $msg = 'Failed to export name %name with definition %definition: %error';
-      $arg = array('%name' => $n, '%definition' => $definition, '%error' => $e->getMessage());
-      drupal_set_message(t($msg, $arg), 'error');
-      watchdog('sheetnode', $msg, $arg, WATCHDOG_WARNING);
-    }
+  // TODO: Not supported in Excel5.
+  if (!empty($sc['names'])) foreach ($sc['names'] as $n => $info) {
+    // TODO: Support external references.
+    $workbook->addNamedRange(new PHPExcel_NamedRange($n, $workbook->getActiveSheet(), $info['definition']));
   }
 
+  // Cells
   if ($sc['cells']) foreach ($sc['cells'] as $c) {
-    // Rows
-    $row = $sheet->getRow($c['pos'][1]-1);
-    if (java_is_null($row)) {
-      $row = $sheet->createRow($c['pos'][1]-1);
-      if (isset($sc['rowattribs']) && isset($sc['rowattribs']['height']) && isset($sc['rowattribs']['height'][$c['pos'][1]])) {
-        $row->setHeightInPoints($sc['rowattribs']['height'][$c['pos'][1]]);
+    $value = _sheetnode_xls_cell_value($c, $sc); 
+    $coord = socialcalc_cr_to_coord($c['pos'][0], $c['pos'][1]);
+    $workbook->getActiveSheet()->setCellValue($coord, $value);
+
+    // Comment
+    // TODO: Not supported in Excel5.
+    if (!empty($c['comment'])) {
+      $workbook->getActiveSheet()->getComment($coord)->getText()->createTextRun($c['comment']);
+    }
+
+    // Style
+    $style = $workbook->getActiveSheet()->getStyle($coord);
+    // Font
+    if (!empty($c['font'])) {
+      $scf = socialcalc_cellformat_parsefont($c, $sc);
+      $font = $style->getFont();
+      if (!empty($scf['family'])) $font->setName($scf['family']);
+      if (!empty($scf['size'])) $font->setSize(floatval($scf['size']));
+      if (!empty($scf['bold'])) $font->setBold(true);
+      if (!empty($scf['italic'])) $font->setItalic(true);
+      if (!empty($c['color'])) {
+        $scc = socialcalc_cellformat_parsecolor($c, $sc, 'color');
+        $rgb = sprintf('%02X%02X%02X', $scc['r'], $scc['g'], $scc['b']);
+        $font->getColor()->setRGB($rgb);
       }
     }
 
-    // Cells
-    $cell = $row->createCell($c['pos'][0]-1);
-    _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $sc); 
-  }
-
-  // Columns
-  if (isset($sc['colattribs']) && isset($sc['colattribs']['width'])) {
-    foreach ($sc['colattribs']['width'] as $col => $width) {
-      $sheet->setColumnWidth($col-1, $width * 256 / WIDTH_CHAR_TO_PX);
-    }
-  }
-
-  // Write and return the excel sheet to the client
-  if ($type == 'xls') {
-    header('Content-type: application/vnd.ms-excel');
-  }
-  else {
-    header('Content-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  }
-  header('Content-Disposition: attachment; filename='. _sheetnode_sanitize_filename($title, $type));
-  $memoryStream = new java_io_ByteArrayOutputStream();
-  $workbook->write($memoryStream);
-  $memoryStream->close();
-  echo java_values($memoryStream->toByteArray());
-  exit();
-}
-
-function _sheetnode_xls_export_cell($cell, $sheet, $patriarch, $workbook, $c, $sc) {
-  // Cell data
-  if (@$c['datatype'] == 't' || (@$c['datatype'] == 'f' && $c['valuetype'] != 'n')) {
-    if ($c['valuetype'] == 'th') { // text-html
-      $cell->setCellValue(strip_tags($c['datavalue']));
-    }
-    else {
-      $cell->setCellValue($c['datavalue']);
-    }
-    $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_STRING);
-  }
-  else if (@$c['datatype'] == 'v' || (@$c['datatype'] == 'f' && $c['valuetype'] == 'n')) {
-    $cell->setCellValue((float)$c['datavalue']);
-    $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_NUMERIC);
-  }
-  if (@$c['datatype'] == 'f' && strpos($c['formula'], '!') === FALSE) {
-    try { // Not 100% safe
-      $cell->setCellFormula($c['formula']);
-    }
-    catch (Exception $e) {
-      $msg = 'Failed to export formula %formula: %error';
-      $arg = array('%formula' => $c['formula'], '%error' => $e->getMessage());
-      drupal_set_message(t($msg, $arg), 'error');
-      watchdog('sheetnode', $msg, $arg, WATCHDOG_WARNING);
-    }
-    $cell->setCellType(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_FORMULA);
-  }
-
-  // Comment
-  if (!empty($c['comment'])) {
-    $string = $workbook->getCreationHelper()->createRichTextString($c['comment']);
-    if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) { // HSSFWorkbook
-      $anchor = $workbook->getCreationHelper()->createClientAnchor();
-      $anchor->setCol1(java_values($cell->getColumnIndex())+1);
-      $anchor->setRow1(java_values($cell->getRowIndex())+1);
-      $anchor->setCol2(java_values($cell->getColumnIndex())+4);
-      $anchor->setRow2(java_values($cell->getRowIndex())+4);
-      $comment = $patriarch->createComment($anchor);
-      $comment->setString($string);
-      $cell->setCellComment($comment);
-    }
-    else { // XSSFWorkbook
-//      $comment = $sheet->createComment();
-    }
-  }
-
-  // Cellstyle
-  _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc);
-
-  // Merged regions
-  if (@$c['colspan'] > 1 || @$c['rowspan'] > 1) {
-    $cellrange = new org_apache_poi_ss_util_CellRangeAddress(
-      java_values($cell->getRowIndex()), 
-      java_values($cell->getRowIndex()) + max(@$c['rowspan']-1, 0),
-      java_values($cell->getColumnIndex()), 
-      java_values($cell->getColumnIndex()) + max(@$c['colspan']-1, 0)
-    );
-    $sheet->addMergedRegion($cellrange);
-  }
-}
-
-function _sheetnode_xls_export_cellstyle($cell, $sheet, $workbook, $c, $sc) {
-  static $cellstyles = array();
-  
-  // Return if no formatting set.
-  $cs = array_filter(array(
-    isset($c['font']) ? 'f:'. $c['font'] : NULL, 
-    isset($c['color']) ? 'c:'. $c['color'] : NULL, 
-    isset($c['bt']) ? 'bt:'. $c['bt'] : NULL, 
-    isset($c['br']) ? 'br:'. $c['br'] : NULL, 
-    isset($c['bb']) ? 'bb:'. $c['bb'] : NULL, 
-    isset($c['bl']) ? 'bl:'. $c['bl'] : NULL,
-    isset($c['layout']) ? 'l:'. $c['layout'] : NULL, 
-    isset($c['bgcolor']) ? 'bg:'. $c['bgcolor'] : NULL,
-    isset($c['cellformat']) ? 'cf:'. $c['cellformat'] : NULL, 
-    isset($c['nontextvalueformat']) ? 'ntvf:'. $c['nontextvalueformat'] : NULL, 
-    isset($c['textvalueformat']) ? 'tvf:'. $c['textvalueformat'] : NULL,
-  ));
-  if (empty($cs)) return;
-  
-  // Find cached cellstyle.
-  $h = md5(implode(',', $cs));
-  if (isset($cellstyles[$h])) {
-    $cell->setCellStyle($cellstyles[$h]);
-    return;
-  }
-  
-  // Create new cellstyle.
-  $cellstyle = $workbook->createCellStyle();
-  $cellstyles[$h] = $cellstyle;
-
-  // Font and color
-  _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $sc);
-  
-  // Background color
-  $bg = socialcalc_cellformat_parsecolor($c, $sc, 'bgcolor');
-  if ($bg) {
-    $color = _sheetnode_xls_export_color($cell, $sheet, $workbook, $bg);
-    $cellstyle->setFillPattern(1); // solid color
-    $cellstyle->setFillForegroundColor($color);
-  }
-
-  // Horizontal alignment
-  if (isset($c['cellformat'])) {
-    $alignments = array(
-      'left' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_LEFT,
-      'right' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_RIGHT,
-      'center' => org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_CENTER,
-    );
-    $alignment = isset($alignments[$sc['cellformats'][$c['cellformat']]]) ? $alignments[$sc['cellformats'][$c['cellformat']]] : org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_GENERAL;
-    $cellstyle->setAlignment($alignment);
-  }
-
-  // Vertical alignment and padding
-  $layout = socialcalc_cellformat_parselayout($c, $sc);
-  if (isset($layout['padleft'])) {
-    $indent = intval(ceil($layout['padleft'] / WIDTH_CHAR_TO_PX)); 
-    $cellstyle->setIndention($indent);
-  }
-  if (isset($layout['alignvert'])) {
-    $valignments = array(
-      'top' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_TOP,
-      'bottom' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_BOTTOM,
-      'middle' => org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_CENTER,
-    );
-    $valignment = isset($valignments[$layout['alignvert']]) ? $valignments[$layout['alignvert']] : org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_JUSTIFY;
-    $cellstyle->setVerticalAlignment($valignment);
-  }
-
-  // Borders
-  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Top');
-  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Right');
-  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Left');
-  _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, 'Bottom');
-
-  // Data format
-  if (isset($c['nontextvalueformat'])) {
-    $dataformat = $workbook->createDataFormat();
-    $format = $dataformat->getFormat($sc['valueformats'][$c['nontextvalueformat']]);
-    $cellstyle->setDataFormat($format);
-  }
-
-  $cell->setCellStyle($cellstyle);
-}
-
-function _sheetnode_xls_export_font($cellstyle, $cell, $sheet, $workbook, $c, $sc) {
-  static $fonts = array();
-
-  // Return if no font set. 
-  $f = array(
-    isset($c['font']) ? 'f:'. $c['font'] : NULL, 
-    isset($c['color']) ? 'c:'. $c['color'] : NULL, 
-  );
-  if (empty($f)) return;
-
-  // Find cached font.
-  $h = md5(implode(',', $f));
-  if (isset($fonts[$h])) {
-    $cellstyle->setFont($fonts[$h]);
-    return;
-  }
-
-  // Create new font.
-  $font = $workbook->createFont();
-  $fonts[$h] = $font;
-
-  $ff = socialcalc_cellformat_parsefont($c, $sc);
-  if (isset($ff['family'])) $font->setFontName($ff['family']);
-  if (isset($ff['size'])) $font->setFontHeightInPoints(intval($ff['size']));
-  if (!empty($ff['bold'])) $font->setBoldweight(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD);
-  if (!empty($ff['italic'])) $font->setItalic(true);
-
-  $fc = socialcalc_cellformat_parsecolor($c, $sc, 'color');
-  if ($fc) {
-    $color = _sheetnode_xls_export_color($cell, $sheet, $workbook, $fc);
-    $font->setColor($color);
-  }
-
-  $cellstyle->setFont($font);
-}
-
-function _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, $sc, $pos) {
-  $attribs = array(
-    'Top' => 'bt',
-    'Right' => 'br',
-    'Bottom' => 'bb',
-    'Left' => 'bl',
-  );
-  $border = socialcalc_cellformat_parseborder($c, $sc, $attribs[$pos]);
-  if ($border) {
-    if ($border['thickness'] || $border['style']) {
+    // Borders
+    foreach (array(
+      'br' => 'getRight', 
+      'bl' => 'getLeft', 
+      'bt' => 'getTop', 
+      'bb' => 'getBottom',
+    ) as $pos => $method) {
+      $border = socialcalc_cellformat_parseborder($c, $sc, $pos);
+      if (empty($border)) continue;
+      $borderobj = $style->getBorders()->$method();
       $thickness = str_replace('px', '', $border['thickness']); // TODO: what about other units?
       if ($thickness > 0 && $thickness < 7) {
         $thickness = 'thin';
@@ -287,63 +94,121 @@ function _sheetnode_xls_export_border($cellstyle, $cell, $sheet, $workbook, $c, 
       }
       $borderstyles = array(
         'thin' => array(
-          'solid' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_THIN,
-          'dashed' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DASHED,
-          'dotted' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DOTTED,
-          'double' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DOUBLE,
+          'solid' => PHPExcel_Style_Border::BORDER_THIN,
+          'dashed' => PHPExcel_Style_Border::BORDER_DASHED,
+          'dotted' => PHPExcel_Style_Border::BORDER_DOTTED,
+          'double' => PHPExcel_Style_Border::BORDER_DOUBLE,
         ),
         'medium' => array(
-          'solid' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM,
-          'dashed' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM_DASHED,
+          'solid' => PHPExcel_Style_Border::BORDER_MEDIUM,
+          'dashed' => PHPExcel_Style_Border::BORDER_MEDIUMDASHED,
         ),
         'thick' => array(
-          'solid' => org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_THICK,
+          'solid' => PHPExcel_Style_Border::BORDER_THICK,
         ),
       );
       // TODO: what about other combinations?
-      $borderstyle = $borderstyles[$thickness][$border['style']] | org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_NONE;
-      $setstyle = "setBorder{$pos}";
-      $cellstyle->$setstyle($borderstyle);
+      $borderstyle = isset($borderstyles[$thickness][$border['style']]) ? $borderstyles[$thickness][$border['style']] : PHPExcel_Style_Border::BORDER_THIN;
+      $borderobj->setBorderStyle($borderstyle);
+      $scc = $border['color'];
+      $rgb = sprintf('%02X%02X%02X', $scc['r'], $scc['g'], $scc['b']);
+      $borderobj->getColor()->setRGB($rgb);
     }
-    if ($border['color']) {
-      $color = _sheetnode_xls_export_color($cell, $sheet, $workbook, $border['color']);
-      $setcolor = "set{$pos}BorderColor";
-      $cellstyle->$setcolor($color);
+
+    // Background color
+    if (!empty($c['bgcolor'])) {
+      $scc = socialcalc_cellformat_parsecolor($c, $sc, 'bgcolor');
+      $rgb = sprintf('%02X%02X%02X', $scc['r'], $scc['g'], $scc['b']);
+      $style->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID);
+      $style->getFill()->getStartColor()->setRGB($rgb);
+    }
+
+    // Alignment
+    if (!empty($c['cellformat'])) {
+      $alignments = array(
+        'left' => PHPExcel_Style_Alignment::HORIZONTAL_LEFT,
+        'right' => PHPExcel_Style_Alignment::HORIZONTAL_RIGHT,
+        'center' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
+      );
+      $alignment = isset($alignments[$sc['cellformats'][$c['cellformat']]]) ? $alignments[$sc['cellformats'][$c['cellformat']]] : NULL;
+      if ($alignment) {
+        $style->getAlignment()->setHorizontal($alignment);
+      }
+    }
+
+    // Vertical Alignment
+    $layout = socialcalc_cellformat_parselayout($c, $sc);
+    if (!empty($layout['alignvert'])) {
+      $valignments = array(
+        'top' => PHPExcel_Style_Alignment::VERTICAL_TOP,
+        'bottom' => PHPExcel_Style_Alignment::VERTICAL_BOTTOM,
+        'middle' => PHPExcel_Style_Alignment::VERTICAL_CENTER,
+      );
+      $valignment = isset($valignments[$layout['alignvert']]) ? $valignments[$layout['alignvert']] : NULL;
+      if ($valignment) {
+        $style->getAlignment()->setVertical($valignment);
+      }
+    }
+
+    // Data format
+    if (!empty($c['nontextvalueformat'])) {
+      $style->getNumberFormat()->setFormatCode($sc['valueformats'][$c['nontextvalueformat']]);
+    }
+
+    // Merged regions
+    if ($c['colspan'] > 1 || $c['rowspan'] > 1) {
+      $coord2 = socialcalc_cr_to_coord($c['pos'][0]+max($c['colspan']-1, 0), $c['pos'][1]+max($c['rowspan']-1, 0));
+      $workbook->getActiveSheet()->mergeCells($coord .':'. $coord2);
     }
   }
+
+  // Columns
+  $font = $workbook->getActiveSheet()->getDefaultStyle()->getFont();
+  if (!empty($sc['colattribs']['width'])) foreach($sc['colattribs']['width'] as $c => $width) {
+    $workbook->getActiveSheet()->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($c-1))->setWidth(PHPExcel_Shared_Drawing::pixelsToCellDimension($width, $font));
+  }
+
+  // Rows
+  if (!empty($sc['rowattribs']['height'])) foreach($sc['rowattribs']['height'] as $r => $height) {
+    $workbook->getActiveSheet()->getRowDimension($col)->setRowHeight($height);
+  }
+
+  // Redirect output to a client’s web browser.
+  $types = array(
+    'xls' => array(
+      'content-type' => 'application/vnd.ms-excel',
+      'php-excel-type' => 'Excel5',
+    ),
+    'xlsx' => array(
+      'content-type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'php-excel-type' => 'Excel2007',
+    ),
+  );
+  header('Content-Type: ' . $types[$type]['content-type']);
+  header('Content-Disposition: attachment;filename="' . _sheetnode_sanitize_filename($title, $type) . '"');
+  header('Cache-Control: max-age=0');
+
+  $writer = PHPExcel_IOFactory::createWriter($workbook, $types[$type]['php-excel-type']);
+  $writer->save('php://output');
+  exit;
 }
 
-function _sheetnode_xls_export_color($cell, $sheet, $workbook, $c) {
-  if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) { // HSSFWorkbook
-    static $used_palette = array();
-
-    $palette = $workbook->getCustomPalette();
-    $color = $palette->findColor($c['r'], $c['g'], $c['b']);
-    if (java_is_null($color)) {
-      // Replace an unused existing color with the new one.
-      for ($i=0x8; $i<0x40; $i++) {
-        if (!empty($used_palette[$i])) continue;
-        $palette->setColorAtIndex($i, $c['r'], $c['g'], $c['b']);
-        $used_palette[$i] = true;
-        return $i;
-      }
-
-      // Could not find an empty slot: find closest color.
-      $color = $palette->findSimilarColor($c['r'], $c['g'], $c['b']);
-      if (java_is_null($color)) {
-        // Could not even find a close color: return default color.
-        return org_apache_poi_ss_usermodel_Font::type()->COLOR_NORMAL;
-      }
+function _sheetnode_xls_cell_value($c, $sc) {
+  if ($c['datatype'] == 't' || ($c['datatype'] == 'f' && $c['valuetype'] != 'n')) {
+    // TODO: Preserve multiline strings.
+    if ($c['valuetype'] == 'th') { // text-html
+      $value = strip_tags($c['datavalue']);
     }
-
-    $used_palette[java_values($color->getIndex())] = true;
-    return $color->getIndex();
+    else {
+      $value = $c['datavalue'];
+    }
   }
-  else { // XSSFWorkbook
-    $color = new org_apache_poi_xssf_usermodel_XSSFColor();
-    $argb = array(1, $c['r'], $c['g'], $c['b']);
-    $color->setRgb($argb);
-    return $color;
+  else if ($c['datatype'] == 'v' || ($c['datatype'] == 'f' && $c['valuetype'] == 'n')) {
+    $value = floatval($c['datavalue']);
   }
+  if ($c['datatype'] == 'f' && strpos($c['formula'], '!') === FALSE) {
+    $value = '=' . $c['formula'];
+  }
+  return $value;
 }
 

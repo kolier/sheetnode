@@ -15,11 +15,6 @@ function _sheetnode_xls_import_form(&$form_state) {
   return $form;
 }
 
-require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
-$JAVA_BASE = variable_get('pjb_java_base', NULL);
-require_once("$JAVA_BASE/java/Java.inc");
-java_autoload(variable_get('sheetnode_xls_jar', NULL));
-
 function _sheetnode_xls_import_form_validate($form, &$form_state) {
   $source = $_FILES['files']['name']['import'];
 
@@ -55,304 +50,39 @@ function _sheetnode_xls_import_form_validate($form, &$form_state) {
   
   // Verify that the uploaded file is indeed XLS.
   try {
-    $inp = new java_io_FileInputStream($_FILES['files']['tmp_name']['import']);
-    $workbook = org_apache_poi_ss_usermodel_WorkbookFactory::type()->create($inp);
+    require_once(variable_get('sheetnode_xls_library_path', '') . '/Classes/PHPExcel/IOFactory.php');
+    $type = PHPExcel_IOFactory::identify($_FILES['files']['tmp_name']['import']);
   }
   catch (Exception $e) {
-    form_set_error('import', t('The file %file appears to be invalid: %error. Please upload a valid Excel (.xls or .xlsx) file.', array('%file' => $source, '%error' => $e->getMessage())));
-  }
-}
-
-abstract class SheetnodeXLS {
-  protected $_workbook;
-  
-  public static function create($workbook) {
-    if (java_instanceof($workbook, org_apache_poi_hssf_usermodel_HSSFWorkbook::type())) {
-      return new SheetnodeHSSF($workbook);
-    }
-    else {
-      return new SheetnodeXSSF($workbook);
-    }
-  }
-
-  protected $_properties;
-  public function getProperties($field = null) {
-    if (!$this->_properties) {
-      $this->_properties = $this->importProperties();
-    }
-    return $field ? @$this->_properties[$field]['value'] : $this->_properties;
-  }
-
-  abstract public function getFont($cellstyle);
-  abstract public function getFontOfFormattingRun($rtf, $run);
-  abstract public function getColor($font);
-  abstract public function getFillForegroundColor($cellstyle);
-  abstract public function getBorderColor($cellstyle, $pos);
-  abstract public function importFormula($cell, &$c);
-  abstract public function importColor($color);
-  abstract protected function importProperties();
-}
-
-class SheetnodeHSSF extends SheetnodeXLS {
-  public function SheetnodeHSSF($workbook) {
-    $this->_workbook = $workbook;
-    $automatic = new java_class('org.apache.poi.hssf.util.HSSFColor$AUTOMATIC');
-    $this->_automatic = java_values($automatic->index); 
-  }
-  protected function importProperties() {
-    $properties = array();
-    $si = $this->_workbook->getSummaryInformation();
-    $dsi = $this->_workbook->getDocumentSummaryInformation();
-    $fields_objects = array(
-      array('object' => $si, 'fields' => array(
-        'Title' => t('Title'),
-        'Author' => t('Author'),
-        'Subject' => t('Subject'),
-        'Keywords' => t('Keywords'),
-        'Comments' => array('label' => t('Body'), 'field' => 'Body'),
-        'CreateDateTime' => t('Creation date'),
-        'LastSaveDateTime' => t('Last modification date'),
-        'EditTime' => array('label' => t('Total time spent on editing'), 'null' => 0),
-        'LastAuthor' => t('Last modified by'),
-        'LastPrinted' => t('Last printing date'),
-        'PageCount' => array('label' => t('Page count'), 'null' => 0),
-        'WordCount' => array('label' => t('Word count'), 'null' => 0),
-        'CharCount' => array('label' => t('Character count'), 'null' => 0),
-        'RevNumber' => t('Revision number'),
-        'Template' => t('Template'),
-        'ApplicationName' => t('Application'),
-        'Security' => array('label' => t('Security'), 'map' => array(
-          0 => null,
-          1 => t('Password protected'),
-          2 => t('Read-only recommended'),
-          4 => t('Read-only enforced'),
-          8 => t('Locked for annotations'),
-        )),
-      )),
-      array('object' => $dsi, 'fields' => array(
-        'Category' => t('Category'),
-        'Company' => t('Company'),
-        'Manager' => t('Manager'),
-      )),
+    form_set_error(
+      'import', 
+      t('The file %file appears to be invalid: %error. Please upload a valid Excel (.xls or .xlsx) file.', 
+      array('%file' => $source, '%error' => $e->getMessage()))
     );
-    try {
-      foreach ($fields_objects as $propertyset) {
-        $object = $propertyset['object'];
-        foreach ($propertyset['fields'] as $field => $label) {
-          $function = 'get'. $field;
-          $value = java_values($object->$function());
-          $null = null;
-          if (is_array($label)) {
-            if (isset($label['field'])) $field = $label['field'];
-            if (isset($label['null'])) $null = $label['null'];
-            if (isset($label['map'])) $value = $label['map'][$value];
-            $label = $label['label'];
-          }
-          if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
-        }
-      }
-      foreach ($dsi->getCustomProperties() as $field => $value) {
-        if (!java_is_null($value)) $properties[$field] = array('label' => t(java_values($value->getName())), 'value' => java_values($value->getValue()));
-      }
-    }
-    catch (Exception $e) {
-      watchdog('sheetnode', 'Error retrieving XLS document properties: %msg', array('%msg' => $e->getMessage()), WATCHDOG_WARNING);
-    }
-    return $properties;
-  }
-  public function getFont($cellstyle) {
-    return $cellstyle->getFont($this->_workbook);
-  }
-  public function getFontOfFormattingRun($rtf, $run) {
-    return $this->_workbook->getFontAt(java_values($rtf->getFontOfFormattingRun($run)));
-  }
-  public function getColor($font) {
-    return $font->getColor();
-  }
-  public function getFillForegroundColor($cellstyle) {
-    return $cellstyle->getFillForegroundColor();
-  }
-  public function getBorderColor($cellstyle, $pos) {
-    $getcolor = "get{$pos}BorderColor";
-    return $cellstyle->$getcolor();
-  }
-  public function importFormula($cell, &$c) {
-    $c['formula'] = java_values($cell->getCellFormula());
-    $c['datatype'] = 'f';
-    switch (java_values($cell->getCachedFormulaResultType())) {
-    case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_BOOLEAN):
-      $c['datavalue'] = java_values($cell->getBooleanCellValue());
-      $c['valuetype'] = 'n';
-      break;
-    case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_NUMERIC):
-      $c['datavalue'] = java_values($cell->getNumericCellValue());
-      $c['valuetype'] = 'n';
-      break;
-    case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_STRING):
-      $c['datavalue'] = java_values($cell->getStringCellValue());
-      $c['valuetype'] = 't';
-      break;
-    default:
-      $c['datavalue'] = 0;
-      $c['valuetype'] = 'n';
-      break;
-    }
-  }
-  private $_colors;
-  private $_automatic;
-  public function importColor($color) {
-    $index = java_values($color);
-    if ($index == java_values(org_apache_poi_hssf_usermodel_HSSFFont::type()->COLOR_NORMAL)) return FALSE;
-    if ($index == java_values($this->_automatic)) return FALSE;
-    if (isset($this->_colors[$index])) return $this->_colors[$index]; 
-    $palette = $this->_workbook->getCustomPalette();
-    $triplet = java_values($palette->getColor($index)->getTriplet());
-    $this->_colors[$index] = $triplet;
-    return $triplet;
   }
 }
 
-class SheetnodeXSSF extends SheetnodeXLS {
-  public function SheetnodeXSSF($workbook) {
-    $this->_workbook = $workbook;
-  }
-  protected function importProperties() {
-    $properties = array();
-    $fields_objects = array(
-      'CoreProperties' => array(
-        'Category' => t('Category'),
-        'ContentStatus' => t('Content status'),
-        'ContentType' => t('Content type'),
-        'Created' => array('label' => t('Creation date'), 'null' => 0),
-        'Creator' => t('Author'),
-        'Description' => array('label' => t('Body'), 'field' => 'Body'),
-        'Identifier' => t('Identifier'),
-        'Keywords' => t('Keywords'),
-        'Language' => t('Language'),
-        'LastModifiedBy' => t('Last modified by'),
-        'LastPrinted' => t('Last printing date'),
-        'Modified' => t('Last modification date'),
-        'Revision' => t('Revision'),
-        'Subject' => t('Subject'),
-        'Title' => t('Title'),
-        'Version' => t('Version'),
-      ),
-      'ExtendedProperties' => array(
-        'Application' => t('Application'),
-        'AppVersion' => t('Application version'),
-        'Characters' => t('Character count'),
-        'CharactersWithSpaces' => t('Character count (with spaces)'),
-        'Company' => t('Company'),
-        'DigSig' => t('Digital signature'),
-        'DocSecurity' => array('label' => t('Security'), 'field' => 'Security', 'map' => array(
-          0 => null,  
-          1 => t('Password protected'),
-          2 => t('Read-only recommended'),
-          4 => t('Read-only enforced'),
-          8 => t('Locked for annotations'),
-        )),
-        'Lines' => array('label' => t('Line count'), 'null' => 0),
-        'Manager' => t('Manager'),
-        'Pages' => array('label' => t('Page count'), 'null' => 0),
-        'Paragraphs' => array('label' => t('Paragraph count'), 'null' => 0),
-        'Template' => t('Template'),
-        'TotalTime' => array('label' => t('Total time spent on editing'), 'null' => 0),
-      ),
-    );
-    try {
-      foreach ($fields_objects as $propertyset => $fields) {
-        $function = 'get'. $propertyset;
-        $object = $this->_workbook->getProperties()->$function()->getUnderlyingProperties();
-        foreach ($fields as $field => $label) {
-          if ($propertyset == 'CoreProperties') {
-            $function = 'get'. $field .'Property';
-            $value = java_values($object->$function()->getValue());
-          }
-          else {
-            $function = 'get'. $field;
-            $value = java_values($object->$function());
-          }
-          $null = null;
-          if (is_array($label)) {
-            if (isset($label['field'])) $field = $label['field'];
-            if (isset($label['null'])) $null = $label['null'];
-            if (isset($label['map'])) $value = $label['map'][$value];
-            $label = $label['label'];
-          }
-          if ($value != $null) $properties[$field] = array('label' => $label, 'value' => $value);
-        }
-      }
-    }
-    catch (Exception $e) {
-      watchdog('sheetnode', 'Error retrieving XLSX document properties: %msg', array('%msg' => $e->getMessage()), WATCHDOG_WARNING);
-    }
-    return $properties;
-  }
-  public function getFont($cellstyle) {
-    return $cellstyle->getFont();
-  }
-  public function getFontOfFormattingRun($rtf, $run) {
-    return $this->_workbook->getFontAt(0); // TODO
-    return $rtf->getFontOfFormattingRun($run);
-  }
-  public function getColor($font) {
-    return $font->getXSSFColor();
-  }
-  public function getFillForegroundColor($cellstyle) {
-    return $cellstyle->getFillForegroundXSSFColor();
-  }
-  public function getBorderColor($cellstyle, $pos) {
-    $getcolor = "get{$pos}BorderXSSFColor";
-    return $cellstyle->$getcolor();
-  }
-  public function importFormula($cell, &$c) {
-    $c['formula'] = java_values($cell->getCellFormula());
-    $c['datatype'] = 'f';
-    $v = java_values($cell->getStringCellValue());
-    if (empty($v)) {
-      $c['datavalue'] = java_values($cell->getNumericCellValue());
-      $c['valuetype'] = 'n';
-    }
-    else {
-      $c['datavalue'] = $v;
-      $c['valuetype'] = 't';
-    }
-  }
-  public function importColor($color) {
-    if (java_is_null($color)) return FALSE;
-    $argb = java_values($color->getRgb());
-    if (!$argb) return FALSE;
-    $triplet = array(ord($argb[1]),ord($argb[2]),ord($argb[3]));
-    return $triplet;
-  }
-}
-
-// @see http://drupal.org/node/293663
 function _sheetnode_xls_import_form_submit($form, &$form_state) {
-  set_time_limit(0);
-  
-  global $user;
   module_load_include('inc', 'node', 'node.pages');
-  
-  // Open sheet file
-  $inp = new java_io_FileInputStream($_FILES['files']['tmp_name']['import']);
-  $workbook = org_apache_poi_ss_usermodel_WorkbookFactory::type()->create($inp);
-  $sheetnode = SheetnodeXLS::create($workbook);
+  set_time_limit(0);
+  global $user;
 
-  // Create a book if there are more than one sheet
-  $numsheets = java_values($workbook->getNumberOfSheets());
+  // Open sheet file.
+  // TODO: What to do with other properties?
+  $workbook = PHPExcel_IOFactory::load($_FILES['files']['tmp_name']['import']);
+  $title = $workbook->getProperties()->getTitle();
+  if (empty($title)) {
+    $title = pathinfo($_FILES['files']['name']['import'], PATHINFO_FILENAME);
+  }
+  $description = $workbook->getProperties()->getDescription();
+
+  // Create a book if there are more than one sheet.
+  $numsheets = $workbook->getSheetCount();
   if ($numsheets > 1 && module_exists('book')) {
     $node = array('type' => 'book');
     $form_state_book = array();
-    $form_state_book['values']['title'] = $sheetnode->getProperties('Title') ? $sheetnode->getProperties('Title') : pathinfo($_FILES['files']['name']['import'], PATHINFO_FILENAME);
-    $body = '';
-    foreach ($sheetnode->getProperties() as $field => $property) {
-      if ($field != 'Title' && $field != 'Body') {
-        $body .= $property['label'] .': <strong>'. $property['value'] ."</strong>\n";
-      }
-    }
-    $body .= "\n". $sheetnode->getProperties('Body');
-    $form_state_book['values']['body'] = $body;
+    $form_state_book['values']['title'] = $title;
+    $form_state_book['values']['body'] = $description;
     $form_state_book['values']['name'] = $user->name;
     $form_state_book['values']['op'] = t('Save');
     $form_state_book['values']['book']['bid'] = 'new';
@@ -362,30 +92,22 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
     $book = node_load($form_state_book['nid']);
   }
 
-  // Import all sheets
+  // Import all sheets.
   for ($s = 0; $s < $numsheets; $s++) {
-    $sheet = $workbook->getSheetAt($s);
-    $sheetname = java_values($workbook->getSheetName($s));
-
+    $sheet = $workbook->getSheet($s);
     $node = array('type' => 'sheetnode');
     $form_state_node = array();
-    $form_state_node['values']['title'] = $sheetname;
-    $body = '';
-    if (!isset($book)) {
-      foreach ($sheetnode->getProperties() as $field => $property) {
-        $body .= $property['label'] .': <strong>'. $property['value'] ."</strong>\n";
-      }
-    }
-    $form_state_node['values']['body'] = $body;
+    $form_state_node['values']['title'] = (empty($book) ? $title .' > ' : '') . $sheet->getTitle();
+    $form_state_node['values']['body'] = empty($book) ? $description : '';
     $form_state_node['values']['name'] = $user->name;
-    $form_state_node['values']['sheetsave'] = _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode);
+    $form_state_node['values']['sheetsave'] = _sheetnode_xls_import_do($workbook, $sheet);
     $form_state_node['values']['op'] = t('Save');
-    if (isset($book)) { // insert inside the book
+    if (!empty($book)) { // insert inside the book
       $form_state_node['values']['book']['bid'] = $book->nid;
       $form_state_node['values']['book']['plid'] = $book->book['mlid'];
       $form_state_node['values']['book']['weight'] = $s;
     }
-    
+//   /*  UNCOMMENT WHEN DEBUGGING
     // Allow other modules to modify the new node's creation parameters.
     // Hook signature: hook_sheetnode_alter(&$form_state_node, $form, $form_state);
     drupal_alter('sheetnode', $form_state_node, $form, $form_state);
@@ -394,75 +116,72 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
   }
 
   // If more than one sheet, create a book to hold them
-  if (isset($book)) {
+  if (!empty($book)) {
     $form_state['redirect'] = 'node/'. $book->nid;
   }
   else {
     $form_state['redirect'] = 'node/'. $form_state_node['nid'];
+//    */  // UNCOMMENT WHEN DEBUGGING
   }
 }
 
-function _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode) {
+function _sheetnode_xls_import_do($workbook, $sheet) {
+  require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   $sc = array(); // SocialCalc array structure
 
   // Default values.
-  $sc['attribs']['defaultcolwidth'] = round(java_values($sheet->getDefaultColumnWidth()) * WIDTH_CHAR_TO_PX, 2); // width in chars * factor
-  $sc['attribs']['defaultrowheight'] = round(java_values($sheet->getDefaultRowHeightInPoints()), 2);
-  $sc['attribs']['lastrow'] = java_values($sheet->getLastRowNum())+1;
-  $sc['attribs']['lastcol'] = 1; // POI doesn't tell us last col, so we'll compute it
-  
-  // Rows
-  for ($rit = $sheet->rowIterator(); java_is_TRUE($rit->hasNext()); ) {
-    $row = $rit->next();
-    $rowNum = intval(java_values($row->getRowNum()));
-    $height = round(java_values($row->getHeightInPoints()), 2);
-    if ($height != $sc['attribs']['defaultrowheight']) {
-      $sc['rowattribs']['height'][$rowNum+1] = $height;
+  $font = $sheet->getDefaultStyle()->getFont();
+  $sc['attribs']['defaultcolwidth'] = PHPExcel_Shared_Drawing::cellDimensionToPixels($sheet->getDefaultColumnDimension()->getWidth(), $font);
+  $sc['attribs']['defaultrowheight'] = $sheet->getDefaultRowDimension()->getRowHeight();
+  $sc['attribs']['lastrow'] = $sheet->getHighestRow();
+  $sc['attribs']['lastcol'] = PHPExcel_Cell::columnIndexFromString($sheet->getHighestColumn());
+
+  // Iterate on rows.
+  foreach ($rit = $sheet->getRowIterator() as $row) {
+    $r = $row->getRowIndex();
+    $height = $sheet->getRowDimension($r)->getRowHeight();
+    if ($height != -1 && $height != $sc['attribs']['defaultrowheight']) {
+      $sc['rowattribs']['height'][$r] = $height;
     }
-    if (java_is_TRUE($row->getZeroHeight())) {
-      $sc['rowattribs']['hide'][$rowNum+1] = TRUE;
+    if (!$sheet->getRowDimension($r)->getVisible()) {
+      $sc['rowattribs']['hide'][$r] = TRUE;
     }
 
-    // Columns and cells
-    for ($cit = $row->cellIterator(); java_is_TRUE($cit->hasNext()); ) {
-      $cell = $cit->next();
-
-      $colNum = intval(java_values($cell->getColumnIndex()));
-      $width = round(java_values($sheet->getColumnWidth($colNum)) * WIDTH_CHAR_TO_PX / 256, 2); // width in 1/256 of a char!! 
-      if ($width > 0 && $width != $sc['attribs']['defaultcolwidth']) {
-        $sc['colattribs']['width'][$colNum+1] = $width;
+    // Iterate on cells.
+    foreach ($cit = $row->getCellIterator() as $cell) {
+      $ca = $cell->getColumn();
+      $c = PHPExcel_Cell::columnIndexFromString($ca);
+      $width = $sheet->getColumnDimension($ca)->getWidth();
+      if ($width != -1) {
+        $width = PHPExcel_Shared_Drawing::cellDimensionToPixels($width, $font);
+        if ($width != $sc['attribs']['defaultcolwidth']) {
+          $sc['colattribs']['width'][$c] = $width;
+        }
       }
-//      if (java_is_TRUE($sheet->IsColumnHidden($colNum))) {
-//        $sc['colattribs']['hide'][$colNum+1] = TRUE;
-//      }
+      if (!$sheet->getColumnDimension($ca)->getVisible()) {
+        $sc['colattribs']['hide'][$c] = TRUE;
+      }
       
-      // Last column
-      if ($colNum >= $sc['attribs']['lastcol']) $sc['attribs']['lastcol'] = $colNum+1;
-
-      _sheetnode_xls_import_cell($workbook, $cell, $sc, $sheetnode);
+      _sheetnode_xls_import_cell($workbook, $sheet, $cell, $sc);
     }
   }
 
   // Cell merges
-  for ($i=0; $i < java_values($sheet->getNumMergedRegions()); $i++) {
-    $range = $sheet->getMergedRegion($i);
-    $c = java_values($range->getFirstColumn())+1;
-    $r = java_values($range->getFirstRow())+1;
-    $coord = socialcalc_cr_to_coord($c,$r);
-    if (!isset($sc['cells'][$coord])) continue;
-    $sc['cells'][$coord]['colspan'] = java_values($range->getLastColumn()) - java_values($range->getFirstColumn()) + 1;
-    $sc['cells'][$coord]['rowspan'] = java_values($range->getLastRow()) - java_values($range->getFirstRow()) + 1;
+  foreach ($sheet->getMergeCells() as $range) {
+    list($first, $last) = explode(':', $range);
+    if (!isset($sc['cells'][$first])) continue;
+    $firstcr = socialcalc_coord_to_cr($first);
+    $lastcr = socialcalc_coord_to_cr($last);
+    $sc['cells'][$first]['colspan'] = $lastcr[0] - $firstcr[0] + 1;
+    $sc['cells'][$first]['rowspan'] = $lastcr[1] - $firstcr[1] + 1;
   }
 
   // Names
-  for ($i=0; $i < java_values($workbook->getNumberOfNames()); $i++) {
-    $name = $workbook->getNameAt($i);
-    $definition = java_values($name->getRefersToFormula());
-    $definition = str_replace("'$sheetname'!", '', $definition);
-    $definition = str_replace("$sheetname!", '', $definition);
-    $sc['names'][java_values($name->getNameName())] = array(
+  foreach ($workbook->getNamedRanges() as $range) {
+    // TODO: Handle external references and functions.
+    $sc['names'][$range->getName()] = array(
       'desc' => '',
-      'definition' => (java_is_TRUE($name->isFunctionName()) ? '=' : ''). $definition,
+      'definition' => $range->getRange(),
     );
   }
 
@@ -474,273 +193,271 @@ function _sheetnode_xls_import_do($workbook, $sheet, $sheetname, $sheetnode) {
   return socialcalc_save($socialcalc);
 }
 
-function _sheetnode_xls_import_cell($workbook, $cell, &$sc, $sheetnode) {
-  $type = java_values($cell->getCellType());
+function _sheetnode_xls_import_cell($workbook, $sheet, $cell, &$sc) {
   $c = array(); // output cell
   
   // Position
-  $pos = array(java_values($cell->getColumnIndex())+1, java_values($cell->getRowIndex())+1);
-  $c['pos'] = $pos;
+  $c['pos'] = array(PHPExcel_Cell::columnIndexFromString($cell->getColumn()), $cell->getRow());
 
   // Value and type
-  switch ($type) {
-  case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_BOOLEAN):
-    $c['datavalue'] = java_values($cell->getBooleanCellValue());
+  switch ($cell->getDataType()) {
+  case PHPExcel_Cell_DataType::TYPE_BOOL:
+    $c['datavalue'] = (bool)$cell->getValue();
     $c['datatype'] = 'v';
     $c['valuetype'] = 'n';
     break;
-  case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_NUMERIC):
-    $c['datavalue'] = java_values($cell->getNumericCellValue());
+  case PHPExcel_Cell_DataType::TYPE_NUMERIC:
+    $c['datavalue'] = floatval($cell->getValue());
     $c['datatype'] = 'v';
     $c['valuetype'] = 'n';
     break;
-  case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_STRING):
-    $rtf = $cell->getRichStringCellValue();
-    $runs = java_values($rtf->numFormattingRuns());
-    if ($runs) { // it is rich text
-      $c['datavalue'] = '';
-      $text = java_values($rtf->getString());
-      $i = 0;
-      for ($r=0; $r <= $runs; $r++) {
-        if ($r < $runs) { 
-          $j = java_values($rtf->getIndexOfFormattingRun($r));
+  case PHPExcel_Cell_DataType::TYPE_STRING:
+    $text = $cell->getValue();
+    if ($text instanceof PHPExcel_RichText) {
+      $style = $sheet->getStyle($cell->getCoordinate());
+      $defaultfont = $style->getFont();
+      foreach ($text->getRichTextElements() as $element) {
+        $font = $element instanceof PHPExcel_RichText_Run ? $element->getFont() : $defaultfont;
+        $cellData .= '<span style="' . _sheetnode_xls_assembleCSS(_sheetnode_xls_createCSSStyleFont($font)) . '">';
+
+        if ($font->getSuperScript()) {
+          $cellData .= '<sup>';
+        } else if ($font->getSubScript()) {
+          $cellData .= '<sub>';
         }
-        else {
-          $j = strlen($text);
+
+        // Convert UTF8 data to PCDATA
+        $cellText = $element->getText();
+        $cellData .= htmlspecialchars($cellText);
+
+        if ($font->getSuperScript()) {
+          $cellData .= '</sup>';
+        } else if ($font->getSubScript()) {
+          $cellData .= '</sub>';
         }
-        $font = $r == 0 ? $sheetnode->getFont($cell->getCellStyle()) : $sheetnode->getFontOfFormattingRun($rtf, $r-1);
-        $fontstyle = 'font:'. _sheetnode_xls_get_fontstyle($font) .';';
-        $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font), TRUE);
-        $colorstyle = $color ? 'color:'. $color .';': '';
-        $c['datavalue'] .= "<span style=\"$fontstyle$colorstyle\">". substr($text, $i, $j-$i) .'</span>';
-        $i = $j;
+
+        $cellData .= '</span>';
       }
+      $c['datavalue'] = $cellData;
       $c['valuetype'] = 'th';
     }
     else { // it is plain text
-      $text = java_values($cell->getStringCellValue());
-      $filtered = _filter_url($text, NULL);
-      if ($text == $filtered) {
-        $c['datavalue'] = $text;
-        $c['valuetype'] = 't';
-      }
-      else {
-        $c['datavalue'] = $filtered;
-        $c['valuetype'] = 'th';
-      }
+      $c['datavalue'] = $text;
+      $c['valuetype'] = 't';
     }
     $c['datatype'] = 't';
     break;
-  case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_FORMULA):
-    $sheetnode->importFormula($cell, $c);
+  case PHPExcel_Cell_DataType::TYPE_FORMULA:
+    $c['datatype'] = 'f';
+    $c['formula'] = ltrim($cell->getValue(), '=');
+    try {
+      $c['datavalue'] = $cell->getCalculatedValue();
+    }
+    catch (Exception $e) {
+      $c['datavalue'] = 0;
+      watchdog('sheetnode_xls', 'Error importing formula "!formula" at cell !coord.', array('!formula' => $c['formula'], '!coord' => $cell->getCoordinate()), 'warning');
+    }
+    $c['valuetype'] = is_numeric($c['datavalue']) ? 'n' : 't';
     break;
-  case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_ERROR):
-    $c['errors'] = java_values(org_apache_poi_ss_usermodel_FormulaError::type()->forInt($cell->getErrorCellValue())->getString());
+  case PHPExcel_Cell_DataType::TYPE_ERROR:
+    $c['errors'] = $cell->getValue();
     break;
-  case java_values(org_apache_poi_ss_usermodel_Cell::type()->CELL_TYPE_BLANK):
+  case PHPExcel_Cell_DataType::TYPE_NULL:
     break;
   }
 
   // Comment
-  $comment = $cell->getCellComment();
-  if (!java_is_null($comment)) {
-    $c['comment'] = java_values($comment->getString()->getString());
+  $comment = $sheet->getComment($cell->getCoordinate());
+  if (!empty($comment)) {
+    $c['comment'] = $comment->getText()->getPlainText();
   }
 
   // Style
-  $cellstyle = $cell->getCellStyle();
-  if (!java_is_null($cellstyle)) {
-    // Import this style
-    _sheetnode_xls_import_cellstyle($workbook, $cellstyle, $sc, $sheetnode);
-
+  $style = $sheet->getStyle($cell->getCoordinate());
+  static $styles = array();
+  $hash = $style->getHashCode();
+  if (empty($styles[$hash])) {
     // Font
-    $font = $sheetnode->getFont($cellstyle);
-    if (!java_is_null($font)) {
-      // Import this font
-      _sheetnode_xls_import_font($workbook, $font, $sc, $sheetnode);
-      
-      $fonthash = $sc['fonthash'][_sheetnode_xls_get_fontstyle($font)];
-      $c['font'] = $fonthash;
+    $font = _sheetnode_xls_get_font($style->getFont());
+    if ($font) {
+      $styles[$hash]['font'] = _sheetnode_xls_insert_hash($sc, 'font', $font);
     }
-    
-    // Borders
-    $bt = _sheetnode_xls_get_borderstyle($workbook, $cellstyle, 'Top', $sheetnode);
-    if ($bt) $c['bt'] = $sc['borderstylehash'][$bt];
-    $bl = _sheetnode_xls_get_borderstyle($workbook, $cellstyle, 'Left', $sheetnode);
-    if ($bl) $c['bl'] = $sc['borderstylehash'][$bl];
-    $bb = _sheetnode_xls_get_borderstyle($workbook, $cellstyle, 'Bottom', $sheetnode);
-    if ($bb) $c['bb'] = $sc['borderstylehash'][$bb];
-    $br = _sheetnode_xls_get_borderstyle($workbook, $cellstyle, 'Right', $sheetnode);
-    if ($br) $c['br'] = $sc['borderstylehash'][$br];
-
-    // Cell format (horizontal alignment)
-    $cellformat = _sheetnode_xls_get_cellformat($cellstyle);
-    if ($cellformat) {
-      $c['cellformat'] = $sc['cellformathash'][$cellformat];
-    }
-
-    // Layout (padding + vertical alignment)
-    $layouthash = $sc['layouthash'][_sheetnode_xls_get_layout($cellstyle)];
-    $c['layout'] = $layouthash;
 
     // Color
-    $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font));
+    $color = _sheetnode_xls_get_color($style->getFont()->getColor());
     if ($color) {
-      $colorhash = $sc['colorhash'][$color];
-      $c['color'] = $colorhash;
+      $styles[$hash]['color'] = _sheetnode_xls_insert_hash($sc, 'color', $color);
     }
 
     // Background color
-    $bgcolor = _sheetnode_xls_get_color($sheetnode, $sheetnode->getFillForegroundColor($cellstyle));
+    $bgcolor = _sheetnode_xls_get_color($style->getFill()->getEndColor());
     if ($bgcolor) {
-      $bgcolorhash = $sc['colorhash'][$bgcolor];
-      $c['bgcolor'] = $bgcolorhash;
+      $styles[$hash]['bgcolor'] = _sheetnode_xls_insert_hash($sc, 'color', $bgcolor);
     }
-    
-    // Non-text value format
-    $ntvf = _sheetnode_xls_get_valueformat(java_values($cellstyle->getDataFormatString()));
+
+    // Borders
+    $borders = array(
+      'bt' => 'getTop',
+      'bl' => 'getLeft',
+      'bb' => 'getBottom',
+      'br' => 'getRight',
+    );
+    foreach ($borders as $bi => $method) {
+      $border = _sheetnode_xls_get_border($style->getBorders()->$method());
+      if ($border) {
+        $styles[$hash][$bi] = _sheetnode_xls_insert_hash($sc, 'borderstyle', $border);
+      }
+    }
+
+    // Cell format (horizontal alignment)
+    $cellformat = _sheetnode_xls_get_cellformat($style);
+    if ($cellformat) {
+      $styles[$hash]['cellformat'] = _sheetnode_xls_insert_hash($sc, 'cellformat', $cellformat);
+    }
+
+    // Layout (padding + vertical alignment)
+    $layout = _sheetnode_xls_get_layout($style);
+    if ($layout) {
+      $styles[$hash]['layout'] = _sheetnode_xls_insert_hash($sc, 'layout', $layout);
+    }
+
+    // Number format
+    $ntvf = _sheetnode_xls_get_valueformat($style->getNumberFormat());
     if ($ntvf) {
-      $ntvfhash = $sc['valueformathash'][$ntvf];
-      $c['nontextvalueformat'] = $ntvfhash;
+      $styles[$hash]['nontextvalueformat'] = _sheetnode_xls_insert_hash($sc, 'valueformat', $ntvf);
     }
   }
+  $c += $styles[$hash]; // merge the cached styles into the cell directly.
 
-  $sc['cells'][socialcalc_cr_to_coord($pos[0],$pos[1])] = $c;
+  $sc['cells'][$cell->getCoordinate()] = $c;
 }
 
-function _sheetnode_xls_import_font($workbook, $font, &$sc, $sheetnode) {
-  $fontstyle = _sheetnode_xls_get_fontstyle($font);
-  if (!isset($sc['fonthash'][$fontstyle])) {
-    $index = isset($sc['fonts']) ? count($sc['fonts'])+1 : 1;
-    $sc['fonts'][$index] = $fontstyle;
-    $sc['fonthash'][$fontstyle] = $index;
+/**
+ * LIFTED FROM PHPExcel/Classes/PHPExcel/Writer/HTML.php
+ * Takes array where of CSS properties / values and converts to CSS string
+ *
+ * @param array
+ * @return string
+ */
+function _sheetnode_xls_assembleCSS($pValue = array())
+{
+  $pairs = array();
+  foreach ($pValue as $property => $value) {
+    $pairs[] = $property . ':' . $value;
   }
-  
-  $color = _sheetnode_xls_get_color($sheetnode, $sheetnode->getColor($font));
-  if ($color && !isset($sc['colorhash'][$color])) {
-    $index = isset($sc['colors']) ? count($sc['colors'])+1 : 1;
-    $sc['colors'][$index] = $color;
-    $sc['colorhash'][$color] = $index;
-  }
+  $string = implode('; ', $pairs);
+
+  return $string;
 }
 
-function _sheetnode_xls_import_cellstyle($workbook, $cellstyle, &$sc, $sheetnode) {
-  // Border styles
-  _sheetnode_xls_import_borderstyle($workbook, $cellstyle, 'Top', $sc, $sheetnode);
-  _sheetnode_xls_import_borderstyle($workbook, $cellstyle, 'Right', $sc, $sheetnode);
-  _sheetnode_xls_import_borderstyle($workbook, $cellstyle, 'Left', $sc, $sheetnode);
-  _sheetnode_xls_import_borderstyle($workbook, $cellstyle, 'Bottom', $sc, $sheetnode);
+/**
+ * LIFTED FROM PHPExcel/Classes/PHPExcel/Writer/HTML.php
+ * Create CSS style (PHPExcel_Style_Font)
+ *
+ * @param PHPExcel_Style_Font     $pStyle     PHPExcel_Style_Font
+ * @return  array
+ */
+function _sheetnode_xls_createCSSStyleFont(PHPExcel_Style_Font $pStyle) {
+  // Construct CSS
+  $css = array();
 
-  // Cell format (horizontal alignment)
-  $cellformat = _sheetnode_xls_get_cellformat($cellstyle);
-  if ($cellformat && !isset($sc['cellformathash'][$cellformat])) {
-    $index = isset($sc['cellformats']) ? count($sc['cellformats'])+1 : 1;
-    $sc['cellformats'][$index] = $cellformat;
-    $sc['cellformathash'][$cellformat] = $index;
+  // Create CSS
+  if ($pStyle->getBold()) {
+    $css['font-weight'] = 'bold';
+  }
+  if ($pStyle->getUnderline() != PHPExcel_Style_Font::UNDERLINE_NONE && $pStyle->getStrikethrough()) {
+    $css['text-decoration'] = 'underline line-through';
+  } else if ($pStyle->getUnderline() != PHPExcel_Style_Font::UNDERLINE_NONE) {
+    $css['text-decoration'] = 'underline';
+  } else if ($pStyle->getStrikethrough()) {
+    $css['text-decoration'] = 'line-through';
+  }
+  if ($pStyle->getItalic()) {
+    $css['font-style'] = 'italic';
   }
 
-  // Layout (padding + vertical alignment)
-  $layout = _sheetnode_xls_get_layout($cellstyle);
-  if (!isset($sc['layouthash'][$layout])) {
-    $index = isset($sc['layouts']) ? count($sc['layouts'])+1 : 1;
-    $sc['layouts'][$index] = $layout;
-    $sc['layouthash'][$layout] = $index;
-  }
+  $css['color']   = '#' . $pStyle->getColor()->getRGB();
+  $css['font-family'] = '\'' . $pStyle->getName() . '\'';
+  $css['font-size'] = $pStyle->getSize() . 'pt';
 
-  // Background color
-  $bgcolor = _sheetnode_xls_get_color($sheetnode, $sheetnode->getFillForegroundColor($cellstyle));
-  if ($bgcolor && !isset($sc['colorhash'][$bgcolor])) {
-    $index = isset($sc['colorhash']) ? count($sc['colorhash'])+1 : 1;
-    $sc['colors'][$index] = $bgcolor;
-    $sc['colorhash'][$bgcolor] = $index;
-  }
-
-  // Value format
-  $valueformat = _sheetnode_xls_get_valueformat(java_values($cellstyle->getDataFormatString()));
-  if ($valueformat && !isset($sc['valueformathash'][$valueformat])) {
-    $index = isset($sc['valueformats']) ? count($sc['valueformats'])+1 : 1;
-    $sc['valueformats'][$index] = $valueformat;
-    $sc['valueformathash'][$valueformat] = $index;
-  }
+  // Return
+  return $css;
 }
 
-function _sheetnode_xls_import_borderstyle($workbook, $cellstyle, $pos, &$sc, $sheetnode) {
-  $borderstyle = _sheetnode_xls_get_borderstyle($workbook, $cellstyle, $pos, $sheetnode);
-  if ($borderstyle && !isset($sc['borderstylehash'][$borderstyle])) {
-    $index = isset($sc['borderstyles']) ? count($sc['borderstyles'])+1 : 1;
-    $sc['borderstyles'][$index] = $borderstyle;
-    $sc['borderstylehash'][$borderstyle] = $index;
+function _sheetnode_xls_insert_hash(&$sc, $key, $style) {
+  $hash = @$sc[$key.'hash'][$style];
+  if (is_null($hash)) {
+    $hash = count($sc[$key.'s']) + 1;
+    $sc[$key.'s'][$hash] = $style;
+    $sc[$key.'hash'][$style] = $hash;
   }
+  return $hash;
 }
 
-function _sheetnode_xls_get_fontstyle($font) {
-  return (java_is_TRUE($font->getItalic()) ? 'italic' : 'normal') .' '.
-         (java_values($font->getBoldWeight()) == java_values(org_apache_poi_ss_usermodel_Font::type()->BOLDWEIGHT_BOLD) ? 'bold' : 'normal') .' '.
-          java_values($font->getFontHeightInPoints()) .'pt '.
-          java_values($font->getFontName());
+function _sheetnode_xls_get_font($font) {
+  return ($font->getItalic() ? 'italic' : 'normal') .' '.
+         ($font->getBold() ? 'bold' : 'normal') .' '.
+         ($font->getSize() .'pt') .' '.
+         ($font->getName());
 }
 
-function _sheetnode_xls_get_borderstyle($workbook, $cellstyle, $pos, $sheetnode) {
+function _sheetnode_xls_get_border($border) {
   $borderstyles = array(
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_NONE) => FALSE,
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_THIN) => 'thin solid', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM) => 'medium solid', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DASHED) => 'thin dashed', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DOTTED) => 'thin dotted', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_THICK) => 'thick solid', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DOUBLE) => 'thin double', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_HAIR) => 'thin dotted',  // TODO: is it?
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM_DASHED) => 'medium dashed', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DASH_DOT) => 'thin dashed', // TODO: is it?
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM_DASH_DOT) => 'medium dashed', //TODO: is it?
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_DASH_DOT_DOT) => 'thin dashed', // TODO: is it?
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_MEDIUM_DASH_DOT_DOT) => 'medium dashed', // TODO: is it?
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->BORDER_SLANTED_DASH_DOT) => 'thin dashed', // TODO: is it?
+    PHPExcel_Style_Border::BORDER_NONE => FALSE,
+    PHPExcel_Style_Border::BORDER_THIN => 'thin solid', 
+    PHPExcel_Style_Border::BORDER_MEDIUM => 'medium solid', 
+    PHPExcel_Style_Border::BORDER_DASHED => 'thin dashed', 
+    PHPExcel_Style_Border::BORDER_DOTTED => 'thin dotted', 
+    PHPExcel_Style_Border::BORDER_THICK => 'thick solid', 
+    PHPExcel_Style_Border::BORDER_DOUBLE => 'thin double', 
+    PHPExcel_Style_Border::BORDER_HAIR => 'thin dotted',  // TODO: is it?
+    PHPExcel_Style_Border::BORDER_MEDIUMDASHED => 'medium dashed', 
+    PHPExcel_Style_Border::BORDER_DASHDOT => 'thin dashed', // TODO: is it?
+    PHPExcel_Style_Border::BORDER_MEDIUMDASHDOT => 'medium dashed', //TODO: is it?
+    PHPExcel_Style_Border::BORDER_DASHDOTDOT => 'thin dashed', // TODO: is it?
+    PHPExcel_Style_Border::BORDER_MEDIUMDASHDOTDOT => 'medium dashed', // TODO: is it?
+    PHPExcel_Style_Border::BORDER_SLANTDASHDOT => 'thin dashed', // TODO: is it?
   );
-  $getstyle = "getBorder{$pos}";
-  $borderstyle = $borderstyles[java_values($cellstyle->$getstyle())];
+  $borderstyle = $borderstyles[$border->getBorderStyle()];
   if (!$borderstyle) return FALSE;
-  $bordercolor = _sheetnode_xls_get_color($sheetnode, $sheetnode->getBorderColor($cellstyle, $pos));
+  $bordercolor = _sheetnode_xls_get_color($border->getColor());
   return $borderstyle .' '. $bordercolor;
 }
 
-function _sheetnode_xls_get_cellformat($cellstyle) {
+function _sheetnode_xls_get_cellformat($style) {
   $cellformats = array(
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_GENERAL) => FALSE,
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_LEFT) => 'left',
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_CENTER) => 'center',
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_RIGHT) => 'right',
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_FILL) => 'justify', // TODO: is it?
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_JUSTIFY) => 'justify',
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->ALIGN_CENTER_SELECTION) => 'center', // TODO: is it?
+    PHPExcel_Style_Alignment::HORIZONTAL_GENERAL => FALSE,
+    PHPExcel_Style_Alignment::HORIZONTAL_LEFT => 'left',
+    PHPExcel_Style_Alignment::HORIZONTAL_CENTER => 'center',
+    PHPExcel_Style_Alignment::HORIZONTAL_RIGHT => 'right',
+    PHPExcel_Style_Alignment::HORIZONTAL_JUSTIFY => 'justify',
+    PHPExcel_Style_Alignment::HORIZONTAL_CENTER_CONTINUOUS => 'center', // TODO: is it?
   );
-  return $cellformats[java_values($cellstyle->getAlignment())];
+  return $cellformats[$style->getAlignment()->getHorizontal()];
 }
 
-function _sheetnode_xls_get_layout($cellstyle) {
+function _sheetnode_xls_get_layout($style) {
   $valignments = array(
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_TOP) => 'top',
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_CENTER) => 'middle',
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_BOTTOM) => 'bottom', 
-    java_values(org_apache_poi_ss_usermodel_CellStyle::type()->VERTICAL_JUSTIFY) => 'middle', // TODO: is it?
+    PHPExcel_Style_Alignment::VERTICAL_TOP => 'top',
+    PHPExcel_Style_Alignment::VERTICAL_CENTER => 'middle',
+    PHPExcel_Style_Alignment::VERTICAL_BOTTOM => 'bottom', 
+    PHPExcel_Style_Alignment::VERTICAL_JUSTIFY => 'middle', // TODO: is it?
   );
-  $valignment = $valignments[java_values($cellstyle->getVerticalAlignment())];
-  $padding_left = java_values($cellstyle->getIndention()) * WIDTH_CHAR_TO_PX; // simulate indentation with padding
-  $padding_left = empty($padding_left) ? '*' : $padding_left . 'px';
+  $valignment = $valignments[$style->getAlignment()->getVertical()];
+  $padding_left = $style->getAlignment()->getIndent();
+  $padding_left = empty($padding_left) ? '*' : PHPExcel_Shared_Drawing::pointsToPixels($padding_left) . 'px';
   return 'padding:* * * '. $padding_left .';vertical-align:'. $valignment .';';
 }
 
-function _sheetnode_xls_get_valueformat($valueformat) {
+function _sheetnode_xls_get_valueformat($numberformat) {
+  $valueformat = $numberformat->getFormatCode();
   if (strtolower($valueformat) == 'general') return FALSE;
   $valueformat = str_replace(';@', '', $valueformat);
   return strtolower($valueformat);
 }
 
-function _sheetnode_xls_get_color($sheetnode, $color, $hex = FALSE) {
-  $triplet = $sheetnode->importColor($color);
-  if (!$triplet) return FALSE;
-  return $hex ? 
-    sprintf('#%02X%02X%02X', $triplet[0], $triplet[1], $triplet[2]) : 
-    'rgb('. $triplet[0] .','. $triplet[1] .','. $triplet[2] .')';
+function _sheetnode_xls_get_color($color) {
+  $rgb = $color->getRGB();
+  return 'rgb(' . hexdec(substr($rgb, 0, 2)) .','. hexdec(substr($rgb, 2, 2)) .','. hexdec(substr($rgb, 4, 2)) .')';
 }
 

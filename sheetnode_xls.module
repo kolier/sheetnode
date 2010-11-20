@@ -72,32 +72,21 @@ function sheetnode_xls_menu() {
 }
 
 function _sheetnode_xls_settings() {
-  $form['sheetnode_xls_jar_path'] = array(
+  $form['sheetnode_xls_library_path'] = array(
     '#type' => 'textfield',
-    '#title' => t('Apache POI files path'),
-    '#description' => t('Enter the location of the extracted Apache POI package.'),
-    '#default_value' => variable_get('sheetnode_xls_jar_path', ''),
+    '#title' => t('PHP Excel path'),
+    '#description' => t('Enter the location of the extracted PHP Excel package.'),
+    '#default_value' => variable_get('sheetnode_xls_library_path', ''),
   );
-  $form['#submit'][] = '_sheetnode_xls_settings_submit';
   $form['#validate'][] = '_sheetnode_xls_settings_validate';
   return system_settings_form($form);
 }
 
 function _sheetnode_xls_settings_validate($form, $form_state) {
-  $path = $form_state['values']['sheetnode_xls_jar_path'];
-  if (!is_dir($path)) {
-    form_set_error('sheetnode_xls_jar_path', t('The path you entered does not point to a valid location. Please enter the location of the extracted Apache POI package.'));
+  $path = rtrim($form_state['values']['sheetnode_xls_library_path'], '/');
+  if (!is_dir($path) || !is_file($path . '/Classes/PHPExcel.php')) {
+    form_set_error('sheetnode_xls_library_path', t('The path you entered does not point to a valid location. Please enter the location of the extracted PHP Excel package.'));
     return;
   }
-}
-
-function _sheetnode_xls_settings_submit($form, $form_state) {
-  $path = $form_state['values']['sheetnode_xls_jar_path'];
-  $files = file_scan_directory($path, '(.*).jar$');
-  $jars = array();
-  if ($files) foreach ($files as $file) {
-    $jars[] = $file->filename;
-  }
-  variable_set('sheetnode_xls_jar', implode(';', $jars));
 }
 

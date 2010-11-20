@@ -24,14 +24,14 @@ function sheetnode_google_menu() {
   $items = array();
     
   $items['sheetnode/google'] = array(
-    'title' => 'Export to Google Spreadsheets',
+    'title' => 'Export to Google Spreadsheet',
     'access arguments' => array('access content'),
     'page callback' => '_sheetnode_google_export',
     'type' => MENU_CALLBACK,
     'file' => 'sheetnode_google.export.inc',
   );
   $items['sheetnode/google/fetch'] = array(
-    'title' => 'Fetch private Google Spreadsheets',
+    'title' => 'Fetch private Google Spreadsheet',
     'type' => MENU_CALLBACK,
     'page callback' => '_sheetnode_google_js',
     'page arguments' => array('_sheetnode_google_import_fetch'),
@@ -39,7 +39,7 @@ function sheetnode_google_menu() {
     'file' => 'sheetnode_google.import.inc',
   );
   $items['node/add/googlesheet'] = array(
-    'title' => 'Sheetnode import from Google Spreadsheets',
+    'title' => 'Sheetnode import from Google Spreadsheet',
     'access arguments' => array('create sheetnode'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_google_import_form'),

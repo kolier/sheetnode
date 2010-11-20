@@ -6,11 +6,11 @@
  */
 function sheetnode_text_menu() {
   $items['node/add/sheetnode_text'] = array(
-    'title' => 'Sheetnode import from text tables',
+    'title' => 'Sheetnode import from text table',
     'access arguments' => array('create sheetnode'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('sheetnode_text_import_form'),
-    'description' => 'Create a new sheetnode with content from text tables.',
+    'description' => 'Create a new sheetnode with content from a text table.',
   );
   return $items;
 }
