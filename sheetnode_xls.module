@@ -56,12 +56,12 @@ function sheetnode_xls_menu() {
     'title' => 'Sheetnode import from Excel',
     'access arguments' => array('create sheetnode'),
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('_sheetnode_xls_import_form'),
-    'description' => 'Create a new sheetnode with content from an existing Excel (.xls or .xlsx) spreadsheet.',
+    'page arguments' => array('_sheetnode_xls_import_form', t('Excel spreadsheet (.xls or .xlsx) to import')),
+    'description' => 'Create a new sheetnode with content from an existing Microsoft Excel (.xls or .xlsx) spreadsheet.',
     'file' => 'sheetnode_xls.import.inc',
   );
   $items['admin/settings/sheetnode/xls'] = array(
-    'title' => 'Sheetnode XLS settings',
+    'title' => 'Sheetnode XLS',
     'access arguments' => array('administer site configuration'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_xls_settings'),
@@ -74,8 +74,8 @@ function sheetnode_xls_menu() {
 function _sheetnode_xls_settings() {
   $form['sheetnode_xls_library_path'] = array(
     '#type' => 'textfield',
-    '#title' => t('PHP Excel path'),
-    '#description' => t('Enter the location of the extracted PHP Excel package.'),
+    '#title' => t('PHPExcel path'),
+    '#description' => t('Enter the location of the extracted PHPExcel package.'),
     '#default_value' => variable_get('sheetnode_xls_library_path', ''),
   );
   $form['#validate'][] = '_sheetnode_xls_settings_validate';
@@ -85,7 +85,7 @@ function _sheetnode_xls_settings() {
 function _sheetnode_xls_settings_validate($form, $form_state) {
   $path = rtrim($form_state['values']['sheetnode_xls_library_path'], '/');
   if (!is_dir($path) || !is_file($path . '/Classes/PHPExcel.php')) {
-    form_set_error('sheetnode_xls_library_path', t('The path you entered does not point to a valid location. Please enter the location of the extracted PHP Excel package.'));
+    form_set_error('sheetnode_xls_library_path', t('The path you entered does not point to a valid location. Please enter the location of the extracted PHPExcel package.'));
     return;
   }
 }

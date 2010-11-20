@@ -1,11 +1,11 @@
 <?php
 // $Id$
 
-function _sheetnode_xls_import_form(&$form_state, $label) {
+function _sheetnode_ods_import_form(&$form_state) {
   $form['#attributes'] = array('enctype' => "multipart/form-data");
   $form['import'] = array(
     '#type' => 'file',
-    '#title' => $label,
+    '#title' => t('OOCalc spreadsheet (.ods) to import'),
     '#size' => 40,
   );
   $form['submit'] = array(
@@ -15,7 +15,7 @@ function _sheetnode_xls_import_form(&$form_state, $label) {
   return $form;
 }
 
-function _sheetnode_xls_import_form_validate($form, &$form_state) {
+function _sheetnode_ods_import_form_validate($form, &$form_state) {
   $source = $_FILES['files']['name']['import'];
 
   // Handle PHP file upload errors.
@@ -47,10 +47,22 @@ function _sheetnode_xls_import_form_validate($form, &$form_state) {
       array('%file' => $source, '%error' => $_FILES['files']['error']['import'])));
     return;
   }
+  
+  // Verify that the uploaded file is indeed ODS.
+  try {
+    require_once(variable_get('sheetnode_ods_library_path', '') . '/Classes/PHPExcel/IOFactory.php');
+    $type = PHPExcel_IOFactory::identify($_FILES['files']['tmp_name']['import']);
+  }
+  catch (Exception $e) {
+    form_set_error(
+      'import', 
+      t('The file %file appears to be invalid: %error. Please upload a valid OOCalc (.ods) file.', 
+      array('%file' => $source, '%error' => $e->getMessage()))
+    );
+  }
 }
 
-function _sheetnode_xls_import_form_submit($form, &$form_state) {
-  require_once(variable_get('sheetnode_xls_library_path', '') . '/Classes/PHPExcel.php');
+function _sheetnode_ods_import_form_submit($form, &$form_state) {
   module_load_include('inc', 'node', 'node.pages');
   set_time_limit(0);
   global $user;
@@ -88,7 +100,7 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
     $form_state_node['values']['title'] = (empty($book) ? $title .' > ' : '') . $sheet->getTitle();
     $form_state_node['values']['body'] = empty($book) ? $description : '';
     $form_state_node['values']['name'] = $user->name;
-    $form_state_node['values']['sheetsave'] = _sheetnode_xls_import_do($workbook, $sheet);
+    $form_state_node['values']['sheetsave'] = _sheetnode_ods_import_do($workbook, $sheet);
     $form_state_node['values']['op'] = t('Save');
     if (!empty($book)) { // insert inside the book
       $form_state_node['values']['book']['bid'] = $book->nid;
@@ -113,7 +125,7 @@ function _sheetnode_xls_import_form_submit($form, &$form_state) {
   }
 }
 
-function _sheetnode_xls_import_do($workbook, $sheet) {
+function _sheetnode_ods_import_do($workbook, $sheet) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   $sc = array(); // SocialCalc array structure
 
@@ -150,7 +162,7 @@ function _sheetnode_xls_import_do($workbook, $sheet) {
         $sc['colattribs']['hide'][$c] = TRUE;
       }
       
-      _sheetnode_xls_import_cell($workbook, $sheet, $cell, $sc);
+      _sheetnode_ods_import_cell($workbook, $sheet, $cell, $sc);
     }
   }
 
@@ -181,7 +193,7 @@ function _sheetnode_xls_import_do($workbook, $sheet) {
   return socialcalc_save($socialcalc);
 }
 
-function _sheetnode_xls_import_cell($workbook, $sheet, $cell, &$sc) {
+function _sheetnode_ods_import_cell($workbook, $sheet, $cell, &$sc) {
   $c = array(); // output cell
   
   // Position
@@ -206,7 +218,7 @@ function _sheetnode_xls_import_cell($workbook, $sheet, $cell, &$sc) {
       $defaultfont = $style->getFont();
       foreach ($text->getRichTextElements() as $element) {
         $font = $element instanceof PHPExcel_RichText_Run ? $element->getFont() : $defaultfont;
-        $cellData .= '<span style="' . _sheetnode_xls_assembleCSS(_sheetnode_xls_createCSSStyleFont($font)) . '">';
+        $cellData .= '<span style="' . _sheetnode_ods_assembleCSS(_sheetnode_ods_createCSSStyleFont($font)) . '">';
 
         if ($font->getSuperScript()) {
           $cellData .= '<sup>';
@@ -243,7 +255,7 @@ function _sheetnode_xls_import_cell($workbook, $sheet, $cell, &$sc) {
     }
     catch (Exception $e) {
       $c['datavalue'] = 0;
-      watchdog('sheetnode_xls', 'Error importing formula "!formula" at cell !coord.', array('!formula' => $c['formula'], '!coord' => $cell->getCoordinate()), 'warning');
+      watchdog('sheetnode_ods', 'Error importing formula "!formula" at cell !coord.', array('!formula' => $c['formula'], '!coord' => $cell->getCoordinate()), 'warning');
     }
     $c['valuetype'] = is_numeric($c['datavalue']) ? 'n' : 't';
     break;
@@ -266,21 +278,21 @@ function _sheetnode_xls_import_cell($workbook, $sheet, $cell, &$sc) {
   $hash = $style->getHashCode();
   if (empty($styles[$hash])) {
     // Font
-    $font = _sheetnode_xls_get_font($style->getFont());
+    $font = _sheetnode_ods_get_font($style->getFont());
     if ($font) {
-      $styles[$hash]['font'] = _sheetnode_xls_insert_hash($sc, 'font', $font);
+      $styles[$hash]['font'] = _sheetnode_ods_insert_hash($sc, 'font', $font);
     }
 
     // Color
-    $color = _sheetnode_xls_get_color($style->getFont()->getColor());
+    $color = _sheetnode_ods_get_color($style->getFont()->getColor());
     if ($color) {
-      $styles[$hash]['color'] = _sheetnode_xls_insert_hash($sc, 'color', $color);
+      $styles[$hash]['color'] = _sheetnode_ods_insert_hash($sc, 'color', $color);
     }
 
     // Background color
-    $bgcolor = _sheetnode_xls_get_color($style->getFill()->getEndColor());
+    $bgcolor = _sheetnode_ods_get_color($style->getFill()->getEndColor());
     if ($bgcolor) {
-      $styles[$hash]['bgcolor'] = _sheetnode_xls_insert_hash($sc, 'color', $bgcolor);
+      $styles[$hash]['bgcolor'] = _sheetnode_ods_insert_hash($sc, 'color', $bgcolor);
     }
 
     // Borders
@@ -291,28 +303,28 @@ function _sheetnode_xls_import_cell($workbook, $sheet, $cell, &$sc) {
       'br' => 'getRight',
     );
     foreach ($borders as $bi => $method) {
-      $border = _sheetnode_xls_get_border($style->getBorders()->$method());
+      $border = _sheetnode_ods_get_border($style->getBorders()->$method());
       if ($border) {
-        $styles[$hash][$bi] = _sheetnode_xls_insert_hash($sc, 'borderstyle', $border);
+        $styles[$hash][$bi] = _sheetnode_ods_insert_hash($sc, 'borderstyle', $border);
       }
     }
 
     // Cell format (horizontal alignment)
-    $cellformat = _sheetnode_xls_get_cellformat($style);
+    $cellformat = _sheetnode_ods_get_cellformat($style);
     if ($cellformat) {
-      $styles[$hash]['cellformat'] = _sheetnode_xls_insert_hash($sc, 'cellformat', $cellformat);
+      $styles[$hash]['cellformat'] = _sheetnode_ods_insert_hash($sc, 'cellformat', $cellformat);
     }
 
     // Layout (padding + vertical alignment)
-    $layout = _sheetnode_xls_get_layout($style);
+    $layout = _sheetnode_ods_get_layout($style);
     if ($layout) {
-      $styles[$hash]['layout'] = _sheetnode_xls_insert_hash($sc, 'layout', $layout);
+      $styles[$hash]['layout'] = _sheetnode_ods_insert_hash($sc, 'layout', $layout);
     }
 
     // Number format
-    $ntvf = _sheetnode_xls_get_valueformat($style->getNumberFormat());
+    $ntvf = _sheetnode_ods_get_valueformat($style->getNumberFormat());
     if ($ntvf) {
-      $styles[$hash]['nontextvalueformat'] = _sheetnode_xls_insert_hash($sc, 'valueformat', $ntvf);
+      $styles[$hash]['nontextvalueformat'] = _sheetnode_ods_insert_hash($sc, 'valueformat', $ntvf);
     }
   }
   $c += $styles[$hash]; // merge the cached styles into the cell directly.
@@ -327,7 +339,7 @@ function _sheetnode_xls_import_cell($workbook, $sheet, $cell, &$sc) {
  * @param array
  * @return string
  */
-function _sheetnode_xls_assembleCSS($pValue = array())
+function _sheetnode_ods_assembleCSS($pValue = array())
 {
   $pairs = array();
   foreach ($pValue as $property => $value) {
@@ -345,7 +357,7 @@ function _sheetnode_xls_assembleCSS($pValue = array())
  * @param PHPExcel_Style_Font     $pStyle     PHPExcel_Style_Font
  * @return  array
  */
-function _sheetnode_xls_createCSSStyleFont(PHPExcel_Style_Font $pStyle) {
+function _sheetnode_ods_createCSSStyleFont(PHPExcel_Style_Font $pStyle) {
   // Construct CSS
   $css = array();
 
@@ -372,7 +384,7 @@ function _sheetnode_xls_createCSSStyleFont(PHPExcel_Style_Font $pStyle) {
   return $css;
 }
 
-function _sheetnode_xls_insert_hash(&$sc, $key, $style) {
+function _sheetnode_ods_insert_hash(&$sc, $key, $style) {
   $hash = @$sc[$key.'hash'][$style];
   if (is_null($hash)) {
     $hash = count($sc[$key.'s']) + 1;
@@ -382,14 +394,14 @@ function _sheetnode_xls_insert_hash(&$sc, $key, $style) {
   return $hash;
 }
 
-function _sheetnode_xls_get_font($font) {
+function _sheetnode_ods_get_font($font) {
   return ($font->getItalic() ? 'italic' : 'normal') .' '.
          ($font->getBold() ? 'bold' : 'normal') .' '.
          ($font->getSize() .'pt') .' '.
          ($font->getName());
 }
 
-function _sheetnode_xls_get_border($border) {
+function _sheetnode_ods_get_border($border) {
   $borderstyles = array(
     PHPExcel_Style_Border::BORDER_NONE => FALSE,
     PHPExcel_Style_Border::BORDER_THIN => 'thin solid', 
@@ -408,11 +420,11 @@ function _sheetnode_xls_get_border($border) {
   );
   $borderstyle = $borderstyles[$border->getBorderStyle()];
   if (!$borderstyle) return FALSE;
-  $bordercolor = _sheetnode_xls_get_color($border->getColor());
+  $bordercolor = _sheetnode_ods_get_color($border->getColor());
   return $borderstyle .' '. $bordercolor;
 }
 
-function _sheetnode_xls_get_cellformat($style) {
+function _sheetnode_ods_get_cellformat($style) {
   $cellformats = array(
     PHPExcel_Style_Alignment::HORIZONTAL_GENERAL => FALSE,
     PHPExcel_Style_Alignment::HORIZONTAL_LEFT => 'left',
@@ -424,7 +436,7 @@ function _sheetnode_xls_get_cellformat($style) {
   return $cellformats[$style->getAlignment()->getHorizontal()];
 }
 
-function _sheetnode_xls_get_layout($style) {
+function _sheetnode_ods_get_layout($style) {
   $valignments = array(
     PHPExcel_Style_Alignment::VERTICAL_TOP => 'top',
     PHPExcel_Style_Alignment::VERTICAL_CENTER => 'middle',
@@ -437,14 +449,14 @@ function _sheetnode_xls_get_layout($style) {
   return 'padding:* * * '. $padding_left .';vertical-align:'. $valignment .';';
 }
 
-function _sheetnode_xls_get_valueformat($numberformat) {
+function _sheetnode_ods_get_valueformat($numberformat) {
   $valueformat = $numberformat->getFormatCode();
   if (strtolower($valueformat) == 'general') return FALSE;
   $valueformat = str_replace(';@', '', $valueformat);
   return strtolower($valueformat);
 }
 
-function _sheetnode_xls_get_color($color) {
+function _sheetnode_ods_get_color($color) {
   $rgb = $color->getRGB();
   return 'rgb(' . hexdec(substr($rgb, 0, 2)) .','. hexdec(substr($rgb, 2, 2)) .','. hexdec(substr($rgb, 4, 2)) .')';
 }

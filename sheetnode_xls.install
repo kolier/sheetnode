@@ -12,10 +12,10 @@ function sheetnode_xls_requirements($phase) {
     $dir = rtrim(variable_get('sheetnode_xls_library_path', ''), '/');
     $satisfied = is_dir($dir) && is_file($dir . '/Classes/PHPExcel.php');
     $requirements['sheetnode_xls_library'] = array(
-      'title' => $t('PHP Excel library'),
+      'title' => $t('PHPExcel library'),
       'value' => $satisfied ? 
-        $t("PHP Excel is found.") : 
-        $t("PHP Excel is NOT found at !dir.", array('!dir' => $dir)),
+        $t("PHPExcel is found.") : 
+        $t("PHPExcel is NOT found at !dir.", array('!dir' => $dir)),
       'severity' => $satisfied ? REQUIREMENT_OK : REQUIREMENT_ERROR,
     );
   }

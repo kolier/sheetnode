@@ -1,42 +1,34 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_requirements().
+ */
 function sheetnode_ods_requirements($phase) {
   $requirements = array();
   $t = get_t();
 
   if ($phase == 'runtime') {
-    $ods = TRUE;
-    $JAVA_BASE = variable_get('pjb_java_base', '');
-    if (!file_exists("$JAVA_BASE/java/Java.inc")) {
-      $ods = $t('PHP/Java Bridge is not properly installed.');
-    }
-    else {
-      require_once("$JAVA_BASE/java/Java.inc");
-      try {
-        java_require(variable_get('sheetnode_ods_jar', NULL));
-        $Version = new JavaClass('org.odftoolkit.odfdom.Version');
-        $ods_version = $Version->getApplicationTitle();
-      }
-      catch (Exception $e) {
-        $ods = $e->getMessage();
-      }
-    }
-    $requirements['sheetnode_ods_jar'] = array(
-      'title' => 'ODFDOM',
-      'value' => $ods === TRUE ? 
-        $t('!version is found.', array('!version' => $ods_version)) :
-        $t('ODFDOM is NOT found: !error', array('!error' => $ods)),
-      'severity' => $ods === TRUE ? REQUIREMENT_OK : REQUIREMENT_ERROR,
-      'description' => $ods === TRUE ? $t('Build date %build, ODF %version supported.', array('%build' => $Version->getBuildDate(), '%version' => $Version->getSupportedOdfVersion())) : '',
+    $dir = rtrim(variable_get('sheetnode_ods_library_path', ''), '/');
+    $satisfied = is_dir($dir) && is_file($dir . '/Classes/PHPExcel.php');
+    $requirements['sheetnode_ods_library'] = array(
+      'title' => $t('PHPExcel library'),
+      'value' => $satisfied ?
+        $t("PHPExcel is found.") :
+        $t("PHPExcel is NOT found at !dir.", array('!dir' => $dir)),
+      'severity' => $satisfied ? REQUIREMENT_OK : REQUIREMENT_ERROR,
     );
   }
 
   return $requirements;
 }
 
+/**
+ * Implementation of hook_uninstall().
+ */
 function sheetnode_ods_uninstall() {
   variable_del('sheetnode_ods_jar');
   variable_del('sheetnode_ods_jar_path');
+  variable_del('sheetnode_ods_library_path');
 }
 
