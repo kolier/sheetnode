@@ -364,8 +364,8 @@ EOS;
 
   function render() {
     if (strpos($_REQUEST['q'], 'admin/build/views/ajax') === 0) {
-      drupal_set_message(t('Spreadsheet previewing is not supported yet.'), 'warning');
-      return ;
+      drupal_set_message(t('Spreadsheet preview is not supported.'), 'warning');
+      return;
     }
 
     global $base_url;
