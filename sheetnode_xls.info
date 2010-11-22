@@ -1,6 +1,0 @@
-; $Id$
-name = Sheetnode XLS
-description = Provides Excel (XLS/XLSX) import/export support for Sheetnode.
-package = Sheetnode
-dependencies[] = sheetnode 
-core = 6.x

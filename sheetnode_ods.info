@@ -1,6 +1,0 @@
-; $Id$
-name = Sheetnode ODS
-description = Provides OOCalc (ODS) import/export support for Sheetnode.
-package = Sheetnode
-dependencies[] = sheetnode_xls
-core = 6.x
