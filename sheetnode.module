@@ -63,6 +63,7 @@ function sheetnode_form(&$node) {
   $form = node_content_form($node, NULL);
  
   // SocialCalc sheet.
+  $nid = $node->nid;
   if (isset($_POST['sheetsave'])) {
     $value = $_POST['sheetsave'];
   }
@@ -72,10 +73,11 @@ function sheetnode_form(&$node) {
   else if ($node->clone_from_original_nid) { // support node_clone.module
     $original_node = node_load($node->clone_from_original_nid);
     $value = _sheetnode_load($original_node->nid, $original_node->vid);
+    $nid = $node->clone_from_original_nid;
   } else {
     $value = '';
   }
-  $output = _sheetnode_inject($value, TRUE);
+  $output = _sheetnode_inject($value, TRUE, 'edit-sheetsave', array('node' => $nid));
   $form['sheet']['sheetview'] = array('#value' => $output, '#weight' => -1);
   $form['sheet']['sheetsave'] = array('#type' => 'hidden');
 
@@ -115,7 +117,7 @@ function sheetnode_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
-function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave') {
+function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave', $context = NULL) {
   global $base_url;
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
@@ -136,6 +138,7 @@ function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave') {
     'editing' => empty($editing) ? FALSE : TRUE,
     'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
     'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
+    'context' => $context,
   )), 'setting');
   drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
   return '<div class="sheetview" id="sheetview"></div>';
@@ -185,7 +188,7 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   // SocialCalc sheet.
   if (!$teaser) {
     $value = _sheetnode_load($node->nid, $node->vid);
-    $output = _sheetnode_inject($value, FALSE);
+    $output = _sheetnode_inject($value, FALSE, '', array('node' => $node->nid));
     $node->content['sheet'] = array('#value' => $output, '#weight' => -1);
   }
 
@@ -531,7 +534,7 @@ function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $delta = $element['#delta'];
   $value = isset($element['#default_value']) ? (is_array($element['#default_value']) ? $element['#default_value']['value'] : $element['#default_value']) : (
            isset($element['#value'][$field_key]) && is_string($element['#value'][$field_key]) ? $element['#value'][$field_key] : '');
-  $output = _sheetnode_inject($value, TRUE, $element['#id'] . '-' . $field_key);
+  $output = _sheetnode_inject($value, TRUE, $element['#id'] . '-' . $field_key, isset($form['#node']) ? array('node' => $form['#node']->nid) : NULL);
   $element['sheetview'] = array('#value' => $output, '#weight' => -1);
   $element[$field_key] = array('#type' => 'hidden');
   $element['#tree'] = TRUE;
@@ -544,7 +547,7 @@ function theme_sheetfield_spreadsheet($element) {
 
 function theme_sheetnode_formatter_default($element) {
   $value = $element['#item']['value'];
-  $output = _sheetnode_inject($value, FALSE);
+  $output = _sheetnode_inject($value, FALSE, '', isset($element['#node']) ? array('node' => $element['#node']->nid) : NULL);
   return $output;
 }
 

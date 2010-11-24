@@ -86,6 +86,10 @@ Drupal.sheetnode.functionDrupalField = function(fname, operand, foperand, sheet)
 
   oid = scf.OperandValueAndType(sheet, foperand);
   entity = scf.OperandValueAndType(sheet, foperand);
+  if (isNaN(parseInt(oid.value))) {
+    oid.value = Drupal.settings.sheetnode.context['node'];
+    entity.value = 'node';
+  }
   field = scf.OperandValueAndType(sheet, foperand);
 
   $.ajax({
