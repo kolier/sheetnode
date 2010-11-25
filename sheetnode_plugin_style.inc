@@ -52,6 +52,7 @@ class sheetnode_plugin_style extends views_plugin_style {
       'editing' => TRUE,
       'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
       'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
+      'context' => array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name),
     )));
     $form['sheetview']['#weight'] = 99;
     $form['sheetview']['#value'] = <<<EOS
@@ -388,6 +389,7 @@ EOS;
       'editing' => FALSE,
       'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
       'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
+      'context' => array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name),
     )));
     $javascript = <<<EOS
 Drupal.behaviors.sheetnode = function(context) {
