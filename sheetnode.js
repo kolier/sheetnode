@@ -203,8 +203,6 @@ Drupal.sheetnode.viewModes = {
 }
 
 Drupal.sheetnode.start = function(context) {
-  console.log(Drupal.settings.sheetnode.context);
-
   // Just exit if the sheetnode is not in the new context or if it has already been processed.
   if ($('div#'+Drupal.settings.sheetnode.view_id, context).length == 0) return;
   if ($('div.sheetview-processed', context).length != 0) return;
