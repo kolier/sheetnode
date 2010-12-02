@@ -234,6 +234,8 @@ Drupal.sheetnode.start = function(context) {
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
   SocialCalc.Constants.defaultReadonlyStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"lockbg.gif);"
   SocialCalc.Constants.defaultReadonlyClass = "readonly";
+  SocialCalc.Constants.defaultUnhideLeftStyle = "float:left;width:9px;height:12px;cursor:col-resize;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"unhideright.gif);padding:0px;";
+  SocialCalc.Constants.defaultUnhideRightStyle = "float:right;width:9px;height:12px;cursor:col-resize;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"unhideleft.gif);padding:0px;";
   this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
 
   if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) {
