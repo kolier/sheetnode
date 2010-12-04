@@ -229,15 +229,9 @@ Drupal.sheetnode.start = function(context) {
 
   // SocialCalc initialization.
   SocialCalc.Popup.Controls = {};
-  SocialCalc.Constants.defaultImagePrefix = Drupal.settings.sheetnode.image_prefix;
-  SocialCalc.Constants.defaultCommentStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"commentbg.gif);"
+  SocialCalc.ConstantsSetImagePrefix(Drupal.settings.sheetnode.image_prefix);
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
-  SocialCalc.Constants.defaultReadonlyStyle = "background-repeat:no-repeat;background-position:top right;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"lockbg.gif);"
   SocialCalc.Constants.defaultReadonlyClass = "readonly";
-  SocialCalc.Constants.defaultUnhideLeftStyle = "float:right;width:9px;height:12px;cursor:pointer;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"unhideleft.gif);padding:0px;";
-  SocialCalc.Constants.defaultUnhideRightStyle = "float:left;width:9px;height:12px;cursor:pointer;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"unhideright.gif);padding:0px;";
-  SocialCalc.Constants.defaultUnhideTopStyle = "float:left;position:absolute;bottom:0;width:12px;height:9px;cursor:pointer;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"unhidetop.gif);padding:0;";
-  SocialCalc.Constants.defaultUnhideBottomStyle = "float:left;width:12px;height:9px;cursor:pointer;background-image:url("+ Drupal.settings.sheetnode.image_prefix +"unhidebottom.gif);padding:0;";
 
   this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
 
