@@ -5,92 +5,27 @@
 Drupal.sheetnode = Drupal.sheetnode || {};
 
 Drupal.sheetnode.functionsSetup = function() {
-  // SUMPRODUCT function.
-  SocialCalc.Formula.FunctionList["SUMPRODUCT"] = [Drupal.sheetnode.functionSumProduct, -1, "rangen", "", "stat"];
-  SocialCalc.Constants.s_fdef_SUMPRODUCT = 'Sums the pairwise products of 2 or more ranges. The ranges must be of equal length.';
-  SocialCalc.Constants.s_farg_rangen = 'range1, range2, ...';
+  // ORG.DRUPAL.FIELD server-side function.
+  SocialCalc.Formula.FunctionList["ORG.DRUPAL.FIELD"] = [Drupal.sheetnode.functionDrupalField, -1, "drupalfield", "", "drupal"];
+  SocialCalc.Constants["s_fdef_ORG.DRUPAL.FIELD"] = 'Returns a field from the specified Drupal entity (node, user, etc.)';
+  SocialCalc.Constants.s_farg_drupalfield = 'field-name, [oid, entity-name]';
 
-  // Override IF function to allow optional false value.
-  SocialCalc.Formula.FunctionList["IF"] = [Drupal.sheetnode.functionIf, -2, "iffunc2", "", "test"];
-  SocialCalc.Constants.s_farg_iffunc2 = 'logical-expression, true-value[, false-value]';
-
-  // DRUPALFIELD server-side function.
-  SocialCalc.Formula.FunctionList["DRUPALFIELD"] = [Drupal.sheetnode.functionDrupalField, 3, "drupalfield"];
-  SocialCalc.Constants.s_fdef_DRUPALFIELD = 'Returns a field from the specified Drupal entity (node, user, etc.)';
-  SocialCalc.Constants.s_farg_drupalfield = 'oid, entity-name, field-name';
-
-  // CEILING function.
-  SocialCalc.Formula.FunctionList["CEILING"] = [Drupal.sheetnode.functionCeilingFloor, -1, "vsig", "", "math"];
-  SocialCalc.Constants.s_fdef_CEILING = 'Rounds the given number up to the nearest integer or multiple of significance. Significance is the value to whose multiple of ten the value is to be rounded up (.01, .1, 1, 10, etc.)';
-  SocialCalc.Constants.s_farg_vsig = 'value, [significance]';
-  
-  // FLOOR function.
-  SocialCalc.Formula.FunctionList["FLOOR"] = [Drupal.sheetnode.functionCeilingFloor, -1, "vsig", "", "math"];
-  SocialCalc.Constants.s_fdef_FLOOR = 'Rounds the given number down to the nearest multiple of significance. Significance is the value to whose multiple of ten the number is to be rounded down (.01, .1, 1, 10, etc.)';
-}
-
-Drupal.sheetnode.functionCeilingFloor = function(fname, operand, foperand, sheet) {
-  var scf = SocialCalc.Formula;
-  var val, sig, t;
-
-  var PushOperand = function(t, v) {operand.push({type: t, value: v});};
-
-  val = scf.OperandValueAndType(sheet, foperand);
-  t = val.type.charAt(0);
-  if (t != "n") {
-    PushOperand("e#VALUE!", 0);
-    return;
-  }
-  if (val.value == 0) { 
-    PushOperand("n", 0); 
-    return;
-  }
-
-  if (foperand.length == 1) {
-    sig = scf.OperandValueAndType(sheet, foperand);
-    t = val.type.charAt(0);
-    if (t != "n") {
-      PushOperand("e#VALUE!", 0);
-      return;
-    }
-  }
-  else if (foperand.length == 0) {
-    sig = {type: "n", value: val.value > 0 ? 1 : -1};
-  }
-  else {
-    PushOperand("e#VALUE!", 0);
-    return;
-  }
-  if (sig.value == 0) {
-    PushOperand("n", 0); 
-    return;
-  }
-  if (sig.value * val.value < 0) {
-    PushOperand("e#NUM!", 0);
-    return;
-  }
-  
-  switch (fname) {
-    case "CEILING":
-      PushOperand("n", Math.ceil(val.value / sig.value) * sig.value);
-      break;
-    case "FLOOR":
-      PushOperand("n", Math.floor(val.value / sig.value) * sig.value);
-      break;
-  } 
+  // Update function classes.
+  SocialCalc.Constants.function_classlist.push('drupal');
+  SocialCalc.Constants.s_fclass_drupal = "Drupal";
 }
 
 Drupal.sheetnode.functionDrupalField = function(fname, operand, foperand, sheet) {
   var scf = SocialCalc.Formula;
   var oid, entity, field;
 
+  field = scf.OperandValueAndType(sheet, foperand);
   oid = scf.OperandValueAndType(sheet, foperand);
   entity = scf.OperandValueAndType(sheet, foperand);
   if (isNaN(parseInt(oid.value))) {
     oid.value = Drupal.settings.sheetnode.context['oid'];
     entity.value = Drupal.settings.sheetnode.context['entity-name'];
   }
-  field = scf.OperandValueAndType(sheet, foperand);
 
   $.ajax({
     type: 'POST',
@@ -103,75 +38,6 @@ Drupal.sheetnode.functionDrupalField = function(fname, operand, foperand, sheet)
       operand.push(result);
     }
   });
-}
-
-Drupal.sheetnode.functionIf = function(fname, operand, foperand, sheet) {
-  var cond, t;
-
-  cond = SocialCalc.Formula.OperandValueAndType(sheet, foperand);
-  t = cond.type.charAt(0);
-  if (t != "n" && t != "b") {
-    operand.push({type: "e#VALUE!", value: 0});
-    return;
-  }
-
-  var op1, op2;
-
-  op1 = foperand.pop();
-  if (foperand.length == 1) {
-    op2 = foperand.pop();
-  }
-  else if (foperand.length == 0) {
-    op2 = {type: "n", value: 0};
-  }
-  else {
-    scf.FunctionArgsError(fname, operand);
-    return;
-  }
-  
-  operand.push(cond.value ? op1 : op2);
-}
-
-Drupal.sheetnode.functionSumProduct = function(fname, operand, foperand, sheet) {
-  var range, products = [], sum = 0;
-  var scf = SocialCalc.Formula;
-  var ncols = 0, nrows = 0;
-
-  var PushOperand = function(t, v) {operand.push({type: t, value: v});};
-
-  while (foperand.length > 0) {
-    range = scf.TopOfStackValueAndType(sheet, foperand);
-    if (range.type != "range") {
-      PushOperand("e#VALUE!", 0);
-      return;
-    }
-    rangeinfo = scf.DecodeRangeParts(sheet, range.value);
-    if (!ncols) ncols = rangeinfo.ncols;
-    else if (ncols != rangeinfo.ncols) {
-      PushOperand("e#VALUE!", 0);
-      return;
-    }
-    if (!nrows) nrows = rangeinfo.nrows;
-    else if (nrows != rangeinfo.nrows) {
-      PushOperand("e#VALUE!", 0);
-      return;
-    }
-    for (i=0; i<rangeinfo.ncols; i++) {
-      for (j=0; j<rangeinfo.nrows; j++) {
-        k = i * rangeinfo.nrows + j;
-        cellcr = SocialCalc.crToCoord(rangeinfo.col1num + i, rangeinfo.row1num + j);
-        cell = rangeinfo.sheetdata.GetAssuredCell(cellcr);
-        value = cell.valuetype == "n" ? cell.datavalue : 0;
-        products[k] = (products[k] || 1) * value;
-      }
-    }
-  }
-  for (i=0; i<products.length; i++) {
-    sum += products[i];
-  }
-  PushOperand("n", sum);
-
-  return;
 }
 
 Drupal.sheetnode.loadsheetSetup = function() {
