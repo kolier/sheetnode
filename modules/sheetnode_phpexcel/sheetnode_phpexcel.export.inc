@@ -41,9 +41,8 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
   }
 
   // Cells
-  if ($sc['cells']) foreach ($sc['cells'] as $c) {
-    $value = _sheetnode_phpexcel_cell_value($c, $sc); 
-    $coord = socialcalc_cr_to_coord($c['pos'][0], $c['pos'][1]);
+  if ($sc['cells']) foreach ($sc['cells'] as $coord => $c) {
+    $value = _sheetnode_phpexcel_cell_value($c); 
     $workbook->getActiveSheet()->setCellValue($coord, $value);
 
     // Comment
@@ -170,6 +169,22 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
     $workbook->getActiveSheet()->getRowDimension($col)->setRowHeight($height);
   }
 
+  // Test formulas and replace with calculated value when not possible.
+  foreach ($workbook->getActiveSheet()->getCellCollection() as $cellID) {
+    $cell = $workbook->getActiveSheet()->getCell($cellID);
+    if ($cell->getDatatype() == PHPExcel_Cell_DataType::TYPE_FORMULA) {
+      try {
+        $cell->getCalculatedValue(); // don't care about return value
+      }
+      catch (Exception $e) {
+        $coord = $cell->getCoordinate();
+        $cell->setValue(_sheetnode_phpexcel_cell_value($sc['cells'][$coord], TRUE));
+        $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $sc['cells'][$coord]['formula']));
+        $workbook->getActiveSheet()->getComment($coord)->getText()->createTextRun($comment);
+      }
+    }
+  }
+
   // Redirect output to a client’s web browser.
   $plugins = sheetnode_phpexcel_get_plugins();
   $plugin = $plugins[$format];
@@ -182,7 +197,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
   exit;
 }
 
-function _sheetnode_phpexcel_cell_value($c, $sc) {
+function _sheetnode_phpexcel_cell_value($c, $ignore_formula = FALSE) {
   if ($c['datatype'] == 't' || ($c['datatype'] == 'f' && $c['valuetype'] != 'n')) {
     // TODO: Preserve multiline strings.
     if ($c['valuetype'] == 'th') { // text-html
@@ -195,7 +210,7 @@ function _sheetnode_phpexcel_cell_value($c, $sc) {
   else if ($c['datatype'] == 'v' || ($c['datatype'] == 'f' && $c['valuetype'] == 'n')) {
     $value = floatval($c['datavalue']);
   }
-  if ($c['datatype'] == 'f' && strpos($c['formula'], '!') === FALSE) {
+  if ($c['datatype'] == 'f' && strpos($c['formula'], '!') === FALSE && !$ignore_formula) {
     $value = '=' . $c['formula'];
   }
   return $value;
