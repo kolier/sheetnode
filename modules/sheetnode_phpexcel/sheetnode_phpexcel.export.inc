@@ -42,8 +42,8 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
 
   // Cells
   if ($sc['cells']) foreach ($sc['cells'] as $coord => $c) {
-    $value = _sheetnode_phpexcel_cell_value($c); 
-    $workbook->getActiveSheet()->setCellValue($coord, $value);
+    // Value and format
+    _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $workbook->getActiveSheet()); 
 
     // Comment
     // TODO: Not supported in Excel5.
@@ -51,9 +51,8 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
       $workbook->getActiveSheet()->getComment($coord)->getText()->createTextRun($c['comment']);
     }
 
-    // Style
-    $style = $workbook->getActiveSheet()->getStyle($coord);
     // Font
+    $style = $workbook->getActiveSheet()->getStyle($coord);
     if (!empty($c['font'])) {
       $scf = socialcalc_cellformat_parsefont($c, $sc);
       $font = $style->getFont();
@@ -146,11 +145,6 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
       }
     }
 
-    // Data format
-    if (!empty($c['nontextvalueformat'])) {
-      $style->getNumberFormat()->setFormatCode($sc['valueformats'][$c['nontextvalueformat']]);
-    }
-
     // Merged regions
     if ($c['colspan'] > 1 || $c['rowspan'] > 1) {
       $coord2 = socialcalc_cr_to_coord($c['pos'][0]+max($c['colspan']-1, 0), $c['pos'][1]+max($c['rowspan']-1, 0));
@@ -169,7 +163,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
     $workbook->getActiveSheet()->getRowDimension($col)->setRowHeight($height);
   }
 
-  // Test formulas and replace with calculated value when not possible.
+  // Test formulas and replace with calculated value upon failure.
   foreach ($workbook->getActiveSheet()->getCellCollection() as $cellID) {
     $cell = $workbook->getActiveSheet()->getCell($cellID);
     if ($cell->getDatatype() == PHPExcel_Cell_DataType::TYPE_FORMULA) {
@@ -178,12 +172,13 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
       }
       catch (Exception $e) {
         $coord = $cell->getCoordinate();
-        $cell->setValue(_sheetnode_phpexcel_cell_value($sc['cells'][$coord], TRUE));
+        $cell->setValue($sc['cells'][$coord]['datavalue']);
         $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $sc['cells'][$coord]['formula']));
         $workbook->getActiveSheet()->getComment($coord)->getText()->createTextRun($comment);
       }
     }
   }
+  //return '';
 
   // Redirect output to a client’s web browser.
   $plugins = sheetnode_phpexcel_get_plugins();
@@ -197,22 +192,185 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
   exit;
 }
 
-function _sheetnode_phpexcel_cell_value($c, $ignore_formula = FALSE) {
-  if ($c['datatype'] == 't' || ($c['datatype'] == 'f' && $c['valuetype'] != 'n')) {
-    // TODO: Preserve multiline strings.
-    if ($c['valuetype'] == 'th') { // text-html
-      $value = strip_tags($c['datavalue']);
+function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $worksheet) {
+  // Taken from socialcalc-3.js:SocialCalc.FormatValueForDisplay().
+  $cell = $worksheet->getCell($coord);
+  $style = $worksheet->getStyle($coord);
+
+  $valuetype = substr($c['valuetype'], 0, 1);
+  $valuesubtype = substr($c['valuetype'], 1);
+  $displayvalue = $c['datavalue'];
+  $valueformat = NULL;
+  
+  // Error.
+  if (!empty($c['errors']) || $valuetype == 'e') {
+    $displayvalue = !empty($c['errors']) ? $c['errors'] : (!empty($valuesubtype) ? $valuesubtype : t('Unknown error'));
+    $cell->setValueExplicit($displayvalue, PHPExcel_Cell_DataType::TYPE_ERROR);
+  }
+  // Text.
+  else if ($valuetype == 't') {
+    // Get formatting.
+    $valueformat = !empty($c['textvalueformat']) ? $sc['valueformats'][$c['textvalueformat']] : (
+                   !empty($sc['defaulttextvalueformat']) ? $sc['valueformats'][$sc['defaulttextvalueformat']] : NULL);
+    if (in_array(strtolower($valueformat), array('auto', 'none', 'general'))) {
+      $valueformat = NULL;
+    }
+
+    // Default text formatting based on cell type.
+    if (empty($valueformat)) switch ($valuesubtype) {
+    case 'h':
+      $valueformat = 'text-html';
+      break;
+    case 'w':
+    case 'r':
+      $valueformat = 'text-wiki';
+      break;
+    case 'l':
+      $valueformat = 'text-link';
+      break;
+    default:
+      $valueformat = 'text-plain';
+      break;
+    }
+
+    // Set the value.
+    if ($c['datatype'] == 'f') {
+      $cell->setValue('='. $c['formula']);
+    }
+    else switch ($valueformat) {
+    case 'text-plain':
+      $cell->setValueExplicit($displayvalue, PHPExcel_Cell_DataType::TYPE_STRING);
+      break;
+    case 'text-html':
+      // TODO: Parse HTML into rich text.
+      $cell->setValueExplicit(strip_tags($displayvalue), PHPExcel_Cell_DataType::TYPE_STRING);
+      break;
+    case 'text-url':
+    case 'text-link':
+      $matches = array();
+      if (preg_match('/^(.*)<(.*)>$/', $displayvalue, $matches)) {
+        $text = trim($matches[1], "\r\n\t \"");
+        $url = $matches[2];
+      }
+      else {
+        $url = $displayvalue;
+        $parse_url = parse_url($url);
+        $text = $parse_url['host'] . $parse_url['path'];
+      }
+      $cell->setValueExplicit($text, PHPExcel_Cell_DataType::TYPE_STRING);
+      $cell->getHyperlink()->setUrl($url);
+      break;
+    case 'text-wiki':
+      // TODO
+      break;
+    case 'text-image':
+      if (function_exists('curl_init')) {
+        // Download the file using cURL.
+        $ch = curl_init($displayvalue);
+        $filename = tempnam(file_directory_temp(), 'sheetnode_php_excel_');
+        $fp = fopen($filename, 'wb');
+        $options = array(CURLOPT_FILE => $fp,
+                         CURLOPT_HEADER => 0,
+                         CURLOPT_FOLLOWLOCATION => 1,
+                         CURLOPT_TIMEOUT => 60);
+        curl_setopt_array($ch, $options);
+        curl_exec($ch);
+        curl_close($ch);
+        fclose($fp);
+        $image_info = image_get_info($filename);
+        if (!empty($image_info)) {
+          // Insert the image in the PHPExcel file.
+          $objDrawing = new PHPExcel_Worksheet_Drawing();
+          $objDrawing->setPath($filename);
+          $objDrawing->setCoordinates($coord);
+          $objDrawing->setWidth($image_info['width']);
+          $objDrawing->setWorksheet($worksheet);
+        }
+      }
+      break;
+    case 'hidden':
+      // TODO 
+      break;
+    case 'formula':
+      // TODO
+      break;
+    default:
+      if (substr($valueformat, 0, 12) == 'text-custom:') {
+        // TODO
+      }
+      else if (substr($valueformat, 0, 6) == 'custom') {
+        // TODO
+      }
+      else {
+        $cell->setValue($displayvalue);
+      }
+      break;
+    }
+  }
+  // Number.
+  else if ($valuetype == 'n') {
+    // Get formatting.
+    $valueformat = !empty($c['nontextvalueformat']) ? $sc['valueformats'][$c['nontextvalueformat']] : (
+                   !empty($sc['defaultnontextvalueformat']) ? $sc['valueformats'][$sc['defaultnontextvalueformat']] : NULL);
+    if (in_array(strtolower($valueformat), array('auto', 'none'))) {
+      $valueformat = NULL;
+    }
+
+    // Default number formatting based on cell type.
+    if (empty($valueformat)) switch ($valuesubtype) {
+    case '%':
+      $valueformat = SocialCalc_Constants::$defaultFormatp; 
+      break;
+    case '$':
+      $valueformat = SocialCalc_Constants::$defaultFormatc; 
+      break;
+    case 'dt':
+      $valueformat = SocialCalc_Constants::$defaultFormatdt; 
+      break;
+    case 'd':
+      $valueformat = SocialCalc_Constants::$defaultFormatd; 
+      break;
+    case 't':
+      $valueformat = SocialCalc_Constants::$defaultFormatt; 
+      break;
+    case 'l':
+      $valueformat = 'logical';
+      break;
+    default:
+      $valueformat = PHPExcel_Style_NumberFormat::FORMAT_GENERAL; 
+      break;
+    }
+
+    // Set the value.
+    if ($c['datatype'] == 'f') {
+      $cell->setValue('='. $c['formula']);
+    }
+    else if ($valueformat == 'logical') {
+      $displayvalue = empty($displayvalue) ? SocialCalc_Constants::$defaultDisplayFALSE : SocialCalc_Constants::$defaultDisplayTRUE;
+      $cell->setValue($displayvalue);
+      $valueformat = NULL;
+    }
+    else if ($valueformat == 'formula') {
+      $cell->setValueExplicit('='. $c['formula'], PHPExcel_Cell_DataType::TYPE_STRING);
+    }
+    else if ($valueformat == 'forcetext') {
+      $cell->setValueExplicit($displayvalue, PHPExcel_Cell_DataType::TYPE_STRING);
     }
     else {
-      $value = $c['datavalue'];
+      $cell->setValueExplicit($displayvalue, PHPExcel_Cell_DataType::TYPE_NUMERIC);
+    }
+
+    // Set the formatting.
+    if ($valueformat == 'hidden') {
+      // TODO
+    }
+    else if (!empty($valueformat)) {
+      $style->getNumberFormat()->setFormatCode($valueformat);
     }
   }
-  else if ($c['datatype'] == 'v' || ($c['datatype'] == 'f' && $c['valuetype'] == 'n')) {
-    $value = floatval($c['datavalue']);
+  // Unknown.
+  else {
+    $cell->setValueExplicit('', PHPExcel_Cell_DataType::TYPE_NULL);
   }
-  if ($c['datatype'] == 'f' && strpos($c['formula'], '!') === FALSE && !$ignore_formula) {
-    $value = '=' . $c['formula'];
-  }
-  return $value;
 }
 
