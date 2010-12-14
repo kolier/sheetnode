@@ -160,7 +160,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
 
   // Rows
   if (!empty($sc['rowattribs']['height'])) foreach($sc['rowattribs']['height'] as $r => $height) {
-    $workbook->getActiveSheet()->getRowDimension($col)->setRowHeight($height);
+    $workbook->getActiveSheet()->getRowDimension($r)->setRowHeight($height);
   }
 
   // Test formulas and replace with calculated value upon failure.
@@ -267,7 +267,7 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
       if (function_exists('curl_init')) {
         // Download the file using cURL.
         $ch = curl_init($displayvalue);
-        $filename = tempnam(file_directory_temp(), 'sheetnode_php_excel_');
+        $filename = tempnam(file_directory_temp(), 'sheetnode_phpexcel_');
         $fp = fopen($filename, 'wb');
         $options = array(CURLOPT_FILE => $fp,
                          CURLOPT_HEADER => 0,
