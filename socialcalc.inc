@@ -716,3 +716,143 @@ function socialcalc_cellformat_parseborder($cell, $sheet, $attrib) {
   return $border;
 }
 
+// The following functions are found in:
+/**
+ * PHPExcel
+ *
+ * Copyright (c) 2006 - 2010 PHPExcel
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * @category   PHPExcel
+ * @package PHPExcel_Shared
+ * @copyright  Copyright (c) 2006 - 2010 PHPExcel (http://www.codeplex.com/PHPExcel)
+ * @license http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt LGPL
+ * @version 1.7.5, 2010-12-10
+ */
+
+/**
+ * Convert a date from SocialCalc to a Unix timestamp.
+ *
+ * @param  long  $dateValue   SocialCalc date/time value
+ * @return   long         Unix timestamp
+ */
+function socialcalc_export_date($dateValue = 0) {
+  $myBaseDate = 25569;
+  //  Adjust for the spurious 29-Feb-1900 (Day 60)
+  if ($dateValue < 60) {
+    --$myBaseDate;
+  }
+
+  // Perform conversion
+  if ($dateValue >= 1) {
+    $utcDays = $dateValue - $myBaseDate;
+    $returnValue = round($utcDays * 24 * 60 * 60);
+    if (($returnValue <= PHP_INT_MAX) && ($returnValue >= -PHP_INT_MAX)) {
+      $returnValue = (integer) $returnValue;
+    }
+  } else {
+    $hours = round($dateValue * 24);
+    $mins = round($dateValue * 24 * 60) - round($hours * 60);
+    $secs = round($dateValue * 24 * 60 * 60) - round($hours * 60 * 60) - round($mins * 60);
+    $returnValue = (integer) gmmktime($hours, $mins, $secs);
+  }
+
+  return $returnValue;
+}
+
+/**
+ * Convert a date from Excel to a PHP DateTime object
+ *
+ * @param  long  $dateValue   SocialCalc date/time value
+ * @return   long         PHP DateTime object
+ */
+function socialcalc_export_datetime($dateValue = 0) {
+  $dateTime = socialcalc_export_date($dateValue);
+  $days = floor($dateTime / 86400);
+  $time = round((($dateTime / 86400) - $days) * 86400);
+  $hours = round($time / 3600);
+  $minutes = round($time / 60) - ($hours * 60);
+  $seconds = round($time) - ($hours * 3600) - ($minutes * 60);
+
+  $dateObj = date_create('1-Jan-1970+'.$days.' days');
+  $dateObj->setTime($hours,$minutes,$seconds);
+
+  return $dateObj;
+}
+
+/**
+ * Convert a date from PHP to SocialCalc date/time value
+ *
+ * @param  mixed    $dateValue  Unix timestamp or PHP DateTime object
+ * @return   mixed          SocialCalc date/time value
+ *                    or boolean False on failure
+ */
+function socialcalc_import_date($dateValue = 0) {
+  $saveTimeZone = date_default_timezone_get();
+  date_default_timezone_set('UTC');
+  $retValue = False;
+  if ((is_object($dateValue)) && ($dateValue instanceof DateTime)) {
+    $retValue = socialcalc_import_date_explicit( $dateValue->format('Y'), $dateValue->format('m'), $dateValue->format('d'),
+                         $dateValue->format('H'), $dateValue->format('i'), $dateValue->format('s')
+                       );
+  } elseif (is_numeric($dateValue)) {
+    $retValue = socialcalc_import_date_explicit( date('Y',$dateValue), date('m',$dateValue), date('d',$dateValue),
+                         date('H',$dateValue), date('i',$dateValue), date('s',$dateValue)
+                       );
+  }
+  date_default_timezone_set($saveTimeZone);
+
+  return $retValue;
+}
+
+/**
+ * Convert a date from PHP to SocialCalc date/time value
+ *
+ * @param long  $year
+ * @param long  $month
+ * @param long  $day
+ * @param long  $hours
+ * @param long  $minutes
+ * @param long  $seconds
+ * @return  long        SocialCalc date/time value
+ */
+function socialcalc_import_date_explicit($year, $month, $day, $hours=0, $minutes=0, $seconds=0) {
+  //
+  //  Fudge factor for the erroneous fact that the year 1900 is treated as a Leap Year in MS Excel
+  //  This affects every date following 28th February 1900
+  //
+  $excel1900isLeapYear = True;
+  if (($year == 1900) && ($month <= 2)) { $excel1900isLeapYear = False; }
+  $myExcelBaseDate = 2415020;
+
+  //  Julian base date Adjustment
+  if ($month > 2) {
+    $month = $month - 3;
+  } else {
+    $month = $month + 9;
+    --$year;
+  }
+
+  //  Calculate the Julian Date, then subtract the Excel base date (JD 2415020 = 31-Dec-1899 Giving Excel Date of 0)
+  $century = substr($year,0,2);
+  $decade = substr($year,2,2);
+  $excelDate = floor((146097 * $century) / 4) + floor((1461 * $decade) / 4) + floor((153 * $month + 2) / 5) + $day + 1721119 - $myExcelBaseDate + $excel1900isLeapYear;
+
+  $excelTime = (($hours * 3600) + ($minutes * 60) + $seconds) / 86400;
+
+  return (float) $excelDate + $excelTime;
+}
+
