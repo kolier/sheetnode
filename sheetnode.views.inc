@@ -57,6 +57,9 @@ function sheetnode_views_handlers() {
       'sheetnode_handler_field_range' => array(
         'parent' => 'views_handler_field',
       ),
+      'sheetnode_handler_field_date' => array(
+        'parent' => 'views_handler_field_date',
+      ),
     ),
   );
 }
