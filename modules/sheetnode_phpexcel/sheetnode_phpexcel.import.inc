@@ -123,8 +123,14 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
 
   // Default values.
   $font = $sheet->getDefaultStyle()->getFont();
-  $sc['attribs']['defaultcolwidth'] = PHPExcel_Shared_Drawing::cellDimensionToPixels($sheet->getDefaultColumnDimension()->getWidth(), $font);
-  $sc['attribs']['defaultrowheight'] = $sheet->getDefaultRowDimension()->getRowHeight();
+  $defaultcolwidth = PHPExcel_Shared_Drawing::cellDimensionToPixels($sheet->getDefaultColumnDimension()->getWidth(), $font);
+  if ($defaultcolwidth > 0) {
+    $sc['attribs']['defaultcolwidth'] = $defaultcolwidth;
+  }
+  $defaultrowheight = $sheet->getDefaultRowDimension()->getRowHeight();
+  if ($defaultrowheight > 0) {
+    $sc['attribs']['defaultrowheight'] = $defaultrowheight;
+  }
   $sc['attribs']['lastrow'] = $sheet->getHighestRow();
   $sc['attribs']['lastcol'] = PHPExcel_Cell::columnIndexFromString($sheet->getHighestColumn());
 
@@ -282,7 +288,7 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
     }
 
     // Background color
-    $bgcolor = _sheetnode_phpexcel_get_color($style->getFill()->getEndColor());
+    $bgcolor = _sheetnode_phpexcel_get_color($style->getFill()->getStartColor());
     if ($bgcolor) {
       $styles[$hash]['bgcolor'] = _sheetnode_phpexcel_insert_hash($sc, 'color', $bgcolor);
     }
