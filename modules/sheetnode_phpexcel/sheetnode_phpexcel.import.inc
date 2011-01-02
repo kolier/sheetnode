@@ -182,6 +182,9 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
       'definition' => $range->getRange(),
     );
   }
+  
+  // Reset caches.
+  _sheetnode_phpexcel_get_cached_styles(TRUE);
 
   $socialcalc = array(
     'sheet' => $sc,
@@ -272,7 +275,7 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
 
   // Style
   $style = $sheet->getStyle($cell->getCoordinate());
-  static $styles = array();
+  $styles = _sheetnode_phpexcel_get_cached_styles();
   $hash = $style->getHashCode();
   if (empty($styles[$hash])) {
     // Font
@@ -328,6 +331,14 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
   $c += $styles[$hash]; // merge the cached styles into the cell directly.
 
   $sc['cells'][$cell->getCoordinate()] = $c;
+}
+
+function _sheetnode_phpexcel_get_cached_styles($reset = FALSE) {
+  static $styles = array();
+  if ($reset) {
+    $styles = array();
+  }
+  return $styles;
 }
 
 /**
