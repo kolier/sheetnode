@@ -99,7 +99,6 @@ function _sheetnode_phpexcel_import_form_submit($form, &$form_state) {
       $form_state_node['values']['book']['plid'] = $book->book['mlid'];
       $form_state_node['values']['book']['weight'] = $s;
     }
-//   /*  UNCOMMENT WHEN DEBUGGING
     // Allow other modules to modify the new node's creation parameters.
     // Hook signature: hook_sheetnode_alter(&$form_state_node, $form, $form_state);
     drupal_alter('sheetnode', $form_state_node, $form, $form_state);
@@ -113,7 +112,6 @@ function _sheetnode_phpexcel_import_form_submit($form, &$form_state) {
   }
   else {
     $form_state['redirect'] = 'node/'. $form_state_node['nid'];
-//    */  // UNCOMMENT WHEN DEBUGGING
   }
 }
 
@@ -462,7 +460,7 @@ function _sheetnode_phpexcel_get_valueformat($numberformat) {
   $valueformat = $numberformat->getFormatCode();
   if (strtolower($valueformat) == 'general') return FALSE;
   $valueformat = str_replace(';@', '', $valueformat);
-  return strtolower($valueformat);
+  return $valueformat;
 }
 
 function _sheetnode_phpexcel_get_color($color) {
