@@ -289,9 +289,11 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
     }
 
     // Background color
-    $bgcolor = _sheetnode_phpexcel_get_color($style->getFill()->getStartColor());
-    if ($bgcolor) {
-      $styles[$hash]['bgcolor'] = _sheetnode_phpexcel_insert_hash($sc, 'color', $bgcolor);
+    if ($style->getFill()->getFillType() != PHPExcel_Style_Fill::FILL_NONE) {
+      $bgcolor = _sheetnode_phpexcel_get_color($style->getFill()->getStartColor());
+      if ($bgcolor) {
+        $styles[$hash]['bgcolor'] = _sheetnode_phpexcel_insert_hash($sc, 'color', $bgcolor);
+      }
     }
 
     // Borders
