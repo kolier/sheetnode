@@ -606,10 +606,15 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
 
   // Try to find a sheetview.
   if (!$value && module_exists('views')) { // Try a view feed with our SocialCalc output plugin style
+    $args = explode('/', $sheetname);
+    $sheetname = array_shift($args);
     $view = views_get_view($sheetname);
     if ($view) foreach (array_keys($view->display) as $display_name) {
       $display = $view->display[$display_name];
       if (isset($display->display_options['style_plugin']) && $display->display_options['style_plugin'] == 'sheet_raw') {
+        if (!empty($args)) {
+          $view->set_arguments($args);
+        }
         $value = $view->render($display->id);
         header('Content-type: text/html'); // Our style plugin sets this to text/plain
       } 
