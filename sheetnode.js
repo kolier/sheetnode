@@ -74,21 +74,23 @@ Drupal.sheetnode.start = function(context) {
   if ($('div.sheetview-processed', context).length != 0) return;
   
   // DOM initialization.
-  $('#'+Drupal.settings.sheetnode.edit_id, context).parents('form').submit(function() {
-    Drupal.sheetnode.save();
-    return true;
-  });
-  $('.collapsed').each(function() {
-    var ev = 'DOMAttrModified';
-    if ($.browser.msie) {
-      ev = 'propertychange';
-    }
-    $(this).bind(ev, function(e) {
-      if (Drupal.sheetnode.spreadsheet) {
-        Drupal.sheetnode.spreadsheet.editor.SchedulePositionCalculations();
+  if (Drupal.settings.sheetnode.edit_id) {
+    $('#'+Drupal.settings.sheetnode.edit_id, context).parents('form').submit(function() {
+      Drupal.sheetnode.save();
+      return true;
+    });
+    $('.collapsed').each(function() {
+      var ev = 'DOMAttrModified';
+      if ($.browser.msie) {
+        ev = 'propertychange';
       }
-    }, false);
-  });
+      $(this).bind(ev, function(e) {
+        if (Drupal.sheetnode.spreadsheet) {
+          Drupal.sheetnode.spreadsheet.editor.SchedulePositionCalculations();
+        }
+      }, false);
+    });
+  }
   $(window).resize(function() {
     Drupal.sheetnode.resize();
   });
