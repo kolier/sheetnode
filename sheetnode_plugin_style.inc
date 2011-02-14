@@ -141,7 +141,7 @@ EOS;
             $replace = NULL;
             $match = !empty($matches[1][$i]) ? $matches[1][$i] : $matches[2][$i];
             $field_name = $this->get_real_field_name($match);
-            if (!$field_name || !isset($fields[$field_name])) {
+            if (!$field_name) {
               // Not a field: try a cell coordinate.
               if (preg_match('/^\$?\w\w?\$?\d+$/', $match)) {
                 $refpos = socialcalc_coord_to_cr($match);
@@ -155,16 +155,14 @@ EOS;
                   }
                 }
               }
-            } else {
-              if ($matches[0][$i][0] == '@') {
-                $replace = socialcalc_cr_to_coord(
-                  $fields[$field_name]['cell']['pos'][0]+($j*$tangent_increment[$tangent]),
-                  $fields[$field_name]['cell']['pos'][1]+($j*$tangent_increment[$normal])
-                );
-              }
-              else {
-                $replace = $result->{$fields[$field_name]['info']->field_alias};
-              }
+            } else if ($matches[0][$i][0] == '@' && isset($fields[$field_name])) {
+              $replace = socialcalc_cr_to_coord(
+                $fields[$field_name]['cell']['pos'][0]+($j*$tangent_increment[$tangent]),
+                $fields[$field_name]['cell']['pos'][1]+($j*$tangent_increment[$normal])
+              );
+            }
+            else if ($matches[0][$i][0] == '$') {
+              $replace = $result->{$this->view->field[$field_name]->field_alias};
             }
             if (!is_null($replace)) {
               $expression = str_replace($matches[0][$i], $replace, $expression);
