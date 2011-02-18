@@ -118,7 +118,6 @@ function sheetnode_form_alter(&$form, $form_state, $form_id) {
 }
 
 function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave', $context = NULL) {
-  global $base_url;
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js');
@@ -130,12 +129,15 @@ function _sheetnode_inject($value, $editing, $edit_id = 'edit-sheetsave', $conte
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/sheetnode.js');
   drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
   drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
+
+  module_invoke_all('sheetnode_plugins', $editing, $context);
+
   drupal_add_js(array('sheetnode' => array(
     'value' => $value, 
-    'image_prefix' => $base_url . '/' . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
+    'image_prefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
     'view_id' => 'sheetview',
     'edit_id' => $edit_id,
-    'editing' => empty($editing) ? FALSE : TRUE,
+    'editing' => !empty($editing),
     'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
     'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
     'context' => $context,

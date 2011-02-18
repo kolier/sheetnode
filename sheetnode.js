@@ -122,6 +122,9 @@ Drupal.sheetnode.start = function(context) {
     }
   }
 
+  // Trigger event to alert plugins that we've created the spreadsheet.
+  $('div#'+Drupal.settings.sheetnode.view_id, context).trigger('sheetnodeCreated', {spreadsheet: this.spreadsheet});
+
   // Read in data and recompute.
   parts = this.spreadsheet.DecodeSpreadsheetSave(Drupal.settings.sheetnode.value);
   if (parts && parts.sheet) {
@@ -207,6 +210,9 @@ Drupal.sheetnode.start = function(context) {
   
   // Signal that we've processed this instance of sheetnode.
   div.addClass('sheetview-processed');
+
+  // Trigger event to alert plugins that we've built the spreadsheet.
+  $('div#'+Drupal.settings.sheetnode.view_id, context).trigger('sheetnodeReady', {spreadsheet: this.spreadsheet});
 
   // Force a recalc to refresh all values and scrollbars.
   this.spreadsheet.editor.EditorScheduleSheetCommands("recalc");
