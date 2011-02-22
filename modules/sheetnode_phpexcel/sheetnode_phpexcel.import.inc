@@ -89,7 +89,7 @@ function _sheetnode_phpexcel_import_form_submit($form, &$form_state) {
     $sheet = $workbook->getSheet($s);
     $node = array('type' => 'sheetnode');
     $form_state_node = array();
-    $form_state_node['values']['title'] = (empty($book) ? $title .' > ' : '') . $sheet->getTitle();
+    $form_state_node['values']['title'] = $sheet->getTitle();
     $form_state_node['values']['body'] = empty($book) ? $description : '';
     $form_state_node['values']['name'] = $user->name;
     $form_state_node['values']['sheetsave'] = _sheetnode_phpexcel_import_do($workbook, $sheet);

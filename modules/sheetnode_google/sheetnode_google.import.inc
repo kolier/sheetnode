@@ -157,7 +157,7 @@ function _sheetnode_google_import_form_submit($form, &$form_state) {
   foreach ($worksheets->entries as $worksheet) {
     $node = array('type' => 'sheetnode');
     $form_state_node = array();
-    $form_state_node['values']['title'] = (isset($book) ? '' : $spreadsheet->title->text .' > ') . $worksheet->title->text;
+    $form_state_node['values']['title'] = $worksheet->title->text;
     $body = isset($book) ? '' : t('Imported from Google Spreadsheet <a href="@url">!sheet</a>.', array('@url' => $url, '!sheet' => $spreadsheet->title->text));
     $form_state_node['values']['body'] = $body;
     $form_state_node['values']['name'] = $user->name;
