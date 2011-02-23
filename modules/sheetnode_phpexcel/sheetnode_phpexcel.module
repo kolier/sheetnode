@@ -113,11 +113,12 @@ function sheetnode_phpexcel_menu() {
   }
 
   $items['admin/settings/sheetnode/phpexcel'] = array(
-    'title' => 'Sheetnode PHPExcel',
+    'title' => 'PHPExcel',
     'access arguments' => array('administer site configuration'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('_sheetnode_phpexcel_settings'),
     'description' => 'Administer settings for Sheetnode PHPExcel.',
+    'type' => MENU_LOCAL_TASK,
   );
 
   return $items;

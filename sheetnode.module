@@ -259,11 +259,8 @@ function sheetnode_menu() {
   );
   $items['admin/settings/sheetnode/general'] = array(
     'title' => 'General',
-    'access arguments' => array('administer site configuration'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('sheetnode_admin_settings'),
-    'description' => 'Sheetnode module settings',
-    'type' => MENU_LOCAL_TASK,
+    'weight' => -10,
+    'type' => MENU_DEFAULT_LOCAL_TASK,
   );
 
   return $items;
