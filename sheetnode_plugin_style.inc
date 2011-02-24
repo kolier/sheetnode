@@ -363,7 +363,7 @@ EOS;
   }
 
   function render() {
-    if (strpos($_REQUEST['q'], 'admin/build/views/ajax') === 0) {
+    if (!empty($this->view->live_preview)) {
       drupal_set_message(t('Spreadsheet preview is not supported.'), 'warning');
       return;
     }
@@ -379,8 +379,13 @@ EOS;
     drupal_add_js(drupal_get_path('module', 'sheetnode') . '/sheetnode.js');
     drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
     drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
-    $settings = drupal_to_js(array('sheetnode' => array(
-      'value' => socialcalc_save($this->render_sheet()),
+
+    $value = socialcalc_save($this->render_sheet());
+    $context = array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name);
+    module_invoke_all('sheetnode_plugins', $value, FALSE, $context);
+
+    drupal_add_js(array('sheetnode' => array(
+      'value' => $value,
       'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
       'containerElement' => 'sheetview',
       'saveElement' => FALSE,
@@ -389,15 +394,9 @@ EOS;
       'permissions' => array(
         'edit sheet settings' => user_access('edit sheet settings'),
       ),
-      'context' => array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name),
-    )));
-    $javascript = <<<EOS
-Drupal.behaviors.sheetnode = function(context) {
-  jQuery.extend(Drupal.settings, $settings);
-  Drupal.sheetnode.start(context);
-}
-EOS;
-    drupal_add_js($javascript, 'inline');
+      'context' => $context,
+    )), 'setting');
+    drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
     return '<div class="sheetview" id="sheetview"></div>';
   }
 

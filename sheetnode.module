@@ -130,7 +130,7 @@ function _sheetnode_inject($value, $save_element, $context) {
   drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
   drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
 
-  module_invoke_all('sheetnode_plugins', $editing, $context);
+  module_invoke_all('sheetnode_plugins', $value, $save_element, $context);
 
   drupal_add_js(array('sheetnode' => array(
     'value' => $value, 
