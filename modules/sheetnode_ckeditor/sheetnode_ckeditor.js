@@ -6,7 +6,7 @@ Drupal.sheetnodeCK = Drupal.sheetnodeCK || {};
 
 Drupal.behaviors.sheetnodeCK = function(context) {
   CKEDITOR.config.resize_enabled = false;
-  $('div#'+Drupal.settings.sheetnode.view_id, context).bind('sheetnodeCreated', function(e, data) {
+  $('div#'+Drupal.settings.sheetnode.containerElement, context).bind('sheetnodeCreated', function(e, data) {
     var spreadsheet = data.spreadsheet;
     spreadsheet.formulabuttons['ckeditor'] = {
       image: Drupal.settings.sheetnodeCK.imagePrefix+"/ckeditor.png", 

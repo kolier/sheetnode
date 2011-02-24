@@ -43,15 +43,16 @@ class sheetnode_plugin_style extends views_plugin_style {
       '#default_value' => $this->options['template'],
       '#weight' => 98,
     );
-    global $base_url;
     $settings = drupal_to_js(array('sheetnode' => array(
       'value' => $this->options['sheetsave'],
-      'image_prefix' => $base_url . '/' . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
-      'view_id' => 'sheetview',
-      'edit_id' => 'edit-style-options-sheetsave',
-      'editing' => TRUE,
-      'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
-      'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
+      'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
+      'containerElement' => 'sheetview',
+      'saveElement' => 'edit-style-options-sheetsave',
+      'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
+      'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
+      'permissions' => array(
+        'edit sheet settings' => user_access('edit sheet settings'),
+      ),
       'context' => array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name),
     )));
     $form['sheetview']['#weight'] = 99;
@@ -367,7 +368,6 @@ EOS;
       return;
     }
 
-    global $base_url;
     drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
     drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
     drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js');
@@ -381,12 +381,14 @@ EOS;
     drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
     $settings = drupal_to_js(array('sheetnode' => array(
       'value' => socialcalc_save($this->render_sheet()),
-      'image_prefix' => $base_url . '/' . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
-      'view_id' => 'sheetview',
-      'edit_id' => 'edit-style-options-sheetsave',
-      'editing' => FALSE,
-      'fiddling' => variable_get('sheetnode_fiddle', SHEETNODE_VIEW_FIDDLE),
-      'perm_edit_sheet_settings' => user_access('edit sheet settings') ? TRUE : FALSE,
+      'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
+      'containerElement' => 'sheetview',
+      'saveElement' => FALSE,
+      'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
+      'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
+      'permissions' => array(
+        'edit sheet settings' => user_access('edit sheet settings'),
+      ),
       'context' => array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name),
     )));
     $javascript = <<<EOS

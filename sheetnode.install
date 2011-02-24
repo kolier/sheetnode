@@ -7,6 +7,7 @@ function sheetnode_install() {
 
 function sheetnode_uninstall() {
   drupal_uninstall_schema('sheetnode');
+  db_query("DELETE FROM {variable} WHERE name LIKE 'sheetnode_%'");
 }
 
 function sheetnode_schema() {

@@ -70,77 +70,56 @@ Drupal.sheetnode.viewModes = {
 
 Drupal.sheetnode.start = function(context) {
   // Just exit if the sheetnode is not in the new context or if it has already been processed.
-  if ($('div#'+Drupal.settings.sheetnode.view_id, context).length == 0) return;
+  if ($('div#'+Drupal.settings.sheetnode.containerElement, context).length == 0) return;
   if ($('div.sheetview-processed', context).length != 0) return;
-  
-  // DOM initialization.
-  if (Drupal.settings.sheetnode.edit_id) {
-    $('#'+Drupal.settings.sheetnode.edit_id, context).parents('form').submit(function() {
-      Drupal.sheetnode.save();
-      return true;
-    });
-    $('.collapsed').each(function() {
-      var ev = 'DOMAttrModified';
-      if ($.browser.msie) {
-        ev = 'propertychange';
-      }
-      $(this).bind(ev, function(e) {
-        if (Drupal.sheetnode.spreadsheet) {
-          Drupal.sheetnode.spreadsheet.editor.SchedulePositionCalculations();
-        }
-      }, false);
-    });
-  }
-  $(window).resize(function() {
-    Drupal.sheetnode.resize();
-  });
 
+  // Settings initialization.
+  var containerElement = $('div#'+Drupal.settings.sheetnode.containerElement, context);
+  var showEditor = Drupal.settings.sheetnode.saveElement || Drupal.settings.sheetnode.viewMode == Drupal.sheetnode.viewModes.fiddleMode;
+  var showToolbar = showEditor && Drupal.settings.sheetnode.showToolbar;
+  
   // SocialCalc initialization.
   SocialCalc.Popup.Controls = {};
-  SocialCalc.ConstantsSetImagePrefix(Drupal.settings.sheetnode.image_prefix);
+  SocialCalc.ConstantsSetImagePrefix(Drupal.settings.sheetnode.imagePrefix);
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
   SocialCalc.Constants.defaultReadonlyClass = "readonly";
-
-  this.spreadsheet = (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
-
-  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) {
+  this.spreadsheet = showEditor ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
+  if (showToolbar) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
-    if (!Drupal.settings.sheetnode.perm_edit_sheet_settings) {
+    if (!Drupal.settings.sheetnode.permissions['edit sheet settings']) {
       this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.settings, 1);
     }
     this.spreadsheet.tabnums = {};
     for (var i=0; i<this.spreadsheet.tabs.length; i++) {
       this.spreadsheet.tabnums[this.spreadsheet.tabs[i].name] = i;
     }
-    
-    // Hide toolbar if we're just viewing.
-    if (!Drupal.settings.sheetnode.editing) {
-      this.spreadsheet.tabbackground="display:none;";
-      this.spreadsheet.toolbarbackground="display:none;";
-    }
+  }
+  else {
+    this.spreadsheet.tabbackground="display:none;";
+    this.spreadsheet.toolbarbackground="display:none;";
   }
 
   // Trigger event to alert plugins that we've created the spreadsheet.
-  $('div#'+Drupal.settings.sheetnode.view_id, context).trigger('sheetnodeCreated', {spreadsheet: this.spreadsheet});
+  containerElement.trigger('sheetnodeCreated', {spreadsheet: this.spreadsheet});
 
   // Read in data and recompute.
-  parts = this.spreadsheet.DecodeSpreadsheetSave(Drupal.settings.sheetnode.value);
+  var parts = this.spreadsheet.DecodeSpreadsheetSave(Drupal.settings.sheetnode.value);
   if (parts && parts.sheet) {
     this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
   }
-  if (Drupal.settings.sheetnode.editing || Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.fiddleMode) {
-    this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.view_id, 700, $('div#'+Drupal.settings.sheetnode.view_id).width());
+  if (showEditor) {
+    this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.containerElement, 700, containerElement.width());
   }
   else {
-    this.spreadsheet.InitializeSpreadsheetViewer(Drupal.settings.sheetnode.view_id, 700, $('div#'+Drupal.settings.sheetnode.view_id).width());
+    this.spreadsheet.InitializeSpreadsheetViewer(Drupal.settings.sheetnode.containerElement, 700, containerElement.width());
   }
   if (parts && parts.edit) {
     this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
   }
-  if (!Drupal.settings.sheetnode.editing && Drupal.settings.sheetnode.fiddling == Drupal.sheetnode.viewModes.htmlTable) {
-    $('div#'+Drupal.settings.sheetnode.view_id).html(SocialCalc.SpreadsheetViewerCreateSheetHTML(this.spreadsheet));
+  if (!Drupal.settings.sheetnode.saveElement && Drupal.settings.sheetnode.viewMode == Drupal.sheetnode.viewModes.htmlTable) {
+    containerElement.html(SocialCalc.SpreadsheetViewerCreateSheetHTML(this.spreadsheet));
   }
 
   // Special handling for Views AJAX.
@@ -158,33 +137,41 @@ Drupal.sheetnode.start = function(context) {
   Drupal.sheetnode.functionsSetup();
   Drupal.sheetnode.loadsheetSetup();
 
-  // Fix DOM where needed.
-  div = $('div#'+Drupal.settings.sheetnode.view_id, context);
-  $('div#SocialCalc-edittools', div).parent('div').attr('id', 'SocialCalc-toolbar');
-  $('td#SocialCalc-edittab', div).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
-  $('input:text', div).addClass('form-text socialcalc-input');
-  $('input:radio', div).addClass('form-radio socialcalc-input');
-  $('input:checkbox', div).addClass('form-checkbox socialcalc-input');
-  $('textarea', div).addClass('form-textarea socialcalc-input');
-  $('select', div).addClass('form-select socialcalc-input');
-  $('input:button', div).addClass('form-submit socialcalc-input');
-  $('div#SocialCalc-sorttools td:first', div).css('width', 'auto');
-  $('div#SocialCalc-settingsview', div).css('border', 'none').css('width', 'auto').css('height', 'auto');
+  // DOM initialization.
+  if (Drupal.settings.sheetnode.saveElement) {
+    $('#'+Drupal.settings.sheetnode.saveElement, context).parents('form').submit(function() {
+      Drupal.sheetnode.save();
+      return true;
+    });
+  }
+  $(window).resize(function() {
+    Drupal.sheetnode.resize();
+  });
+  $('div#SocialCalc-edittools', containerElement).parent('div').attr('id', 'SocialCalc-toolbar');
+  $('td#SocialCalc-edittab', containerElement).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
+  $('input:text', containerElement).addClass('form-text socialcalc-input');
+  $('input:radio', containerElement).addClass('form-radio socialcalc-input');
+  $('input:checkbox', containerElement).addClass('form-checkbox socialcalc-input');
+  $('textarea', containerElement).addClass('form-textarea socialcalc-input');
+  $('select', containerElement).addClass('form-select socialcalc-input');
+  $('input:button', containerElement).addClass('form-submit socialcalc-input');
+  $('div#SocialCalc-sorttools td:first', containerElement).css('width', 'auto');
+  $('div#SocialCalc-settingsview', containerElement).css('border', 'none').css('width', 'auto').css('height', 'auto');
 
   // Lock cells requires special permission.
-  if (Drupal.settings.sheetnode.editing && !Drupal.settings.sheetnode.perm_edit_sheet_settings) {
-    $('#'+Drupal.sheetnode.spreadsheet.idPrefix+'locktools').css('display', 'none');
+  if (showToolbar && !Drupal.settings.sheetnode.permissions['edit sheet settings']) {
+    $('span#SocialCalc-locktools', containerElement).css('display', 'none');
   }
 
   // Prepare for fullscreen handling when clicking the SocialCalc icon.
-  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', div).attr('title', Drupal.t('Fullscreen')).click(function() {
-    if (div.hasClass('sheetview-fullscreen')) { // Going back to normal:
+  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', containerElement).attr('title', Drupal.t('Fullscreen')).click(function() {
+    if (containerElement.hasClass('sheetview-fullscreen')) { // Going back to normal:
       // Restore saved values.
-      div.removeClass('sheetview-fullscreen');
+      containerElement.removeClass('sheetview-fullscreen');
       if (Drupal.sheetnode.beforeFullscreen.index >= Drupal.sheetnode.beforeFullscreen.parentElement.children().length) {
-        Drupal.sheetnode.beforeFullscreen.parentElement.append(div);
+        Drupal.sheetnode.beforeFullscreen.parentElement.append(containerElement);
       } else {
-        div.insertBefore(Drupal.sheetnode.beforeFullscreen.parentElement.children().get(Drupal.sheetnode.beforeFullscreen.index));
+        containerElement.insertBefore(Drupal.sheetnode.beforeFullscreen.parentElement.children().get(Drupal.sheetnode.beforeFullscreen.index));
       }
       Drupal.sheetnode.spreadsheet.requestedHeight = Drupal.sheetnode.beforeFullscreen.requestedHeight;
       Drupal.sheetnode.resize();
@@ -194,25 +181,25 @@ Drupal.sheetnode.start = function(context) {
     else { // Going fullscreen:
       // Save current values.
       Drupal.sheetnode.beforeFullscreen = {
-        parentElement: div.parent(),
-        index: div.parent().children().index(div),
+        parentElement: containerElement.parent(),
+        index: containerElement.parent().children().index(containerElement),
         x: $(window).scrollLeft(), y: $(window).scrollTop(),
         requestedHeight: Drupal.sheetnode.spreadsheet.requestedHeight
       };
 
       // Set values needed to go fullscreen.
-      $('body').append(div).css('overflow', 'hidden');
-      div.addClass('sheetview-fullscreen');
+      $('body').append(containerElement).css('overflow', 'hidden');
+      containerElement.addClass('sheetview-fullscreen');
       Drupal.sheetnode.resize();
       window.scroll(0,0);
     }
   });
   
   // Signal that we've processed this instance of sheetnode.
-  div.addClass('sheetview-processed');
+  containerElement.addClass('sheetview-processed');
 
   // Trigger event to alert plugins that we've built the spreadsheet.
-  $('div#'+Drupal.settings.sheetnode.view_id, context).trigger('sheetnodeReady', {spreadsheet: this.spreadsheet});
+  containerElement.trigger('sheetnodeReady', {spreadsheet: this.spreadsheet});
 
   // Force a recalc to refresh all values and scrollbars.
   this.spreadsheet.editor.EditorScheduleSheetCommands("recalc");
@@ -220,16 +207,16 @@ Drupal.sheetnode.start = function(context) {
 
 Drupal.sheetnode.resize = function() {
   // Adjust width and height if needed.
-  div = $('div#'+Drupal.settings.sheetnode.view_id);
-  if (div.hasClass('sheetview-fullscreen')) {
-    this.spreadsheet.requestedHeight = div.height();
+  containerElement = $('div#'+Drupal.settings.sheetnode.containerElement);
+  if (containerElement.hasClass('sheetview-fullscreen')) {
+    this.spreadsheet.requestedHeight = containerElement.height();
   }
-  this.spreadsheet.requestedWidth = div.width();
+  this.spreadsheet.requestedWidth = containerElement.width();
   this.spreadsheet.DoOnResize();
 }
 
 Drupal.sheetnode.save = function() {
-  $('#'+Drupal.settings.sheetnode.edit_id).val(this.spreadsheet.CreateSpreadsheetSave());
+  $('#'+Drupal.settings.sheetnode.saveElement).val(this.spreadsheet.CreateSpreadsheetSave());
   log = $('#edit-log').val();
   if (log != undefined) {
     audit = this.spreadsheet.sheet.CreateAuditString();
