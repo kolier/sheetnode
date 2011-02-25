@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 function sheetnode_install() {
   drupal_install_schema('sheetnode');
