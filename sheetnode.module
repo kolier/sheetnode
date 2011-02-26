@@ -131,19 +131,23 @@ function _sheetnode_inject($value, $save_element, $context) {
 
   module_invoke_all('sheetnode_plugins', $value, $save_element, $context);
 
-  drupal_add_js(array('sheetnode' => array(
-    'value' => $value, 
-    'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
-    'containerElement' => 'sheetview',
-    'saveElement' => $save_element,
-    'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
-    'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
-    'permissions' => array(
-      'edit sheet settings' => user_access('edit sheet settings'),
-    ),
-    'context' => $context,
-  )), 'setting');
-  drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
+  static $once = FALSE;
+  if (!$once) {
+    $once = TRUE;
+    drupal_add_js(array('sheetnode' => array(
+      'value' => $value, 
+      'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
+      'containerElement' => 'sheetview',
+      'saveElement' => $save_element,
+      'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
+      'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
+      'permissions' => array(
+        'edit sheet settings' => user_access('edit sheet settings'),
+      ),
+      'context' => $context,
+    )), 'setting');
+    drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
+  }
   return '<div class="sheetview" id="sheetview"></div>';
 }
 
