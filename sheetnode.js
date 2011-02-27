@@ -75,7 +75,7 @@ Drupal.sheetnode.start = function(context) {
   // Settings initialization.
   var containerElement = $('div#'+Drupal.settings.sheetnode.containerElement, context);
   var showEditor = Drupal.settings.sheetnode.saveElement || Drupal.settings.sheetnode.viewMode == Drupal.sheetnode.viewModes.fiddleMode;
-  var showToolbar = showEditor && Drupal.settings.sheetnode.showToolbar;
+  var showToolbar = Drupal.settings.sheetnode.saveElement || (Drupal.settings.sheetnode.showToolbar && Drupal.settings.sheetnode.viewMode == Drupal.sheetnode.viewModes.fiddleMode);
   
   // SocialCalc initialization.
   SocialCalc.Popup.Controls = {};
