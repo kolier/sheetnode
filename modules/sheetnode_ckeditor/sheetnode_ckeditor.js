@@ -93,7 +93,7 @@ Drupal.sheetnodeCK.DoMultiline = function() {
    CKEDITOR.replace(idp+"textarea");
 
    ele = document.getElementById(idp+"textarea");
-   ele.focus();
+   //ele.focus();
    SocialCalc.CmdGotFocus(ele);
 //!!! need to do keyboard handling: if esc, hide?
 
