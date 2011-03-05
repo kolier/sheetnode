@@ -242,7 +242,8 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
       break;
     case 'text-html':
       // TODO: Parse HTML into rich text.
-      $cell->setValueExplicit(strip_tags($displayvalue), PHPExcel_Cell_DataType::TYPE_STRING);
+      $stripped = preg_replace('/^\s+|\s+$/', '', strip_tags($displayvalue));
+      $cell->setValueExplicit($stripped, PHPExcel_Cell_DataType::TYPE_STRING);
       break;
     case 'text-url':
     case 'text-link':
