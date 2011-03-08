@@ -241,9 +241,15 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
       $cell->setValueExplicit($displayvalue, PHPExcel_Cell_DataType::TYPE_STRING);
       break;
     case 'text-html':
-      // TODO: Parse HTML into rich text.
-      $stripped = preg_replace('/^\s+|\s+$/', '', strip_tags($displayvalue));
-      $cell->setValueExplicit($stripped, PHPExcel_Cell_DataType::TYPE_STRING);
+      $html2rtf = new Sheetnode_PHPExcel_HTML2RichText($displayvalue);
+      $rtf = $html2rtf->convert($cell);
+      if ($rtf) {
+        $cell->setValue($rtf);
+      }
+      else {
+        $stripped = preg_replace('/^\s+|\s+$/', '', strip_tags($displayvalue));
+        $cell->setValueExplicit($stripped, PHPExcel_Cell_DataType::TYPE_STRING);
+      }
       break;
     case 'text-url':
     case 'text-link':
@@ -371,6 +377,67 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
   // Unknown.
   else {
     $cell->setValueExplicit('', PHPExcel_Cell_DataType::TYPE_NULL);
+  }
+}
+
+/**
+ * Class to convert an HTML fragment to a fully-parsed array of styles.
+ * Uses TCDPF which is included in PHPExcel.
+ */
+require_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel/Shared/PDF/tcpdf.php');
+class Sheetnode_PHPExcel_HTML2RichText extends TCPDF {
+  var $html;
+  public function Sheetnode_PHPExcel_HTML2RichText($html) {
+    $this->html = $html;
+  }
+  public function convert($cell) {
+    $dom = $this->getHtmlDomArray($this->html);
+    if (empty($dom)) return FALSE;
+    $rtf = new PHPExcel_RichText();
+    $run = $rtf->createTextRun();
+    foreach ($dom as $entry) {
+      if ($entry['tag']) { // HTML tag
+        if (!$entry['opening']) continue;
+        // Set style based on tag.
+        switch ($entry['value']) {
+        case 'strong':
+        case 'b':
+          $run->getFont()->setBold(TRUE);
+          break;
+        case 'em':
+        case 'i':
+          $run->getFont()->setItalic(TRUE);
+          break;
+        case 'u':
+          $run->getFont()->setUnderline(PHPExcel_Style_Font::UNDERLINE_SINGLE);
+          break;
+        case 'strike':
+          $run->getFont()->setStrikethrough(TRUE);
+          break;
+        case 'sub':
+          $run->getFont()->setSubScript(TRUE);
+          break;
+        case 'sup':
+          $run->getFont()->setSuperScript(TRUE);
+          break;
+        }
+        // Set style based on tag attributes if any.
+        // Set style base on CSS style if any.
+        if (!empty($entry['style'])) foreach ($entry['style'] as $key => $value) switch ($key) {
+        case 'color':
+          $color = $this->convertHTMLColorToDec($value);
+          $rgb = sprintf('%02X%02X%02X', $color[0], $color[1], $color[2]);
+          $run->getFont()->getColor()->setRGB($rgb);
+          break;
+        }
+      }
+      else { // text
+        if (empty($entry['value'])) continue;
+        $run->setText($entry['value']);
+        $run = $rtf->createTextRun();
+      }
+    }
+    return $rtf;
   }
 }
 
