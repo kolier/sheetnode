@@ -398,46 +398,62 @@ class Sheetnode_PHPExcel_HTML2RichText extends TCPDF {
     foreach ($dom as $entry) {
       if ($entry['tag']) { // HTML tag
         if (!$entry['opening']) continue;
-        // Set style based on tag.
-        switch ($entry['value']) {
-        case 'strong':
-        case 'b':
-          $run->getFont()->setBold(TRUE);
-          break;
-        case 'em':
-        case 'i':
-          $run->getFont()->setItalic(TRUE);
-          break;
-        case 'u':
-          $run->getFont()->setUnderline(PHPExcel_Style_Font::UNDERLINE_SINGLE);
-          break;
-        case 'strike':
-          $run->getFont()->setStrikethrough(TRUE);
-          break;
-        case 'sub':
-          $run->getFont()->setSubScript(TRUE);
-          break;
-        case 'sup':
-          $run->getFont()->setSuperScript(TRUE);
-          break;
-        }
-        // Set style based on tag attributes if any.
-        // Set style base on CSS style if any.
-        if (!empty($entry['style'])) foreach ($entry['style'] as $key => $value) switch ($key) {
-        case 'color':
-          $color = $this->convertHTMLColorToDec($value);
-          $rgb = sprintf('%02X%02X%02X', $color[0], $color[1], $color[2]);
-          $run->getFont()->getColor()->setRGB($rgb);
-          break;
-        }
+        // Defer the work to third-party implementations.
+        module_invoke_all('sheetnode_phpexcel_html2richtext', $run, $cell, $entry, $this);
       }
       else { // text
         if (empty($entry['value'])) continue;
         $run->setText($entry['value']);
         $run = $rtf->createTextRun();
       }
+      drupal_alter('sheetnode_phpexcel_html2richtext', $run, $cell, $entry, $this);
     }
     return $rtf;
+  }
+}
+
+/**
+ * Implementation of hook_sheetnode_phpexcel_html2richtext.
+ *
+ * Handles standard HTML tags and converts them to styling commands on the current rich-text run.
+ *
+ * @param $run PHPExcel_RichText_Run instance
+ * @param $cell PHPExcel_Cell instance
+ * @param $entry array entry of DOM as returned by TCPDF::getHtmlDomArray()
+ * @param $converter Sheetnode_PHPExcel_HTML2RichText instance
+ */
+function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $entry, $converter) {
+  // Set style based on tag.
+  switch ($entry['value']) {
+  case 'strong':
+  case 'b':
+    $run->getFont()->setBold(TRUE);
+    break;
+  case 'em':
+  case 'i':
+    $run->getFont()->setItalic(TRUE);
+    break;
+  case 'u':
+    $run->getFont()->setUnderline(PHPExcel_Style_Font::UNDERLINE_SINGLE);
+    break;
+  case 'strike':
+    $run->getFont()->setStrikethrough(TRUE);
+    break;
+  case 'sub':
+    $run->getFont()->setSubScript(TRUE);
+    break;
+  case 'sup':
+    $run->getFont()->setSuperScript(TRUE);
+    break;
+  }
+  // Set style based on tag attributes if any.
+  // Set style base on CSS style if any.
+  if (!empty($entry['style'])) foreach ($entry['style'] as $key => $value) switch ($key) {
+  case 'color':
+    $color = $converter->convertHTMLColorToDec($value);
+    $rgb = sprintf('%02X%02X%02X', $color[0], $color[1], $color[2]);
+    $run->getFont()->getColor()->setRGB($rgb);
+    break;
   }
 }
 
