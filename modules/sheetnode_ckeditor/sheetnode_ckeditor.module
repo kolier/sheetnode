@@ -4,7 +4,7 @@
  * Implementation of hook_sheetnode_plugins().
  */
 function sheetnode_ckeditor_sheetnode_plugins() {
-  drupal_add_js(drupal_get_path('module', 'sheetnode_ckeditor') . '/ckeditor/ckeditor.js');
+  drupal_add_js(drupal_get_path('module', 'sheetnode_ckeditor') . '/ckeditor/ckeditor_source.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode_ckeditor') . '/sheetnode_ckeditor.js');
   drupal_add_js(array('sheetnodeCK' => array(
     'imagePrefix' => url(drupal_get_path('module', 'sheetnode_ckeditor') . '/images'),

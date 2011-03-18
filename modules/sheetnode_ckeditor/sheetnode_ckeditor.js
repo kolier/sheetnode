@@ -114,7 +114,6 @@ Drupal.sheetnodeCK.HideMultiline = function() {
    var editor = spreadsheet.editor;
 
    var ele = document.getElementById(spreadsheet.idPrefix+"ckeditordialog");
-   ele.innerHTML = "";
 
    SocialCalc.DragUnregister(ele);
 
