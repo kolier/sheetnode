@@ -90,7 +90,15 @@ Drupal.sheetnodeCK.DoMultiline = function() {
 
    spreadsheet.spreadsheetDiv.appendChild(main);
 
-   CKEDITOR.replace(idp+"textarea");
+   CKEDITOR.replace(idp+"textarea", {
+      toolbar : [
+         ['Cut','Copy','Paste','PasteText','PasteFromWord','-','Scayt'],
+         ['Undo','Redo','-','Find','Replace','-','SelectAll','RemoveFormat'],
+         '/',
+         ['Font','FontSize','TextColor'],
+         ['Bold','Italic','Underline','Strike'],
+         ]
+      });
 
    ele = document.getElementById(idp+"textarea");
    //ele.focus();

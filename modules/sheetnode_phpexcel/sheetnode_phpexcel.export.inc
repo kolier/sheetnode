@@ -389,6 +389,7 @@ class Sheetnode_PHPExcel_HTML2RichText extends TCPDF {
   var $html;
   public function Sheetnode_PHPExcel_HTML2RichText($html) {
     $this->html = $html;
+    $this->setPageUnit('px');
   }
   public function convert($cell) {
     $dom = $this->getHtmlDomArray($this->html);
@@ -453,6 +454,12 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $entry
     $color = $converter->convertHTMLColorToDec($value);
     $rgb = sprintf('%02X%02X%02X', $color[0], $color[1], $color[2]);
     $run->getFont()->getColor()->setRGB($rgb);
+    break;
+  case 'font-family':
+    $run->getFont()->setName($value);
+    break;
+  case 'font-size':
+    $run->getFont()->setSize($value);
     break;
   }
 }
