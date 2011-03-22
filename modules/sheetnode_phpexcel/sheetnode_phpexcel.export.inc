@@ -242,7 +242,7 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
       break;
     case 'text-html':
       $html2rtf = new Sheetnode_PHPExcel_HTML2RichText($displayvalue);
-      $rtf = $html2rtf->convert($cell);
+      $rtf = $html2rtf->convert($cell, $style);
       if ($rtf) {
         $cell->setValue($rtf);
       }
@@ -391,7 +391,7 @@ class Sheetnode_PHPExcel_HTML2RichText extends TCPDF {
     $this->html = $html;
     $this->setPageUnit('px');
   }
-  public function convert($cell) {
+  public function convert($cell, $style) {
     $dom = $this->getHtmlDomArray($this->html);
     if (empty($dom)) return FALSE;
     $rtf = new PHPExcel_RichText();
@@ -400,14 +400,14 @@ class Sheetnode_PHPExcel_HTML2RichText extends TCPDF {
       if ($entry['tag']) { // HTML tag
         if (!$entry['opening']) continue;
         // Defer the work to third-party implementations.
-        module_invoke_all('sheetnode_phpexcel_html2richtext', $run, $cell, $entry, $this);
+        module_invoke_all('sheetnode_phpexcel_html2richtext', $run, $cell, $style, $entry, $this);
       }
       else { // text
         if (empty($entry['value'])) continue;
         $run->setText($entry['value']);
         $run = $rtf->createTextRun();
       }
-      drupal_alter('sheetnode_phpexcel_html2richtext', $run, $cell, $entry, $this);
+      drupal_alter('sheetnode_phpexcel_html2richtext', $run, $cell, $style, $entry, $this);
     }
     return $rtf;
   }
@@ -423,7 +423,7 @@ class Sheetnode_PHPExcel_HTML2RichText extends TCPDF {
  * @param $entry array entry of DOM as returned by TCPDF::getHtmlDomArray()
  * @param $converter Sheetnode_PHPExcel_HTML2RichText instance
  */
-function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $entry, $converter) {
+function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $style, $entry, $converter) {
   // Set style based on tag.
   switch ($entry['value']) {
   case 'strong':
@@ -446,6 +446,11 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $entry
   case 'sup':
     $run->getFont()->setSuperScript(TRUE);
     break;
+  case 'a':
+    if (!empty($entry['attribute']['href'])) {
+      $cell->getHyperlink()->setUrl($entry['attribute']['href']);
+    }
+    break;
   }
   // Set style based on tag attributes if any.
   // Set style base on CSS style if any.
@@ -461,6 +466,31 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $entry
   case 'font-size':
     $run->getFont()->setSize($value);
     break;
+  case 'font-style':
+    switch ($value) {
+    case 'italic':
+      $run->getFont()->setItalic(TRUE);
+      break;
+    }
+    break;
+  case 'text-decoration':
+    switch ($value) {
+    case 'underline':
+      $run->getFont()->setUnderline(PHPExcel_Style_Font::UNDERLINE_SINGLE);
+      break;
+    }
+    break;
+  case 'font-weight':
+    if ($value == 'bold' || $value == 'bolder' || $value >= 700) {
+      $run->getFont()->setBold(TRUE);
+    }
+    break;
+  case 'background-color':
+    $color = $converter->convertHTMLColorToDec($value);
+    $rgb = sprintf('%02X%02X%02X', $color[0], $color[1], $color[2]);
+    $style->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID);
+    $style->getFill()->getStartColor()->setRGB($rgb);
+    break; 
   }
 }
 

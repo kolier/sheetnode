@@ -6,8 +6,20 @@
 function sheetnode_ckeditor_sheetnode_plugins() {
   drupal_add_js(drupal_get_path('module', 'sheetnode_ckeditor') . '/ckeditor/ckeditor.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode_ckeditor') . '/sheetnode_ckeditor.js');
+
+  $toolbar = array(
+    array('Cut','Copy','Paste','PasteText','PasteFromWord','-','Scayt'),
+    array('Undo','Redo','-','Find','Replace','-','SelectAll','RemoveFormat'),
+    '/',
+    array('Font','FontSize','TextColor', 'BGColor'),
+    array('Bold','Italic','Underline','Strike'),
+    array('Link', 'Unlink'),
+  );
+  drupal_alter('sheetnode_ckeditor_toolbar', $toolbar);
+
   drupal_add_js(array('sheetnodeCK' => array(
     'imagePrefix' => url(drupal_get_path('module', 'sheetnode_ckeditor') . '/images'),
+    'toolbar' => $toolbar,
   )), 'setting');
 }
 
