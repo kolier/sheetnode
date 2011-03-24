@@ -457,14 +457,14 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $style
   if (!empty($entry['style'])) foreach ($entry['style'] as $key => $value) switch ($key) {
   case 'color':
     $color = $converter->convertHTMLColorToDec($value);
-    $rgb = sprintf('%02X%02X%02X', $color[0], $color[1], $color[2]);
+    $rgb = sprintf('%02X%02X%02X', $color['R'], $color['G'], $color['B']);
     $run->getFont()->getColor()->setRGB($rgb);
     break;
   case 'font-family':
     $run->getFont()->setName($value);
     break;
   case 'font-size':
-    $run->getFont()->setSize($value);
+    $run->getFont()->setSize($converter->getHTMLUnitToUnits($value, 1, 'pt', TRUE));
     break;
   case 'font-style':
     switch ($value) {
@@ -487,7 +487,7 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $style
     break;
   case 'background-color':
     $color = $converter->convertHTMLColorToDec($value);
-    $rgb = sprintf('%02X%02X%02X', $color[0], $color[1], $color[2]);
+    $rgb = sprintf('%02X%02X%02X', $color['R'], $color['G'], $color['B']);
     $style->getFill()->setFillType(PHPExcel_Style_Fill::FILL_SOLID);
     $style->getFill()->getStartColor()->setRGB($rgb);
     break; 
