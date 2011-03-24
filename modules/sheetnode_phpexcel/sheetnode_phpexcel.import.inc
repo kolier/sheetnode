@@ -385,7 +385,7 @@ function _sheetnode_phpexcel_createCSSStyleFont(PHPExcel_Style_Font $pStyle) {
   }
 
   $css['color']   = '#' . $pStyle->getColor()->getRGB();
-  $css['font-family'] = '\'' . $pStyle->getName() . '\'';
+  $css['font-family'] = $pStyle->getName();
   $css['font-size'] = $pStyle->getSize() . 'pt';
 
   // Return
