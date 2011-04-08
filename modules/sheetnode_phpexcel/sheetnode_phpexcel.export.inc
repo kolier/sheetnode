@@ -145,7 +145,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
     }
 
     // Merged regions
-    if ($c['colspan'] > 1 || $c['rowspan'] > 1) {
+    if (@$c['colspan'] > 1 || @$c['rowspan'] > 1) {
       $coord2 = socialcalc_cr_to_coord($c['pos'][0]+max($c['colspan']-1, 0), $c['pos'][1]+max($c['rowspan']-1, 0));
       $workbook->getActiveSheet()->mergeCells($coord .':'. $coord2);
     }
@@ -196,9 +196,9 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
   $cell = $worksheet->getCell($coord);
   $style = $worksheet->getStyle($coord);
 
-  $valuetype = substr($c['valuetype'], 0, 1);
-  $valuesubtype = substr($c['valuetype'], 1);
-  $displayvalue = $c['datavalue'];
+  $valuetype = empty($c['valuetype']) ? NULL : substr($c['valuetype'], 0, 1);
+  $valuesubtype = empty($c['valuetype']) ? NULL : substr($c['valuetype'], 1);
+  $displayvalue = @$c['datavalue'];
   $valueformat = NULL;
   
   // Error.
