@@ -395,7 +395,7 @@ function _sheetnode_phpexcel_createCSSStyleFont(PHPExcel_Style_Font $pStyle) {
 function _sheetnode_phpexcel_insert_hash(&$sc, $key, $style) {
   $hash = @$sc[$key.'hash'][$style];
   if (is_null($hash)) {
-    $hash = count($sc[$key.'s']) + 1;
+    $hash = count(@$sc[$key.'s']) + 1;
     $sc[$key.'s'][$hash] = $style;
     $sc[$key.'hash'][$style] = $hash;
   }

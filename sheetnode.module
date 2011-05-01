@@ -62,14 +62,14 @@ function sheetnode_form(&$node) {
   $form = node_content_form($node, NULL);
  
   // SocialCalc sheet.
-  $nid = $node->nid;
+  $nid = @$node->nid;
   if (isset($_POST['sheetsave'])) {
     $value = $_POST['sheetsave'];
   }
   else if (!empty($node->nid)) {
     $value = _sheetnode_load($node->nid, $node->vid);
   }
-  else if ($node->clone_from_original_nid) { // support node_clone.module
+  else if (!empty($node->clone_from_original_nid)) { // support node_clone.module
     $original_node = node_load($node->clone_from_original_nid);
     $value = _sheetnode_load($original_node->nid, $original_node->vid);
     $nid = $node->clone_from_original_nid;
