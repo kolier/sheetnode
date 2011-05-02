@@ -15,6 +15,7 @@ function sheetnode_views_plugins() {
         'uses options' => TRUE,
         'type' => 'normal',
         'theme' => 'views_view_sheet',
+        'path' => drupal_get_path('module', 'sheetnode') . '/views',
         'js' => array(
           drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js',
           drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js',
@@ -36,6 +37,7 @@ function sheetnode_views_plugins() {
         'uses fields' => TRUE,
         'uses options' => TRUE,
         'type' => 'feed',
+        'path' => drupal_get_path('module', 'sheetnode') . '/views',
       ),
     ),
   );
@@ -47,7 +49,7 @@ function sheetnode_views_plugins() {
 function sheetnode_views_handlers() {
   return array(
     'info' => array(
-      'path' => drupal_get_path('module', 'sheetnode'),
+      'path' => drupal_get_path('module', 'sheetnode') . '/views',
     ),
     'handlers' => array(
       'sheetnode_handler_field_cell' => array(
