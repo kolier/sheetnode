@@ -9,6 +9,11 @@ Drupal.sheetnode.functionsSetup = function() {
   SocialCalc.Constants["s_fdef_ORG.DRUPAL.FIELD"] = 'Returns a field from the specified Drupal entity (node, user, etc.)';
   SocialCalc.Constants.s_farg_drupalfield = 'field-name, [oid, entity-name]';
 
+  // ORG.DRUPAL.TOKEN server-side function.
+  SocialCalc.Formula.FunctionList["ORG.DRUPAL.TOKEN"] = [Drupal.sheetnode.functionDrupalToken, -1, "drupaltoken", "", "drupal"];
+  SocialCalc.Constants["s_fdef_ORG.DRUPAL.TOKEN"] = 'Returns a token value from the specified Drupal entity (node, user, etc.)';
+  SocialCalc.Constants.s_farg_drupaltoken = 'token, [oid, entity-name]';
+
   // Update function classes.
   SocialCalc.Constants.function_classlist.push('drupal');
   SocialCalc.Constants.s_fclass_drupal = "Drupal";
@@ -30,6 +35,31 @@ Drupal.sheetnode.functionDrupalField = function(fname, operand, foperand, sheet)
     type: 'POST',
     url: Drupal.settings.basePath+'sheetnode/field',
     data: 'oid='+oid.value+'&entity='+escape(entity.value)+'&field='+escape(field.value),
+    datatype: 'json',
+    async: false,
+    success: function (data) {
+      var result = Drupal.parseJson(data);
+      operand.push(result);
+    }
+  });
+}
+
+Drupal.sheetnode.functionDrupalToken = function(fname, operand, foperand, sheet) {
+  var scf = SocialCalc.Formula;
+  var oid, entity, field;
+
+  token = scf.OperandValueAndType(sheet, foperand);
+  oid = scf.OperandValueAndType(sheet, foperand);
+  entity = scf.OperandValueAndType(sheet, foperand);
+  if (isNaN(parseInt(oid.value))) {
+    oid.value = Drupal.settings.sheetnode.context['oid'];
+    entity.value = Drupal.settings.sheetnode.context['entity-name'];
+  }
+
+  $.ajax({
+    type: 'POST',
+    url: Drupal.settings.basePath+'sheetnode/token',
+    data: 'oid='+oid.value+'&entity='+escape(entity.value)+'&token='+escape(token.value),
     datatype: 'json',
     async: false,
     success: function (data) {

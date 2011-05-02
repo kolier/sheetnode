@@ -248,6 +248,11 @@ function sheetnode_menu() {
     'page callback' => '_sheetnode_ajax_field',
     'access arguments' => array('access content'),
   );
+  $items['sheetnode/token'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => '_sheetnode_ajax_token',
+    'access arguments' => array('access content'),
+  );
   $items['node/add/sheetnode_template'] = array(
     'title' => 'Sheetnode import from template',
     'access arguments' => array('create sheetnode'),
@@ -637,6 +642,34 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
       echo $parts['sheet'];
     }
   }
+  exit();
+}
+
+function _sheetnode_ajax_token($oid = NULL, $entity = NULL, $token = NULL) {
+  if (!$oid) $oid = $_REQUEST['oid'];
+  if (!$entity) $entity = $_REQUEST['entity'];
+  if (!$token) $token = $_REQUEST['token'];
+  if (function_exists($entity . '_load')) {
+    $object = call_user_func($entity . '_load', $oid);
+    $value = NULL;
+    if ($object) {
+      // Do the token replacement.
+      if (module_exists('token')) {
+        $value = token_replace($token, $entity, $object);
+      }
+
+      // If found, send it back.
+      if ($value) {
+        require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+        drupal_json(array(
+          'type' => is_numeric($value) ? 'n' : 'th',
+          'value' => $value,
+        ));
+        exit();
+      }
+    }
+  }
+  drupal_json(array('value' => '', 'type' => 'e#NAME?'));
   exit();
 }
 
