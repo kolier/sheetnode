@@ -649,24 +649,23 @@ function _sheetnode_ajax_token($oid = NULL, $entity = NULL, $token = NULL) {
   if (!$oid) $oid = $_REQUEST['oid'];
   if (!$entity) $entity = $_REQUEST['entity'];
   if (!$token) $token = $_REQUEST['token'];
-  if (function_exists($entity . '_load')) {
-    $object = call_user_func($entity . '_load', $oid);
-    $value = NULL;
-    if ($object) {
-      // Do the token replacement.
-      if (module_exists('token')) {
-        $value = token_replace($token, $entity, $object);
-      }
 
-      // If found, send it back.
-      if ($value) {
-        require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
-        drupal_json(array(
-          'type' => is_numeric($value) ? 'n' : 'th',
-          'value' => $value,
-        ));
-        exit();
-      }
+  $value = NULL;
+  $object = _sheetnode_load_entity($entity, $oid);
+  if ($object) {
+    // Do the token replacement.
+    if (module_exists('token')) {
+      $value = token_replace($token, $entity, $object);
+    }
+
+    // If found, send it back.
+    if ($value) {
+      require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+      drupal_json(array(
+        'type' => is_numeric($value) ? 'n' : 'th',
+        'value' => $value,
+      ));
+      exit();
     }
   }
   drupal_json(array('value' => '', 'type' => 'e#NAME?'));
@@ -677,47 +676,46 @@ function _sheetnode_ajax_field($oid = NULL, $entity = NULL, $field = NULL) {
   if (!$oid) $oid = $_REQUEST['oid'];
   if (!$entity) $entity = $_REQUEST['entity'];
   if (!$field) $field = $_REQUEST['field'];
-  if (function_exists($entity . '_load')) {
-    $object = call_user_func($entity . '_load', $oid);
-    $value = NULL;
-    if ($object) {
-      // Try CCK field.
-      if ($entity == 'node' && module_exists('content')) {
-        $field_info = content_fields($field, $object->type);
-        if ($field_info) {
-          $field_info['display_settings']['label']['format'] = 'hidden';
-          $value = content_view_field($field_info, $object, FALSE, TRUE);
-        }
-      }
 
-      // Try rendered node field.
-      if (!$value && $entity == 'node') {
-        $node = drupal_clone($object);
-        $node = node_build_content($node);
-        if (isset($node->content[$field])) {
-          $value = drupal_render($node->content[$field]);
-        }
+  $value = NULL;
+  $object = _sheetnode_load_entity($entity, $oid);
+  if ($object) {
+    // Try CCK field.
+    if ($entity == 'node' && module_exists('content')) {
+      $field_info = content_fields($field, $object->type);
+      if ($field_info) {
+        $field_info['display_settings']['label']['format'] = 'hidden';
+        $value = content_view_field($field_info, $object, FALSE, TRUE);
       }
+    }
 
-      // Try raw object field.
-      if (!$value && isset($object->$field)) {
-        if (is_object($object->$field) || is_array($object->$field)) {
-          $value = print_r($object->$field, TRUE);
-        }
-        else {
-          $value = $object->$field;
-        }
+    // Try rendered node field.
+    if (!$value && $entity == 'node') {
+      $node = drupal_clone($object);
+      $node = node_build_content($node);
+      if (isset($node->content[$field])) {
+        $value = drupal_render($node->content[$field]);
       }
+    }
 
-      // If found, send it back.
-      if ($value) {
-        require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
-        drupal_json(array(
-          'type' => is_numeric($value) ? 'n' : 'th',
-          'value' => $value,
-        ));
-        exit();
+    // Try raw object field.
+    if (!$value && isset($object->$field)) {
+      if (is_object($object->$field) || is_array($object->$field)) {
+        $value = print_r($object->$field, TRUE);
       }
+      else {
+        $value = $object->$field;
+      }
+    }
+
+    // If found, send it back.
+    if ($value) {
+      require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+      drupal_json(array(
+        'type' => is_numeric($value) ? 'n' : 'th',
+        'value' => $value,
+      ));
+      exit();
     }
   }
   drupal_json(array('value' => '', 'type' => 'e#NAME?'));
@@ -746,5 +744,19 @@ function _sheetnode_sanitize_filename($filename, $extension) {
   $filename  = preg_replace('/[^a-zA-Z0-9-_.]/', '-', $filename);
   $filename .= '.'. $extension;
   return $filename;
+}
+
+function _sheetnode_load_entity($entity, $oid) {
+  if (function_exists($entity . '_load')) { // call load function directly
+    return call_user_func($entity . '_load', $oid);
+  }
+  if (module_exists('views_bulk_operations')) { // get entity info from VBO
+    $object_info = _views_bulk_operations_get_object_info();
+    if (isset($object_info[$entity]) && function_exists($object_info[$entity]['load'])) {
+      return call_user_func($object_info[$entity]['load'], $oid);
+    }
+  }
+  watchdog('sheetnode', 'Could not load entity %entity: No load function found.', array('%entity' => $entity), WATCHDOG_WARNING);
+  return NULL;
 }
 
