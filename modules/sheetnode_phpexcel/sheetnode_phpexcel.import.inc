@@ -214,6 +214,7 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
     if ($text instanceof PHPExcel_RichText) {
       $style = $sheet->getStyle($cell->getCoordinate());
       $defaultfont = $style->getFont();
+      $cellData = '';
       foreach ($text->getRichTextElements() as $element) {
         $font = $element instanceof PHPExcel_RichText_Run ? $element->getFont() : $defaultfont;
         $cellData .= '<span style="' . _sheetnode_phpexcel_assembleCSS(_sheetnode_phpexcel_createCSSStyleFont($font)) . '">';
