@@ -100,20 +100,6 @@ function sheetnode_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && isset($form['type']['#value']) && $form['type']['#value'] == 'sheetnode') {
     unset($form['buttons']['preview']);
   }
-  
-  // @see http://drupal.org/node/344040#comment-1155144
-  if ($form_id == 'sheetnode_node_form') {
-    if (isset($form['#post']['book'])) {
-      $form['book']['bid'] = array(
-        '#type' => 'hidden',
-        '#value' => $form['#post']['book']['bid'],
-      );
-      $form['book']['plid'] = array(
-        '#type' => 'hidden',
-        '#value' => $form['#post']['book']['plid'],
-      );
-    }
-  }
 }
 
 function _sheetnode_inject($value, $save_element, $context) {

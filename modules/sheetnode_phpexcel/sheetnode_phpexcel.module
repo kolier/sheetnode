@@ -66,6 +66,39 @@ function sheetnode_phpexcel_get_plugins($dir = 'all') {
 }
 
 /**
+ * API function to batch import several files using Batch API.
+ */
+function sheetnode_phpexcel_batch_import($files, $destination = NULL, $batch = array(), $params = array()) {
+  $batch += array(
+    'finished' => '_sheetnode_phpexcel_batch_import_finished',
+    'title' => t('Importing spreadsheets'),
+    'init_message' => t('Import process is starting.'),
+    'progress_message' => t('Imported @current out of @total files.'),
+    'error_message' => t('Import process has encountered an error.'),
+    'file' => drupal_get_path('module', 'sheetnode_phpexcel') . '/sheetnode_phpexcel.import.inc',
+  );
+  foreach ($files as $filename => $filepath) {
+    $batch['operations'][] = array('_sheetnode_phpexcel_batch_import_file', array($filepath, $filename, $params));
+  }
+  batch_set($batch);
+  batch_process($destination);
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function sheetnode_phpexcel_init() {
+  spl_autoload_register('_sheetnode_phpexcel_autoload');
+}
+
+/**
+ * Autoload callback.
+ */
+function _sheetnode_phpexcel_autoload($classname) {
+  include_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel.php');
+}
+
+/**
  * Implementation of hook_link().
  */
 function sheetnode_phpexcel_link($type, $node = NULL, $teaser = FALSE) {
@@ -127,7 +160,7 @@ function _sheetnode_phpexcel_settings() {
   $form['sheetnode_phpexcel_library_path'] = array(
     '#type' => 'textfield',
     '#title' => t('PHPExcel path'),
-    '#description' => t('Enter the location of the extracted PHPExcel package.'),
+    '#description' => t('Enter the full path of the extracted PHPExcel package.'),
     '#default_value' => variable_get('sheetnode_phpexcel_library_path', ''),
   );
   $form['#validate'][] = '_sheetnode_phpexcel_settings_validate';
