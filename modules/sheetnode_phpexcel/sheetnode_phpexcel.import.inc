@@ -188,7 +188,7 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
 
   // Names
   foreach ($workbook->getNamedRanges() as $range) {
-    if ($sheet->getHashCode() == $range->getWorksheet()->getHashCode() || !$range->getLocalOnly()) {
+    if ($sheet->getHashCode() == $range->getWorksheet()->getHashCode()) {
       $sc['names'][$range->getName()] = array(
         'desc' => '',
         'definition' => (is_null($range->getScope()) || $sheet->getHashCode() == $range->getScope()->getHashCode() ? '' : $range->getScope()->getTitle() . '!') . $range->getRange(),
