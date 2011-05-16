@@ -93,6 +93,7 @@ function _sheetnode_phpexcel_batch_import_file($filepath, $filename, $params, &$
     $node->title = check_plain($sheet->getTitle());
     $node->name = user_load($user->uid)->name;
     $node->sheetsave = _sheetnode_phpexcel_import_do($workbook, $sheet);
+    $node->template = NULL;
     drupal_alter('sheetnode_import', $node, $workbook, $sheet, $params);
     $node = node_submit($node);
     node_save($node);
@@ -108,7 +109,7 @@ function _sheetnode_phpexcel_batch_import_file($filepath, $filename, $params, &$
       $node->book['bid'] = $bid;
       $node->book['plid'] = $mlid;
       $node->book['module'] = 'book';
-      book_nodeapi($node, 'update');
+      book_nodeapi($node, 'update', NULL, NULL);
     }
   }
 
@@ -149,7 +150,7 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
   foreach ($rit = $sheet->getRowIterator() as $row) {
     $r = $row->getRowIndex();
     $height = $sheet->getRowDimension($r)->getRowHeight();
-    if ($height != -1 && $height != $sc['attribs']['defaultrowheight']) {
+    if ($height != -1 && $height != @$sc['attribs']['defaultrowheight']) {
       $sc['rowattribs']['height'][$r] = $height;
     }
     if (!$sheet->getRowDimension($r)->getVisible()) {
@@ -163,7 +164,7 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
       $width = $sheet->getColumnDimension($ca)->getWidth();
       if ($width != -1) {
         $width = PHPExcel_Shared_Drawing::cellDimensionToPixels($width, $font);
-        if ($width != $sc['attribs']['defaultcolwidth']) {
+        if ($width != @$sc['attribs']['defaultcolwidth']) {
           $sc['colattribs']['width'][$c] = $width;
         }
       }
