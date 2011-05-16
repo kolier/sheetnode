@@ -188,11 +188,12 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
 
   // Names
   foreach ($workbook->getNamedRanges() as $range) {
-    // TODO: Handle external references and functions.
-    $sc['names'][$range->getName()] = array(
-      'desc' => '',
-      'definition' => $range->getRange(),
-    );
+    if ($sheet->getHashCode() == $range->getWorksheet()->getHashCode() || !$range->getLocalOnly()) {
+      $sc['names'][$range->getName()] = array(
+        'desc' => '',
+        'definition' => (is_null($range->getScope()) || $sheet->getHashCode() == $range->getScope()->getHashCode() ? '' : $range->getScope()->getTitle() . '!') . $range->getRange(),
+      );
+    }
   }
   
   // Reset caches.
@@ -269,7 +270,11 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
     }
     catch (Exception $e) {
       $c['datavalue'] = 0;
-      watchdog('sheetnode_phpexcel', 'Error importing formula "!formula" at cell !coord.', array('!formula' => $c['formula'], '!coord' => $cell->getCoordinate()), 'warning');
+      watchdog('sheetnode_phpexcel', '!title: Error importing formula "!formula" at cell !coord.', array(
+        '!title' => $sheet->getTitle(),
+        '!formula' => $c['formula'], 
+        '!coord' => $cell->getCoordinate()
+      ), 'warning');
     }
     $c['valuetype'] = is_numeric($c['datavalue']) ? 'n' : 't';
     break;
