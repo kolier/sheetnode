@@ -54,35 +54,47 @@ function _sheetnode_phpexcel_import_form_validate($form, &$form_state) {
 
 function _sheetnode_phpexcel_import_form_submit($form, &$form_state) {
   $file = file_save_upload('import');
-  sheetnode_phpexcel_batch_import(array($_FILES['files']['name']['import'] => $file->filepath));
+  sheetnode_phpexcel_batch_import(array($file->filepath), NULL, '_sheetnode_phpexcel_import_callback');
 }
 
-function _sheetnode_phpexcel_batch_import_file($filepath, $filename, $params, &$context) {
+function _sheetnode_phpexcel_import_callback($node, $workbook, $sheet, $params, &$context) {
+  if ($workbook->getSheetCount() > 1 && module_exists('book')) {
+    // Create book if none present.
+    if (empty($context['sandbox']['book'])) {
+      global $user;
+      $book = new StdClass;
+      $book->type = 'book';
+      $book->title = check_plain($workbook->getProperties()->getTitle());
+      if (empty($book->title)) {
+        $book->title = t('Untitled Workbook');
+      }
+      $book->name = $user->name;
+      $book->book['bid'] = 'new';
+      $book = node_submit($book);
+      node_save($book);
+      if ($book->nid) {
+        $context['results'][] = $book->nid;
+        $context['sandbox']['book'] = $book;
+      }
+    }
+
+    // Mark the book as parent to the sheetnode.
+    $book = $context['sandbox']['book'];
+    $node->book['bid'] = $book->nid;
+    $node->book['plid'] = $book->book['mlid'];
+    $node->book['module'] = 'book';
+  }
+}
+
+function _sheetnode_phpexcel_batch_import_file($filename, $callback, $params, &$context) {
   set_time_limit(0);
   global $user;
 
   if (empty($context['sandbox']['workbook'])) {
     // Load workbook and get number of worksheets.
-    $context['sandbox']['workbook'] = $workbook = PHPExcel_IOFactory::load($filepath);
+    $context['sandbox']['workbook'] = $workbook = PHPExcel_IOFactory::load($filename);
     $context['sandbox']['total'] = $workbook->getSheetCount();
     $context['sandbox']['current'] = 0;
-    if ($context['sandbox']['total'] > 1 && module_exists('book')) {
-      $book = new StdClass;
-      $book->type = 'book';
-      $book->title = $workbook->getProperties()->getTitle();
-      if (empty($book->title)) {
-        $book->title = $filename;
-      }
-      $book->name = user_load($user->uid)->name;
-      $book->book['bid'] = 'new';
-      drupal_alter('sheetnode_import', $book, $workbook, NULL, $params);
-      $book = node_submit($book);
-      node_save($book);
-      if (!empty($book->nid)) {
-        $context['results'][] = $book->nid;
-        $context['sandbox']['book'] = $book;
-      }
-    }
   }
   else {
     // Create sheetnode out of current sheet.
@@ -91,25 +103,21 @@ function _sheetnode_phpexcel_batch_import_file($filepath, $filename, $params, &$
     $node = new StdClass;
     $node->type = 'sheetnode';
     $node->title = check_plain($sheet->getTitle());
-    $node->name = user_load($user->uid)->name;
+    $node->name = $user->name;
     $node->sheetsave = _sheetnode_phpexcel_import_do($workbook, $sheet);
     $node->template = NULL;
+
+    // Let other modules alter the sheetnode or do other work.
+    if (!empty($callback) && function_exists($callback)) {
+      $callback($node, $workbook, $sheet, $params, $context);
+    }
     drupal_alter('sheetnode_import', $node, $workbook, $sheet, $params);
+
+    // Save the sheetnode.
     $node = node_submit($node);
     node_save($node);
     if (!empty($node->nid)) {
       $context['results'][] = $node->nid;
-    }
-
-    // Add to book if present.
-    if (!empty($context['sandbox']['book'])) {
-      $book = $context['sandbox']['book'];
-      $bid = $book->nid;
-      $mlid = $book->book['mlid'];
-      $node->book['bid'] = $bid;
-      $node->book['plid'] = $mlid;
-      $node->book['module'] = 'book';
-      book_nodeapi($node, 'update', NULL, NULL);
     }
   }
 

@@ -68,7 +68,7 @@ function sheetnode_phpexcel_get_plugins($dir = 'all') {
 /**
  * API function to batch import several files using Batch API.
  */
-function sheetnode_phpexcel_batch_import($files, $destination = NULL, $batch = array(), $params = array()) {
+function sheetnode_phpexcel_batch_import($files, $destination = NULL, $callback = NULL, $params = array(), $batch = array()) {
   $batch += array(
     'finished' => '_sheetnode_phpexcel_batch_import_finished',
     'title' => t('Importing spreadsheets'),
@@ -77,8 +77,8 @@ function sheetnode_phpexcel_batch_import($files, $destination = NULL, $batch = a
     'error_message' => t('Import process has encountered an error.'),
     'file' => drupal_get_path('module', 'sheetnode_phpexcel') . '/sheetnode_phpexcel.import.inc',
   );
-  foreach ($files as $filename => $filepath) {
-    $batch['operations'][] = array('_sheetnode_phpexcel_batch_import_file', array($filepath, $filename, $params));
+  foreach ($files as $filename) {
+    $batch['operations'][] = array('_sheetnode_phpexcel_batch_import_file', array($filename, $callback, $params));
   }
   batch_set($batch);
   batch_process($destination);
