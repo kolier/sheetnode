@@ -15,28 +15,44 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
 
   // Title
   try {
-    // TODO: Split titles with format "Spreadsheet > Workbook" and sanitize.
     $workbook->getActiveSheet()->SetTitle($title);
   }
   catch (Exception $e) {
     watchdog('sheetnode_phpexcel', 'Error setting worksheet title to "!title": @error', array('!title' => $title, '@error' => $e->getMessage()), WATCHDOG_WARNING);
   }
 
-/*
-  // TODO: Properties
-  $workbook->getProperties()->setCreator("Maarten Balliauw")
-                 ->setLastModifiedBy("Maarten Balliauw")
-                 ->setTitle("Office 2007 XLSX Test Document")
-                 ->setSubject("Office 2007 XLSX Test Document")
-                 ->setDescription("Test document for Office 2007 XLSX, generated using PHP classes.")
-                 ->setKeywords("office 2007 openxml php")
-                 ->setCategory("Test result file");
-*/
   // Names
-  // TODO: Not supported in Excel5.
-  if (!empty($sc['names'])) foreach ($sc['names'] as $n => $info) {
-    // TODO: Support external references.
-    $workbook->addNamedRange(new PHPExcel_NamedRange($n, $workbook->getActiveSheet(), $info['definition']));
+  if (!empty($sc['names'])) foreach ($sc['names'] as $name => $info) {
+    $definition = ltrim($info['definition'], '=');
+    @list($sheetref, $cellref) = explode('!', $definition, 2);
+    if (empty($cellref)) {
+      $cellref = $definition;
+      $sheetrefobj = $workbook->getActiveSheet();
+    }
+    else {
+      $sheetrefobj = $workbook->getSheetByName($sheetref);
+    }
+    // TODO: PHPExcel does not support non-range names.
+    try {
+      $range = PHPExcel_Cell::rangeBoundaries($cellref);
+    }
+    catch (Exception $e) {
+      watchdog('sheetnode_phpexcel', 'Could not export name %name with value %definition because non-range name are not yet supported.', array(
+        '%name' => $name,
+        '%definition' => $definition,
+      ));
+      continue;
+    }
+    if (!empty($sheetrefobj)) {
+      $workbook->addNamedRange(new PHPExcel_NamedRange($name, $sheetrefobj, $cellref));
+    }
+    else {
+      watchdog('sheetnode_phpexcel', 'Could not export name %name with value %definition because %sheetref was not found.', array(
+        '%name' => $name,
+        '%definition' => $definition,
+        '%sheetref' => $sheetref,
+      ));
+    }
   }
 
   // Cells
@@ -45,7 +61,6 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
     _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $workbook->getActiveSheet()); 
 
     // Comment
-    // TODO: Not supported in Excel5.
     if (!empty($c['comment'])) {
       $workbook->getActiveSheet()->getComment($coord)->getText()->createTextRun($c['comment']);
     }
@@ -177,7 +192,6 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
       }
     }
   }
-  //return '';
 
   // Redirect output to a client’s web browser.
   $plugins = sheetnode_phpexcel_get_plugins();
