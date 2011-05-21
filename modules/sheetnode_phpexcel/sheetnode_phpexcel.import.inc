@@ -64,12 +64,17 @@ function _sheetnode_phpexcel_import_callback($node, $workbook, $sheet, $params, 
       global $user;
       $book = new StdClass;
       $book->type = 'book';
+
+      node_object_prepare($book);
+
       $book->title = check_plain($workbook->getProperties()->getTitle());
       if (empty($book->title)) {
         $book->title = t('Untitled Workbook');
       }
       $book->name = $user->name;
       $book->book['bid'] = 'new';
+      $book->book['plid'] = $book->book['mlid'] = NULL;
+
       $book = node_submit($book);
       node_save($book);
       if ($book->nid) {
@@ -87,6 +92,7 @@ function _sheetnode_phpexcel_import_callback($node, $workbook, $sheet, $params, 
 }
 
 function _sheetnode_phpexcel_batch_import_file($filename, $callback, $params, &$context) {
+  module_load_include('inc', 'node', 'node.pages');
   set_time_limit(0);
   global $user;
 
@@ -102,6 +108,9 @@ function _sheetnode_phpexcel_batch_import_file($filename, $callback, $params, &$
     $sheet = $workbook->getSheet($context['sandbox']['current'] - 1);
     $node = new StdClass;
     $node->type = 'sheetnode';
+
+    node_object_prepare($node);
+
     $node->title = check_plain($sheet->getTitle());
     $node->name = $user->name;
     $node->sheetsave = _sheetnode_phpexcel_import_do($workbook, $sheet);
