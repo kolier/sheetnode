@@ -50,7 +50,7 @@ class sheetnode_plugin_style extends views_plugin_style {
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
       'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
       'permissions' => array(
-        'edit sheet settings' => user_access('edit sheet settings'),
+        'edit sheetnode settings' => user_access('edit sheetnode settings'),
       ),
       'context' => array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name),
     )));
@@ -391,7 +391,7 @@ EOS;
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
       'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
       'permissions' => array(
-        'edit sheet settings' => user_access('edit sheet settings'),
+        'edit sheetnode settings' => user_access('edit sheetnode settings'),
       ),
       'context' => $context,
     )), 'setting');

@@ -3,7 +3,7 @@
 function _sheetnode_phpexcel_export($format, $node) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   if (!$node || $node->type != 'sheetnode') return drupal_not_found();
-  return _sheetnode_phpexcel_export_do($format, $node->title, socialcalc_parse(_sheetnode_load($node->nid, $node->vid)));
+  return _sheetnode_phpexcel_export_do($format, $node->title, socialcalc_parse($node->sheetnode['value']));
 }
 
 function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
@@ -161,7 +161,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
 
     // Merged regions
     if (@$c['colspan'] > 1 || @$c['rowspan'] > 1) {
-      $coord2 = socialcalc_cr_to_coord($c['pos'][0]+max($c['colspan']-1, 0), $c['pos'][1]+max($c['rowspan']-1, 0));
+      $coord2 = socialcalc_cr_to_coord($c['pos'][0]+max(@$c['colspan']-1, 0), $c['pos'][1]+max(@$c['rowspan']-1, 0));
       $workbook->getActiveSheet()->mergeCells($coord .':'. $coord2);
     }
   }
@@ -197,7 +197,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
   $plugins = sheetnode_phpexcel_get_plugins();
   $plugin = $plugins[$format];
   header('Content-Type: ' . $plugin['content-type']);
-  header('Content-Disposition: attachment;filename="' . _sheetnode_sanitize_filename($title, $format) . '"');
+  header('Content-Disposition: attachment;filename="' . _sheetnode_phpexcel_sanitize_filename($title) . '.' . $format . '"');
   header('Cache-Control: max-age=0');
 
   $writer = PHPExcel_IOFactory::createWriter($workbook, $plugin['php-excel-type']);
@@ -506,5 +506,12 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $style
     $style->getFill()->getStartColor()->setRGB($rgb);
     break; 
   }
+}
+
+function _sheetnode_phpexcel_sanitize_filename($string) {
+  $string = htmlentities($string, ENT_QUOTES, 'UTF-8');
+  $string = preg_replace('/&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);/i', '$1', $string);
+  $string = preg_replace('/[^0-9a-z-_]/i', '-', $string);
+  return trim($string, '-');
 }
 

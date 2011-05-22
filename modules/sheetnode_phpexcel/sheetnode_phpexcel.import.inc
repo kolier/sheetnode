@@ -57,7 +57,8 @@ function _sheetnode_phpexcel_import_form_submit($form, &$form_state) {
   sheetnode_phpexcel_batch_import(array($file->filepath), NULL, '_sheetnode_phpexcel_import_callback');
 }
 
-function _sheetnode_phpexcel_import_callback($node, $workbook, $sheet, $params, &$context) {
+function _sheetnode_phpexcel_import_callback($node, $params, &$context) {
+  $workbook = $context['sandbox']['workbook'];
   if ($workbook->getSheetCount() > 1 && module_exists('book')) {
     // Create book if none present.
     if (empty($context['sandbox']['book'])) {
@@ -67,13 +68,16 @@ function _sheetnode_phpexcel_import_callback($node, $workbook, $sheet, $params, 
 
       node_object_prepare($book);
 
-      $book->title = check_plain($workbook->getProperties()->getTitle());
+      $book->title = $workbook->getProperties()->getTitle();
       if (empty($book->title)) {
         $book->title = t('Untitled Workbook');
       }
       $book->name = $user->name;
       $book->book['bid'] = 'new';
       $book->book['plid'] = $book->book['mlid'] = NULL;
+
+      // Let other modules alter the book or do other work.
+      drupal_alter('sheetnode_import', $book, $params, $context);
 
       $book = node_submit($book);
       node_save($book);
@@ -88,6 +92,7 @@ function _sheetnode_phpexcel_import_callback($node, $workbook, $sheet, $params, 
     $node->book['bid'] = $book->nid;
     $node->book['plid'] = $book->book['mlid'];
     $node->book['module'] = 'book';
+    $node->book['weight'] = $context['sandbox']['current'] - 1;
   }
 }
 
@@ -111,16 +116,16 @@ function _sheetnode_phpexcel_batch_import_file($filename, $callback, $params, &$
 
     node_object_prepare($node);
 
-    $node->title = check_plain($sheet->getTitle());
+    $node->title = $sheet->getTitle();
     $node->name = $user->name;
-    $node->sheetsave = _sheetnode_phpexcel_import_do($workbook, $sheet);
-    $node->template = NULL;
+    $node->sheetnode['value'] = _sheetnode_phpexcel_import_do($workbook, $sheet);
+    $node->sheetnode['template'] = NULL;
 
     // Let other modules alter the sheetnode or do other work.
     if (!empty($callback) && function_exists($callback)) {
-      $callback($node, $workbook, $sheet, $params, $context);
+      $callback($node, $params, $context);
     }
-    drupal_alter('sheetnode_import', $node, $workbook, $sheet, $params);
+    drupal_alter('sheetnode_import', $node, $params, $context);
 
     // Save the sheetnode.
     $node = node_submit($node);

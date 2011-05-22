@@ -117,7 +117,7 @@ Drupal.sheetnode.start = function(context) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
-    if (!Drupal.settings.sheetnode.permissions['edit sheet settings']) {
+    if (!Drupal.settings.sheetnode.permissions['edit sheetnode settings']) {
       this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.settings, 1);
     }
     this.spreadsheet.tabnums = {};
@@ -188,7 +188,7 @@ Drupal.sheetnode.start = function(context) {
   $('div#SocialCalc-settingsview', containerElement).css('border', 'none').css('width', 'auto').css('height', 'auto');
 
   // Lock cells requires special permission.
-  if (showToolbar && !Drupal.settings.sheetnode.permissions['edit sheet settings']) {
+  if (showToolbar && !Drupal.settings.sheetnode.permissions['edit sheetnode settings']) {
     $('span#SocialCalc-locktools', containerElement).css('display', 'none');
   }
 
