@@ -450,8 +450,8 @@ function sheetnode_content_extra_fields($type_name) {
 function sheetnode_field_info() {
   return array(
     'sheetfield' => array(
-      'label' => t('Sheet'),
-      'description' => t('Store a spreadsheet in the database.'),
+      'label' => t('Spreadsheet'),
+      'description' => t('Store a spreadsheet.'),
       // 'content_icon' => 'icon_content_sheet.png',
     ),
   );
@@ -462,28 +462,11 @@ function sheetnode_field_info() {
  */
 function sheetnode_field_settings($op, $field) {
   switch ($op) {
-  case 'form':
-    break;
-  case 'save':
-    break;
   case 'database columns':
     require_once(drupal_get_path('module', 'sheetnode') . '/sheetnode.install');
     $schema = sheetnode_schema();
     $columns['value'] = $schema['sheetnode']['fields']['value'];
     return $columns;
-  case 'views data':
-    break;
-  }
-}
-
-/**
- * Implementation of hook_field().
- */
-function sheetnode_field($op, &$node, $field, &$items, $teaser, $page) {
-  switch ($op) {
-  case 'insert':
-  case 'update':
-    break;
   }
 }
 
@@ -491,8 +474,9 @@ function sheetnode_field($op, &$node, $field, &$items, $teaser, $page) {
  * Implementation of hook_content_is_empty().
  */
 function sheetnode_content_is_empty($item, $field) {
-  // TODO
-  return FALSE;
+  require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+  $sc = socialcalc_parse($item['value']);
+  return empty($sc['sheet']['cells']);
 }
 
 /**
@@ -530,18 +514,6 @@ function sheetnode_widget_info() {
 }
 
 /**
- * Implementation of hook_widget_settings().
- */
-function sheetnode_widget_settings($op, $widget) {
-  switch ($op) {
-  case 'form':
-    break;
-  case 'save':
-    break;
-  }
-}
-
-/**
  * Implementation of hook_widget().
  */
 function sheetnode_widget(&$form, &$form_state, $field, $items, $delta = 0) {
@@ -569,13 +541,14 @@ function sheetnode_elements() {
 
 function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $field_key = $element['#columns'][0];
-  $delta = $element['#delta'];
-  $value = isset($element['#default_value']) ? (is_array($element['#default_value']) ? $element['#default_value']['value'] : $element['#default_value']) : (
-           isset($element['#value'][$field_key]) && is_string($element['#value'][$field_key]) ? $element['#value'][$field_key] : '');
-  $output = _sheetnode_inject($value, $element['#id'] . '-' . $field_key, isset($form['#node']) ? array('entity-name' => 'node', 'oid' => $form['#node']->nid) : NULL);
+  $value = !empty($element['#value'][$field_key]) ? $element['#value'][$field_key] : (
+           !empty($element['#value']) ? $element['#value'] : (
+           !empty($element['#default_value'][$field_key]) ? $element['#default_value'][$field_key] : (
+           !empty($element['#default_value']) ? $element['#default_value'] : '')));
+  $output = _sheetnode_inject($value, $element['#id'] . '-' . $field_key, isset($form['#node']) ? array('entity-name' => 'node', 'oid' => @$form['#node']->nid) : NULL);
+  $element['#tree'] = TRUE;
   $element['sheetview'] = array('#value' => $output, '#weight' => -1);
   $element[$field_key] = array('#type' => 'hidden');
-  $element['#tree'] = TRUE;
   return $element;
 }
 
@@ -585,7 +558,7 @@ function theme_sheetfield_spreadsheet($element) {
 
 function theme_sheetnode_formatter_default($element) {
   $value = $element['#item']['value'];
-  $output = _sheetnode_inject($value, FALSE, isset($element['#node']) ? array('entity-name' => 'node', 'oid' => $element['#node']->nid) : NULL);
+  $output = _sheetnode_inject($value, FALSE, isset($element['#node']) ? array('entity-name' => 'node', 'oid' => @$element['#node']->nid) : NULL);
   return $output;
 }
 
