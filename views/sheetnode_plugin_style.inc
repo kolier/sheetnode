@@ -44,7 +44,7 @@ class sheetnode_plugin_style extends views_plugin_style {
     );
     $settings = drupal_to_js(array('sheetnode' => array(
       'value' => $this->options['sheetsave'],
-      'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
+      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
       'containerElement' => 'sheetview',
       'saveElement' => 'edit-style-options-sheetsave',
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
@@ -385,7 +385,7 @@ EOS;
 
     drupal_add_js(array('sheetnode' => array(
       'value' => $value,
-      'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
+      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
       'containerElement' => 'sheetview',
       'saveElement' => FALSE,
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),

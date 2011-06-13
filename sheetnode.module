@@ -170,7 +170,7 @@ function _sheetnode_inject($value, $save_element, $context) {
     $once = TRUE;
     drupal_add_js(array('sheetnode' => array(
       'value' => $value, 
-      'imagePrefix' => url(drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-'),
+      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
       'containerElement' => 'sheetview',
       'saveElement' => $save_element,
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
