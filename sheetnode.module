@@ -244,6 +244,55 @@ function sheetnode_nodeapi($node, $op) {
 }
 
 /**
+ * Implementation of hook_token_list().
+ */
+function sheetnode_token_list($type = 'all') {
+  if ($type == 'all' || $type == 'node') {
+    return array(
+      'sheetnode' => array(
+        'sheetnode-????' => t('Enter a cell reference such as sheetnode-B52, sheetnode-C79, etc.'),
+      ),
+    );
+  }
+  if ($type == 'all' || $type == 'field') {
+    return array(
+      'sheetfield' => array(
+        '????' => t('Enter a cell reference such as sheetnode-B52, sheetnode-C79, etc.'),
+      ),
+    );
+  }
+}
+
+/**
+ * Implementation of hook_token_values().
+ */
+function sheetnode_token_values($type, $object = NULL) {
+  $tokens = array();
+  if ($type == 'node' && $object->type == 'sheetnode') {
+    require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+    $socialcalc = socialcalc_parse($object->sheetnode['value']);
+    $sc = $socialcalc['sheet'];
+    if (!empty($sc['cells'])) foreach ($sc['cells'] as $coord => $c) {
+      $tokens['sheetnode-' . $coord] = isset($c['datavalue']) ? $c['datavalue'] : '';
+    }
+  }
+  if ($type == 'node' && $object->type != 'sheetnode') {
+    foreach (content_fields(NULL, $object->type) as $field) {
+      if ($field['type_name'] == $object->type && $field['type'] == 'sheetfield') {
+        require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+        $item = $object->{$field['field_name']}[0]; // To act like other CCK fields
+        $socialcalc = socialcalc_parse($item['value']);
+        $sc = $socialcalc['sheet'];
+        if (!empty($sc['cells'])) foreach ($sc['cells'] as $coord => $c) {
+          $tokens[$field['field_name'] . '-' . $coord] = isset($c['datavalue']) ? $c['datavalue'] : '';
+        }
+      }
+    }
+  }
+  return $tokens;
+}
+
+/**
  * Implementation of hook_menu().
  */
 function sheetnode_menu() {
