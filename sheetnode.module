@@ -148,6 +148,11 @@ function sheetnode_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && isset($form['type']['#value']) && $form['type']['#value'] == 'sheetnode') {
     unset($form['buttons']['preview']);
   }
+
+  // Hack CCK field settings to force fieldset to open to avoid b0rked sheet.
+  if ($form_id == 'content_field_edit_form' && $form['#field']['type_name'] == 'sheetfield') {
+    $form['widget']['default_value_fieldset']['#collapsed'] = FALSE;
+  }
 }
 
 function _sheetnode_inject($value, $save_element, $context) {
