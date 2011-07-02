@@ -390,7 +390,7 @@ function sheetnode_import_template_submit($form, &$form_state) {
   global $user;
   module_load_include('inc', 'node', 'node.pages');
 
-  $template = db_fetch_object(db_query("SELECT * FROM {sheetnode_template} WHERE tid=%d", $form_state['values']['template']));
+  $template = _sheetnode_template_load($form_state['values']['template']);
   $node = new StdClass;
   $node->type = 'sheetnode';
 
@@ -398,7 +398,7 @@ function sheetnode_import_template_submit($form, &$form_state) {
 
   $node->title = $template->name;
   $node->name = $user->name;
-  $node->sheetnode['value'] = unserialize($template->value);
+  $node->sheetnode['value'] = $template->value;
   $node->sheetnode['template'] = NULL;
 
   // Let other modules alter the sheetnode or do other work.
@@ -771,6 +771,14 @@ function _sheetnode_template_save($vid, $name, $value) {
     $record->tid = $tid;
   }
   drupal_write_record('sheetnode_template', $record, $tid ? 'tid' : array());
+}
+
+function _sheetnode_template_load($tid) {
+  $template = db_fetch_object(db_query("SELECT * FROM {sheetnode_template} WHERE tid=%d", $tid));
+  if ($template) {
+    $template->value = unserialize($template->value);
+  }
+  return $template;
 }
 
 function _sheetnode_load_entity($entity, $oid) {
