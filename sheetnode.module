@@ -149,9 +149,39 @@ function sheetnode_form_alter(&$form, $form_state, $form_id) {
     unset($form['buttons']['preview']);
   }
 
-  // Hack CCK field settings to force fieldset to open to avoid b0rked sheet.
+  // Sheetfield CCK settings:
+  // * Force fieldset to open to avoid b0rked sheet layout.
+  // * Insert extra template element for default values.
   if ($form_id == 'content_field_edit_form' && $form['#field']['type_name'] == 'sheetfield') {
     $form['widget']['default_value_fieldset']['#collapsed'] = FALSE;
+
+    $options[0] = t('- Select a template -');
+    $result = db_query("SELECT tid, name FROM {sheetnode_template}");
+    while ($template = db_fetch_object($result)) {
+      $options[$template->tid] = $template->name;
+    }
+    $form['widget']['default_value_fieldset']['sheetfield_template'] = array(
+      '#type' => 'select',
+      '#title' => t('Template'),
+      '#description' => t('Please select the template to load into your new sheetfield. This setting will override the sheet above but will be overridden by the PHP code below.'),
+      '#options' => $options, 
+      '#default_value' => variable_get('sheetfield_template_' . $form['#field']['field_name'], 0),
+      '#weight' => 1,
+    );
+    $form['widget']['default_value_fieldset']['default_value_widget']['#weight'] = 0;
+    $form['widget']['default_value_fieldset']['advanced_options']['#weight'] = 2;
+    array_unshift($form['#submit'], '_sheetnode_content_field_edit_form_submit');
+  }
+}
+
+function _sheetnode_content_field_edit_form_submit($form, &$form_state) {
+  if (!empty($form_state['values']['sheetfield_template'])) {
+    $template = _sheetnode_template_load($form_state['values']['sheetfield_template']);
+    if (!empty($template)) {
+      $form_state['values']['default_value_widget'][ $form_state['values']['field_name'] ][0]['value'] = $template->value;
+      $form_state['values']['default_value'][0]['value'] = $template->value;
+      variable_set('sheetfield_template_' . $form_state['values']['field_name'], $form_state['values']['sheetfield_template']);
+    }
   }
 }
 
