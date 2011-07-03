@@ -5,7 +5,7 @@ Drupal.sheetnodeCK = Drupal.sheetnodeCK || {};
 
 Drupal.behaviors.sheetnodeCK = function(context) {
   CKEDITOR.config.resize_enabled = false;
-  $('div#'+Drupal.settings.sheetnode.containerElement, context).bind('sheetnodeCreated', function(e, data) {
+  $('div.sheetview', context).bind('sheetnodeCreated', function(e, data) {
     var spreadsheet = data.spreadsheet;
     if (typeof spreadsheet.formulabuttons == 'undefined') return;
     spreadsheet.formulabuttons['ckeditor'] = {

@@ -16,7 +16,8 @@ Drupal.sheetnode = function(settings, container, context) {
   this.settings = settings;
   this.$container = $(container);
   this.context = context;
-  this.start();
+  var self = this;
+  window.setTimeout(function(){ self.start(); }, 1);
 }
 
 Drupal.sheetnode.sheetviews = [];
@@ -116,7 +117,7 @@ Drupal.sheetnode.viewModes = {
 }
 
 Drupal.sheetnode.prototype.start = function() {
-  var that = this;
+  var self = this;
   var showEditor = this.settings.saveElement || this.settings.viewMode == Drupal.sheetnode.viewModes.fiddleMode;
   var showToolbar = this.settings.saveElement || (this.settings.showToolbar && this.settings.viewMode == Drupal.sheetnode.viewModes.fiddleMode);
   
@@ -167,7 +168,7 @@ Drupal.sheetnode.prototype.start = function() {
   // Special handling for Views AJAX.
   try {
     $('input[type=submit]', Drupal.settings.views.ajax.id).click(function() {
-      that.save();
+      self.save();
     });
   }
   catch (e) {
@@ -182,12 +183,12 @@ Drupal.sheetnode.prototype.start = function() {
   // DOM initialization.
   if (this.settings.saveElement) {
     this.$form = this.$container.parents('form').submit(function() {
-      that.save();
+      self.save();
       return true;
     });
   }
   $(window).resize(function() {
-    that.resize();
+    self.resize();
   });
   $('div#SocialCalc-edittools', this.$container).parent('div').attr('id', 'SocialCalc-toolbar');
   $('td#SocialCalc-edittab', this.$container).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
@@ -206,7 +207,7 @@ Drupal.sheetnode.prototype.start = function() {
   }
 
   // Prepare for fullscreen handling when clicking the SocialCalc icon.
-  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', this.$container).attr('title', Drupal.t('Fullscreen')).click(function() { that.fullscreen() });
+  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', this.$container).attr('title', Drupal.t('Fullscreen')).click(function() { self.fullscreen() });
   
   // Signal that we've processed this instance of sheetnode.
   this.$container.addClass('sheetview-processed');
@@ -259,10 +260,10 @@ Drupal.sheetnode.prototype.resize = function() {
 }
 
 Drupal.sheetnode.prototype.save = function() {
-  var that = this;
+  var self = this;
   $('#'+this.settings.saveElement, this.$form).val(this.spreadsheet.CreateSpreadsheetSave());
   $('#edit-log', this.$form).each(function() {
-    var audit = that.spreadsheet.sheet.CreateAuditString();
+    var audit = self.spreadsheet.sheet.CreateAuditString();
     var log = $(this).val();
     if (!log.length) {
       $(this).val(audit);
