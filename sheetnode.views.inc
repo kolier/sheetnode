@@ -4,6 +4,7 @@
  * Implementation of hook_views_plugins().
  */
 function sheetnode_views_plugins() {
+  $path = drupal_get_path('module', 'sheetnode');
   return array(
     'style' => array(
       'sheet' => array(
@@ -15,17 +16,17 @@ function sheetnode_views_plugins() {
         'uses options' => TRUE,
         'type' => 'normal',
         'theme' => 'views_view_sheet',
-        'path' => drupal_get_path('module', 'sheetnode') . '/views',
+        'path' => $path . '/views',
         'js' => array(
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js',
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js',
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js',
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/formatnumber2.js',
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/formula1.js',
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcpopup.js',
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcspreadsheetcontrol.js',
-          drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcviewer.js',
-          drupal_get_path('module', 'sheetnode') . '/sheetnode.js',
+          $path . '/socialcalc/socialcalcconstants.js',
+          $path . '/socialcalc/socialcalc-3.js',
+          $path . '/socialcalc/socialcalctableeditor.js',
+          $path . '/socialcalc/formatnumber2.js',
+          $path . '/socialcalc/formula1.js',
+          $path . '/socialcalc/socialcalcpopup.js',
+          $path . '/socialcalc/socialcalcspreadsheetcontrol.js',
+          $path . '/socialcalc/socialcalcviewer.js',
+          $path . '/sheetnode.js',
         ),
       ),
       'sheet_raw' => array(
@@ -37,7 +38,7 @@ function sheetnode_views_plugins() {
         'uses fields' => TRUE,
         'uses options' => TRUE,
         'type' => 'feed',
-        'path' => drupal_get_path('module', 'sheetnode') . '/views',
+        'path' => $path . '/views',
       ),
     ),
   );

@@ -42,25 +42,26 @@ class sheetnode_plugin_style extends views_plugin_style {
       '#default_value' => $this->options['template'],
       '#weight' => 98,
     );
-    $settings = drupal_to_js(array('sheetnode' => array(
+    $sheet_id = 'sheetview-' . str_replace('_', '-', $this->view->name);
+    $settings = drupal_to_js(array('sheetnode' => array($sheet_id => array(
       'value' => $this->options['sheetsave'],
       'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
-      'containerElement' => 'sheetview',
+      'containerElement' => $sheet_id,
       'saveElement' => 'edit-style-options-sheetsave',
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
       'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
       'permissions' => array(
         'edit sheetnode settings' => user_access('edit sheetnode settings'),
       ),
-      'context' => array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name),
-    )));
+      'context' => array('entity-name' => 'view', 'oid' => $this->view->name),
+    ))));
     $form['sheetview']['#weight'] = 99;
     $form['sheetview']['#value'] = <<<EOS
-<div class="sheetview" id="sheetview">
+<div class="sheetview" id="$sheet_id">
 <script language="javascript" type="text/javascript">
-  Drupal.behaviors.sheetnode = function(context) {
+  Drupal.behaviors.sheetview = function(context) {
     jQuery.extend(Drupal.settings, $settings);
-    Drupal.sheetnode.start(context);
+    Drupal.behaviors.sheetnode(context);
   }
 </script>
 </div>
@@ -380,13 +381,14 @@ EOS;
     drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
 
     $value = socialcalc_save($this->render_sheet());
-    $context = array('entity-name' => 'view', 'oid' => isset($this->view->vid) ? $this->view->vid : $this->view->name);
+    $context = array('entity-name' => 'view', 'oid' => $this->view->name);
     module_invoke_all('sheetnode_plugins', $value, FALSE, $context);
 
-    drupal_add_js(array('sheetnode' => array(
+    $sheet_id = 'sheetview-' . str_replace('_', '-', $this->view->name);
+    drupal_add_js(array('sheetnode' => array($sheet_id => array(
       'value' => $value,
       'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
-      'containerElement' => 'sheetview',
+      'containerElement' => $sheet_id,
       'saveElement' => FALSE,
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
       'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
@@ -394,9 +396,8 @@ EOS;
         'edit sheetnode settings' => user_access('edit sheetnode settings'),
       ),
       'context' => $context,
-    )), 'setting');
-    drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
-    return '<div class="sheetview" id="sheetview"></div>';
+    ))), 'setting');
+    return '<div class="sheetview" id="' . $sheet_id . '"></div>';
   }
 
   function get_real_field_name($field_name) {

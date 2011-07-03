@@ -1,7 +1,25 @@
 (function ($) {
 // START jQuery
 
-Drupal.sheetnode = Drupal.sheetnode || {};
+Drupal.behaviors.sheetnode = function(context) {
+  // Abort early if sheetnode settings not in place (which happens in case of Views style settings).
+  if (typeof(Drupal.settings.sheetnode) == 'undefined') return;
+
+  $(".sheetview", context).not(".sheetview-processed").each(function() {
+    if (typeof(Drupal.settings.sheetnode[$(this).attr('id')]) != 'undefined') {
+      Drupal.sheetnode.sheetviews.push(new Drupal.sheetnode(Drupal.settings.sheetnode[$(this).attr('id')], this, context));
+    }
+  });
+}
+
+Drupal.sheetnode = function(settings, container, context) {
+  this.settings = settings;
+  this.$container = $(container);
+  this.context = context;
+  this.start();
+}
+
+Drupal.sheetnode.sheetviews = [];
 
 Drupal.sheetnode.functionsSetup = function() {
   // ORG.DRUPAL.FIELD server-side function.
@@ -85,8 +103,8 @@ Drupal.sheetnode.loadsheetSetup = function() {
   }
 }
 
-Drupal.sheetnode.focusSetup = function() {
-  $('.form-text,.form-textarea,.form-select').not('.socialcalc-input').focus(function(e) {
+Drupal.sheetnode.prototype.focusSetup = function() {
+  $('.form-text,.form-textarea,.form-select', this.context).not('.socialcalc-input').focus(function(e) {
     SocialCalc.CmdGotFocus(this);
   });
 }
@@ -97,19 +115,14 @@ Drupal.sheetnode.viewModes = {
   htmlTable: 2
 }
 
-Drupal.sheetnode.start = function(context) {
-  // Just exit if the sheetnode is not in the new context or if it has already been processed.
-  if ($('div#'+Drupal.settings.sheetnode.containerElement, context).length == 0) return;
-  if ($('div.sheetview-processed', context).length != 0) return;
-
-  // Settings initialization.
-  var containerElement = $('div#'+Drupal.settings.sheetnode.containerElement, context);
-  var showEditor = Drupal.settings.sheetnode.saveElement || Drupal.settings.sheetnode.viewMode == Drupal.sheetnode.viewModes.fiddleMode;
-  var showToolbar = Drupal.settings.sheetnode.saveElement || (Drupal.settings.sheetnode.showToolbar && Drupal.settings.sheetnode.viewMode == Drupal.sheetnode.viewModes.fiddleMode);
+Drupal.sheetnode.prototype.start = function() {
+  var that = this;
+  var showEditor = this.settings.saveElement || this.settings.viewMode == Drupal.sheetnode.viewModes.fiddleMode;
+  var showToolbar = this.settings.saveElement || (this.settings.showToolbar && this.settings.viewMode == Drupal.sheetnode.viewModes.fiddleMode);
   
   // SocialCalc initialization.
   SocialCalc.Popup.Controls = {};
-  SocialCalc.ConstantsSetImagePrefix(Drupal.settings.sheetnode.imagePrefix);
+  SocialCalc.ConstantsSetImagePrefix(this.settings.imagePrefix);
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
   SocialCalc.Constants.defaultReadonlyClass = "readonly";
   this.spreadsheet = showEditor ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
@@ -117,7 +130,7 @@ Drupal.sheetnode.start = function(context) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.audit, 1);
-    if (!Drupal.settings.sheetnode.permissions['edit sheetnode settings']) {
+    if (!this.settings.permissions['edit sheetnode settings']) {
       this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.settings, 1);
     }
     this.spreadsheet.tabnums = {};
@@ -131,30 +144,30 @@ Drupal.sheetnode.start = function(context) {
   }
 
   // Trigger event to alert plugins that we've created the spreadsheet.
-  containerElement.trigger('sheetnodeCreated', {spreadsheet: this.spreadsheet});
+  this.$container.trigger('sheetnodeCreated', {spreadsheet: this.spreadsheet});
 
   // Read in data and recompute.
-  var parts = this.spreadsheet.DecodeSpreadsheetSave(Drupal.settings.sheetnode.value);
+  var parts = this.spreadsheet.DecodeSpreadsheetSave(this.settings.value);
   if (parts && parts.sheet) {
-    this.spreadsheet.ParseSheetSave(Drupal.settings.sheetnode.value.substring(parts.sheet.start, parts.sheet.end));
+    this.spreadsheet.ParseSheetSave(this.settings.value.substring(parts.sheet.start, parts.sheet.end));
   }
   if (showEditor) {
-    this.spreadsheet.InitializeSpreadsheetControl(Drupal.settings.sheetnode.containerElement, 700, containerElement.width());
+    this.spreadsheet.InitializeSpreadsheetControl(this.settings.containerElement, 700, this.$container.width());
   }
   else {
-    this.spreadsheet.InitializeSpreadsheetViewer(Drupal.settings.sheetnode.containerElement, 700, containerElement.width());
+    this.spreadsheet.InitializeSpreadsheetViewer(this.settings.containerElement, 700, this.$container.width());
   }
   if (parts && parts.edit) {
-    this.spreadsheet.editor.LoadEditorSettings(Drupal.settings.sheetnode.value.substring(parts.edit.start, parts.edit.end));
+    this.spreadsheet.editor.LoadEditorSettings(this.settings.value.substring(parts.edit.start, parts.edit.end));
   }
-  if (!Drupal.settings.sheetnode.saveElement && Drupal.settings.sheetnode.viewMode == Drupal.sheetnode.viewModes.htmlTable) {
-    containerElement.html(SocialCalc.SpreadsheetViewerCreateSheetHTML(this.spreadsheet));
+  if (!this.settings.saveElement && this.settings.viewMode == Drupal.sheetnode.viewModes.htmlTable) {
+    this.$container.html(SocialCalc.SpreadsheetViewerCreateSheetHTML(this.spreadsheet));
   }
 
   // Special handling for Views AJAX.
   try {
     $('input[type=submit]', Drupal.settings.views.ajax.id).click(function() {
-      Drupal.sheetnode.save();
+      that.save();
     });
   }
   catch (e) {
@@ -162,100 +175,102 @@ Drupal.sheetnode.start = function(context) {
   }
 
   // Call our setup functions.
-  Drupal.sheetnode.focusSetup();
+  this.focusSetup();
   Drupal.sheetnode.functionsSetup();
   Drupal.sheetnode.loadsheetSetup();
 
   // DOM initialization.
-  if (Drupal.settings.sheetnode.saveElement) {
-    $('#'+Drupal.settings.sheetnode.saveElement, context).parents('form').submit(function() {
-      Drupal.sheetnode.save();
+  if (this.settings.saveElement) {
+    this.$form = this.$container.parents('form').submit(function() {
+      that.save();
       return true;
     });
   }
   $(window).resize(function() {
-    Drupal.sheetnode.resize();
+    that.resize();
   });
-  $('div#SocialCalc-edittools', containerElement).parent('div').attr('id', 'SocialCalc-toolbar');
-  $('td#SocialCalc-edittab', containerElement).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
-  $('input:text', containerElement).addClass('form-text socialcalc-input');
-  $('input:radio', containerElement).addClass('form-radio socialcalc-input');
-  $('input:checkbox', containerElement).addClass('form-checkbox socialcalc-input');
-  $('textarea', containerElement).addClass('form-textarea socialcalc-input');
-  $('select', containerElement).addClass('form-select socialcalc-input');
-  $('input:button', containerElement).addClass('form-submit socialcalc-input');
-  $('div#SocialCalc-sorttools td:first', containerElement).css('width', 'auto');
-  $('div#SocialCalc-settingsview', containerElement).css('border', 'none').css('width', 'auto').css('height', 'auto');
+  $('div#SocialCalc-edittools', this.$container).parent('div').attr('id', 'SocialCalc-toolbar');
+  $('td#SocialCalc-edittab', this.$container).parents('div:eq(0)').attr('id', 'SocialCalc-tabbar');
+  $('input:text', this.$container).addClass('form-text socialcalc-input');
+  $('input:radio', this.$container).addClass('form-radio socialcalc-input');
+  $('input:checkbox', this.$container).addClass('form-checkbox socialcalc-input');
+  $('textarea', this.$container).addClass('form-textarea socialcalc-input');
+  $('select', this.$container).addClass('form-select socialcalc-input');
+  $('input:button', this.$container).addClass('form-submit socialcalc-input');
+  $('div#SocialCalc-sorttools td:first', this.$container).css('width', 'auto');
+  $('div#SocialCalc-settingsview', this.$container).css('border', 'none').css('width', 'auto').css('height', 'auto');
 
   // Lock cells requires special permission.
-  if (showToolbar && !Drupal.settings.sheetnode.permissions['edit sheetnode settings']) {
-    $('span#SocialCalc-locktools', containerElement).css('display', 'none');
+  if (showToolbar && !this.settings.permissions['edit sheetnode settings']) {
+    $('span#SocialCalc-locktools', this.$container).css('display', 'none');
   }
 
   // Prepare for fullscreen handling when clicking the SocialCalc icon.
-  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', containerElement).attr('title', Drupal.t('Fullscreen')).click(function() {
-    if (containerElement.hasClass('sheetview-fullscreen')) { // Going back to normal:
-      // Restore saved values.
-      containerElement.removeClass('sheetview-fullscreen');
-      if (Drupal.sheetnode.beforeFullscreen.index >= Drupal.sheetnode.beforeFullscreen.parentElement.children().length) {
-        Drupal.sheetnode.beforeFullscreen.parentElement.append(containerElement);
-      } else {
-        containerElement.insertBefore(Drupal.sheetnode.beforeFullscreen.parentElement.children().get(Drupal.sheetnode.beforeFullscreen.index));
-      }
-      Drupal.sheetnode.spreadsheet.requestedHeight = Drupal.sheetnode.beforeFullscreen.requestedHeight;
-      Drupal.sheetnode.resize();
-      $('body').css('overflow', 'auto');
-      window.scroll(Drupal.sheetnode.beforeFullscreen.x, Drupal.sheetnode.beforeFullscreen.y);
-    }
-    else { // Going fullscreen:
-      // Save current values.
-      Drupal.sheetnode.beforeFullscreen = {
-        parentElement: containerElement.parent(),
-        index: containerElement.parent().children().index(containerElement),
-        x: $(window).scrollLeft(), y: $(window).scrollTop(),
-        requestedHeight: Drupal.sheetnode.spreadsheet.requestedHeight
-      };
-
-      // Set values needed to go fullscreen.
-      $('body').append(containerElement).css('overflow', 'hidden');
-      containerElement.addClass('sheetview-fullscreen');
-      Drupal.sheetnode.resize();
-      window.scroll(0,0);
-    }
-  });
+  $('td#'+SocialCalc.Constants.defaultTableEditorIDPrefix+'logo img', this.$container).attr('title', Drupal.t('Fullscreen')).click(function() { that.fullscreen() });
   
   // Signal that we've processed this instance of sheetnode.
-  containerElement.addClass('sheetview-processed');
+  this.$container.addClass('sheetview-processed');
 
   // Trigger event to alert plugins that we've built the spreadsheet.
-  containerElement.trigger('sheetnodeReady', {spreadsheet: this.spreadsheet});
+  this.$container.trigger('sheetnodeReady', {spreadsheet: this.spreadsheet});
 
   // Force a recalc to refresh all values and scrollbars.
-  this.spreadsheet.editor.EditorScheduleSheetCommands("recalc");
+  this.spreadsheet.editor.EditorScheduleSheetCommands('recalc');
 }
 
-Drupal.sheetnode.resize = function() {
-  // Adjust width and height if needed.
-  containerElement = $('div#'+Drupal.settings.sheetnode.containerElement);
-  if (containerElement.hasClass('sheetview-fullscreen')) {
-    this.spreadsheet.requestedHeight = containerElement.height();
+Drupal.sheetnode.prototype.fullscreen = function() {
+  if (this.$container.hasClass('sheetview-fullscreen')) { // Going back to normal:
+    // Restore saved values.
+    this.$container.removeClass('sheetview-fullscreen');
+    if (this.beforeFullscreen.index >= this.beforeFullscreen.parentElement.children().length) {
+      this.beforeFullscreen.parentElement.append(this.$container);
+    } else {
+      this.$container.insertBefore(this.beforeFullscreen.parentElement.children().get(this.beforeFullscreen.index));
+    }
+    this.spreadsheet.requestedHeight = this.beforeFullscreen.requestedHeight;
+    this.resize();
+    $('body').css('overflow', 'auto');
+    window.scroll(this.beforeFullscreen.x, this.beforeFullscreen.y);
   }
-  this.spreadsheet.requestedWidth = containerElement.width();
+  else { // Going fullscreen:
+    // Save current values.
+    this.beforeFullscreen = {
+      parentElement: this.$container.parent(),
+      index: this.$container.parent().children().index(this.$container),
+      x: $(window).scrollLeft(), y: $(window).scrollTop(),
+      requestedHeight: this.spreadsheet.requestedHeight
+    };
+
+    // Set values needed to go fullscreen.
+    $('body').append(this.$container).css('overflow', 'hidden');
+    this.$container.addClass('sheetview-fullscreen');
+    this.resize();
+    window.scroll(0,0);
+  }
+}
+
+Drupal.sheetnode.prototype.resize = function() {
+  // Adjust width and height if needed.
+  if (this.$container.hasClass('sheetview-fullscreen')) {
+    this.spreadsheet.requestedHeight = this.$container.height();
+  }
+  this.spreadsheet.requestedWidth = this.$container.width();
   this.spreadsheet.DoOnResize();
 }
 
-Drupal.sheetnode.save = function() {
-  $('#'+Drupal.settings.sheetnode.saveElement).val(this.spreadsheet.CreateSpreadsheetSave());
-  log = $('#edit-log').val();
-  if (log != undefined) {
-    audit = this.spreadsheet.sheet.CreateAuditString();
+Drupal.sheetnode.prototype.save = function() {
+  var that = this;
+  $('#'+this.settings.saveElement, this.$form).val(this.spreadsheet.CreateSpreadsheetSave());
+  $('#edit-log', this.$form).each(function() {
+    var audit = that.spreadsheet.sheet.CreateAuditString();
+    var log = $(this).val();
     if (!log.length) {
-      $('#edit-log').val(audit);
+      $(this).val(audit);
     }
     else {
-      $('#edit-log').val(log + '\n' + audit);
+      $(this).val(log + '\n' + audit);
     }
-  }
+  });
 }
 
 // END jQuery

@@ -72,7 +72,12 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
   
   // SocialCalc sheet.
   if (!$teaser) {
-    $output = _sheetnode_inject($node->sheetnode['value'], FALSE, array('entity-name' => 'node', 'oid' => $node->nid));
+    $output = _sheetnode_inject(
+      'sheetnode-' . $node->nid, 
+      $node->sheetnode['value'], 
+      FALSE, 
+      array('entity-name' => 'node', 'oid' => $node->nid)
+    );
     $node->content['sheetnode'] = array('#value' => $output, '#weight' => -1);
   }
 
@@ -109,7 +114,12 @@ function sheetnode_form(&$node) {
     $value = '';
     $nid = NULL;
   }
-  $output = _sheetnode_inject($value, 'edit-sheetnode-value', array('entity-name' => 'node', 'oid' => $nid));
+  $output = _sheetnode_inject(
+    'sheetnode-' . (empty($node->nid) ? 'new' : $node->nid), 
+    $value, 
+    'edit-sheetnode-value', 
+    array('entity-name' => 'node', 'oid' => $nid)
+  );
   $form['sheetnode'] = array(
     '#tree' => TRUE,
     '#value' => $output, 
@@ -136,7 +146,12 @@ function sheetnode_form(&$node) {
 function sheetnode_validate($node, &$form) {
   $errors = form_get_errors();
   if (!empty($errors)) {
-    _sheetnode_inject($form['sheetnode']['value']['#value'], 'edit-sheetnode-value', array('entity-name' => 'node', 'oid' => $form['nid']['#value'])); 
+    _sheetnode_inject(
+      'sheetnode-' . (empty($form['nid']['#value']) ? 'new' : $form['nid']['#value']), 
+      $form['sheetnode']['value']['#value'], 
+      'edit-sheetnode-value', 
+      array('entity-name' => 'node', 'oid' => $form['nid']['#value'])
+    ); 
   }
 }
 
@@ -144,11 +159,6 @@ function sheetnode_validate($node, &$form) {
  * Implementation of hook_form_alter().
  */
 function sheetnode_form_alter(&$form, $form_state, $form_id) {
-  // We don't support previewing because only one spreadsheet can be shown on the page.
-  if (isset($form['type']) && isset($form['type']['#value']) && $form['type']['#value'] == 'sheetnode') {
-    unset($form['buttons']['preview']);
-  }
-
   // Sheetfield CCK settings:
   // * Force fieldset to open to avoid b0rked sheet layout.
   // * Insert extra template element for default values.
@@ -185,7 +195,7 @@ function _sheetnode_content_field_edit_form_submit($form, &$form_state) {
   }
 }
 
-function _sheetnode_inject($value, $save_element, $context) {
+function _sheetnode_inject($sheet_id, $value, $save_element, $context) {
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
   drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js');
@@ -200,13 +210,12 @@ function _sheetnode_inject($value, $save_element, $context) {
 
   module_invoke_all('sheetnode_plugins', $value, $save_element, $context);
 
-  static $once = FALSE;
-  if (!$once) {
-    $once = TRUE;
-    drupal_add_js(array('sheetnode' => array(
+  static $sheets = NULL;
+  if (!isset($sheets[$sheet_id])) {
+    drupal_add_js(array('sheetnode' => array($sheet_id => array(
       'value' => $value, 
       'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
-      'containerElement' => 'sheetview',
+      'containerElement' => $sheet_id,
       'saveElement' => $save_element,
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
       'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
@@ -214,10 +223,10 @@ function _sheetnode_inject($value, $save_element, $context) {
         'edit sheetnode settings' => user_access('edit sheetnode settings'),
       ),
       'context' => $context,
-    )), 'setting');
-    drupal_add_js('Drupal.behaviors.sheetnode = function(context) { Drupal.sheetnode.start(context); }', 'inline');
+    ))), 'setting');
+    $sheets[$sheet_id] = TRUE;
   }
-  return '<div class="sheetview" id="sheetview"></div>';
+  return '<div class="sheetview" id="' . $sheet_id . '"></div>';
 }
 
 /**
@@ -629,7 +638,12 @@ function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
            !empty($element['#value']) ? $element['#value'] : (
            !empty($element['#default_value'][$field_key]) ? $element['#default_value'][$field_key] : (
            !empty($element['#default_value']) ? $element['#default_value'] : '')));
-  $output = _sheetnode_inject($value, $element['#id'] . '-' . $field_key, isset($form['#node']) ? array('entity-name' => 'node', 'oid' => @$form['#node']->nid) : NULL);
+  $output = _sheetnode_inject(
+    'sheetfield-' . $element['#id'], 
+    $value, 
+    $element['#id'] . '-' . $field_key, 
+    isset($form['#node']) ? array('entity-name' => 'node', 'oid' => @$form['#node']->nid) : NULL
+  );
   $element['#tree'] = TRUE;
   $element['sheetview'] = array('#value' => $output, '#weight' => -1);
   $element[$field_key] = array('#type' => 'hidden');
@@ -642,7 +656,12 @@ function theme_sheetfield_spreadsheet($element) {
 
 function theme_sheetnode_formatter_default($element) {
   $value = $element['#item']['value'];
-  $output = _sheetnode_inject($value, FALSE, isset($element['#node']) ? array('entity-name' => 'node', 'oid' => @$element['#node']->nid) : NULL);
+  $output = _sheetnode_inject(
+    'sheetfield-' . str_replace('_', '-', $element['#field_name']) . '-' . $element['#item']['#delta'], 
+    $value, 
+    FALSE, 
+    isset($element['#node']) ? array('entity-name' => 'node', 'oid' => @$element['#node']->nid) : NULL
+  );
   return $output;
 }
 
