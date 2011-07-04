@@ -196,17 +196,19 @@ function _sheetnode_content_field_edit_form_submit($form, &$form_state) {
 }
 
 function _sheetnode_inject($sheet_id, $value, $save_element, $context) {
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formatnumber2.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formula1.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcpopup.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcspreadsheetcontrol.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcviewer.js');
-  drupal_add_js(drupal_get_path('module', 'sheetnode') . '/sheetnode.js');
-  drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
-  drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
+  $path = drupal_get_path('module', 'sheetnode');
+  drupal_add_js($path . '/socialcalc/socialcalcconstants.js');
+  drupal_add_js($path . '/socialcalc/socialcalc-3.js');
+  drupal_add_js($path . '/socialcalc/socialcalctableeditor.js');
+  drupal_add_js($path . '/socialcalc/formatnumber2.js');
+  drupal_add_js($path . '/socialcalc/formula1.js');
+  drupal_add_js($path . '/socialcalc/socialcalcpopup.js');
+  drupal_add_js($path . '/socialcalc/socialcalcspreadsheetcontrol.js');
+  drupal_add_js($path . '/socialcalc/socialcalcviewer.js');
+  drupal_add_js($path . '/socialcalc/workerqueue.js');
+  drupal_add_js($path . '/sheetnode.js');
+  drupal_add_css($path . '/socialcalc/socialcalc.css');
+  drupal_add_css($path . '/sheetnode.css');
 
   module_invoke_all('sheetnode_plugins', $value, $save_element, $context);
 
@@ -214,7 +216,7 @@ function _sheetnode_inject($sheet_id, $value, $save_element, $context) {
   if (!isset($sheets[$sheet_id])) {
     drupal_add_js(array('sheetnode' => array($sheet_id => array(
       'value' => $value, 
-      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
+      'imagePrefix' => base_path() . $path . '/socialcalc/images/sc-',
       'containerElement' => $sheet_id,
       'saveElement' => $save_element,
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),

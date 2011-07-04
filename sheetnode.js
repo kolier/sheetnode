@@ -126,7 +126,7 @@ Drupal.sheetnode.prototype.start = function() {
   SocialCalc.ConstantsSetImagePrefix(this.settings.imagePrefix);
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
   SocialCalc.Constants.defaultReadonlyClass = "readonly";
-  this.spreadsheet = showEditor ? new SocialCalc.SpreadsheetControl() : new SocialCalc.SpreadsheetViewer();
+  this.spreadsheet = showEditor ? new SocialCalc.SpreadsheetControl(this.settings.containerElement+"-") : new SocialCalc.SpreadsheetViewer(this.settings.containerElement+"-");
   if (showToolbar) {
     // Remove unwanted tabs.
     this.spreadsheet.tabs.splice(this.spreadsheet.tabnums.clipboard, 1);
