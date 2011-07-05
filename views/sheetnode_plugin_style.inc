@@ -42,30 +42,10 @@ class sheetnode_plugin_style extends views_plugin_style {
       '#default_value' => $this->options['template'],
       '#weight' => 98,
     );
-    $sheet_id = 'sheetview-' . str_replace('_', '-', $this->view->name);
-    $settings = drupal_to_js(array('sheetnode' => array($sheet_id => array(
-      'value' => $this->options['sheetsave'],
-      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
-      'containerElement' => $sheet_id,
-      'saveElement' => 'edit-style-options-sheetsave',
-      'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
-      'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
-      'permissions' => array(
-        'edit sheetnode settings' => user_access('edit sheetnode settings'),
-      ),
-      'context' => array('entity-name' => 'view', 'oid' => $this->view->name),
-    ))));
-    $form['sheetview']['#weight'] = 99;
-    $form['sheetview']['#value'] = <<<EOS
-<div class="sheetview" id="$sheet_id">
-<script language="javascript" type="text/javascript">
-  Drupal.behaviors.sheetview = function(context) {
-    jQuery.extend(Drupal.settings, $settings);
-    Drupal.behaviors.sheetnode(context);
-  }
-</script>
-</div>
-EOS;
+    $form['sheetview'] = array(
+      '#value' => $this->render_ajax($this->options['sheetsave'], 'edit-style-options-sheetsave'),
+      '#weight' => 99,
+    );
     $form['sheetsave'] = array('#type' => 'hidden');
   }
 
@@ -362,23 +342,52 @@ EOS;
     return $socialcalc;
   }
 
+  function render_ajax($value, $save_element) {
+    $sheet_id = 'sheetview-' . str_replace('_', '-', $this->view->name);
+    if (!empty($this->view->live_preview)) {
+      $sheet_id .= '-preview';
+    }
+    $settings = drupal_to_js(array('sheetnode' => array($sheet_id => array(
+      'value' => $value,
+      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
+      'containerElement' => $sheet_id,
+      'saveElement' => $save_element,
+      'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
+      'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
+      'permissions' => array(
+        'edit sheetnode settings' => user_access('edit sheetnode settings'),
+      ),
+      'context' => array('entity-name' => 'view', 'oid' => $this->view->name),
+    ))));
+    return <<<EOS
+<div class="sheetview" id="$sheet_id">
+<script language="javascript" type="text/javascript">
+  Drupal.behaviors.sheetview = function(context) {
+    jQuery.extend(Drupal.settings, $settings);
+    Drupal.behaviors.sheetnode(context);
+  }
+</script>
+</div>
+EOS;
+  }
+
   function render() {
     if (!empty($this->view->live_preview)) {
-      drupal_set_message(t('Spreadsheet preview is not supported.'), 'warning');
-      return;
+      return $this->render_ajax(socialcalc_save($this->render_sheet()), NULL);
     }
 
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcconstants.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc-3.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalctableeditor.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formatnumber2.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/formula1.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcpopup.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcspreadsheetcontrol.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalcviewer.js');
-    drupal_add_js(drupal_get_path('module', 'sheetnode') . '/sheetnode.js');
-    drupal_add_css(drupal_get_path('module', 'sheetnode') . '/socialcalc/socialcalc.css');
-    drupal_add_css(drupal_get_path('module', 'sheetnode') . '/sheetnode.css');
+    $path = drupal_get_path('module', 'sheetnode');
+    drupal_add_js($path . '/socialcalc/socialcalcconstants.js');
+    drupal_add_js($path . '/socialcalc/socialcalc-3.js');
+    drupal_add_js($path . '/socialcalc/socialcalctableeditor.js');
+    drupal_add_js($path . '/socialcalc/formatnumber2.js');
+    drupal_add_js($path . '/socialcalc/formula1.js');
+    drupal_add_js($path . '/socialcalc/socialcalcpopup.js');
+    drupal_add_js($path . '/socialcalc/socialcalcspreadsheetcontrol.js');
+    drupal_add_js($path . '/socialcalc/socialcalcviewer.js');
+    drupal_add_js($path . '/sheetnode.js');
+    drupal_add_css($path . '/socialcalc/socialcalc.css');
+    drupal_add_css($path . '/sheetnode.css');
 
     $value = socialcalc_save($this->render_sheet());
     $context = array('entity-name' => 'view', 'oid' => $this->view->name);
@@ -387,7 +396,7 @@ EOS;
     $sheet_id = 'sheetview-' . str_replace('_', '-', $this->view->name);
     drupal_add_js(array('sheetnode' => array($sheet_id => array(
       'value' => $value,
-      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
+      'imagePrefix' => base_path() . $path . '/socialcalc/images/sc-',
       'containerElement' => $sheet_id,
       'saveElement' => FALSE,
       'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),

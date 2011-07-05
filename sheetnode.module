@@ -636,10 +636,14 @@ function sheetnode_elements() {
 
 function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $field_key = $element['#columns'][0];
+  // TODO: Figure out this mess of values.
   $value = !empty($element['#value'][$field_key]) ? $element['#value'][$field_key] : (
            !empty($element['#value']) ? $element['#value'] : (
            !empty($element['#default_value'][$field_key]) ? $element['#default_value'][$field_key] : (
            !empty($element['#default_value']) ? $element['#default_value'] : '')));
+  if (is_array($value)) {
+    $value = '';
+  }
   $output = _sheetnode_inject(
     'sheetfield-' . $element['#id'], 
     $value, 

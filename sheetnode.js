@@ -122,7 +122,6 @@ Drupal.sheetnode.prototype.start = function() {
   var showToolbar = this.settings.saveElement || (this.settings.showToolbar && this.settings.viewMode == Drupal.sheetnode.viewModes.fiddleMode);
   
   // SocialCalc initialization.
-  SocialCalc.Popup.Controls = {};
   SocialCalc.ConstantsSetImagePrefix(this.settings.imagePrefix);
   SocialCalc.Constants.defaultCommentClass = "cellcomment";
   SocialCalc.Constants.defaultReadonlyClass = "readonly";
