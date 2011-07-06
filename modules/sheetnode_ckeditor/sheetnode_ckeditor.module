@@ -17,9 +17,13 @@ function sheetnode_ckeditor_sheetnode_plugins() {
   );
   drupal_alter('sheetnode_ckeditor_toolbar', $toolbar);
 
-  drupal_add_js(array('sheetnodeCK' => array(
-    'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode_ckeditor') . '/images',
-    'toolbar' => $toolbar,
-  )), 'setting');
+  static $once = FALSE;
+  if (!$once) {
+    $once = TRUE;
+    drupal_add_js(array('sheetnodeCK' => array(
+      'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode_ckeditor') . '/images',
+      'toolbar' => $toolbar,
+    )), 'setting');
+  }
 }
 
