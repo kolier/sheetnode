@@ -119,17 +119,47 @@ function sheetnode_views_data() {
  * Implementation of hook_views_data_alter().
  */
 function sheetnode_views_data_alter(&$data) {
+  $cck_info = _content_type_info();
   foreach ($data as $table_name => $table_info) {
     foreach ($table_info as $field_name => $field_info) {
+      // Add a SocialCalc date converter for each date field.
       if (!empty($field_info['field']['handler']) && $field_info['field']['handler'] == 'views_handler_field_date') {
-        $sc = $field_info;
-        $sc['real field'] = $field_name;
-        $sc['title'] = $field_info['title'] . ' (SocialCalc)';
-        $sc['field']['handler'] = 'sheetnode_handler_field_date';
-        foreach (array('filter', 'argument', 'relationship', 'sort') as $key) {
-          unset($sc[$key]);
+        $date = $field_info;
+        $date['real field'] = $field_name;
+        $date['title'] = $field_info['title'] . ' (SocialCalc)';
+        $date['field']['handler'] = 'sheetnode_handler_field_date';
+        unset($date['filter'], $date['argument'], $date['relationship'], $date['sort']);
+        $data[$table_name][$field_name . '_socialcalc'] = $date;
+      }
+
+      // Add a cell and range field for each CCK sheet field.
+      if (!empty($field_info['field']['content_field_name']) && $cck_info['fields'][ $field_info['field']['content_field_name'] ]['type_name'] == 'sheetfield') {
+        $field = $cck_info['fields'][ $field_info['field']['content_field_name'] ];
+        $label_truncated = truncate_utf8(t($field['widget']['label']), 10, TRUE);
+        $title = t('@label (!name)', array('@label' => t($field['widget']['label']), '!name' => $field['field_name']));
+        $title_short = check_plain($label_truncated);
+        $types = array();
+        foreach ($cck_info['content types'] as $type) {
+          if (isset($type['fields'][$field['field_name']])) {
+            $types[] = $type['name'];
+          }
         }
-        $data[$table_name][$field_name . '_socialcalc'] = $sc;
+
+        $cell = $field_info;
+        $cell['real field'] = $field_name;
+        $cell['title'] = $title . ' - ' . t('cell');
+        $cell['title short'] = $title_short . ' - ' . t('cell');
+        $cell['help'] = t('Cell reference - Appears in: @types', array('@types' => implode(', ', $types)));
+        $cell['field']['handler'] = 'sheetnode_handler_field_cell';
+        unset($cell['filter'], $cell['argument'], $cell['relationship'], $cell['sort'], $cell['field']['title'], $cell['field']['title short']);
+        $data[$table_name][$field_name . '_cell'] = $cell;
+
+        $range = $cell;
+        $range['title'] = $title . ' - ' . t('range');
+        $range['title short'] = $title_short . ' - ' . t('range');
+        $range['help'] = t('Range reference - Appears in: @types', array('@types' => implode(', ', $types)));
+        $range['field']['handler'] = 'sheetnode_handler_field_range';
+        $data[$table_name][$field_name . '_range'] = $range;
       }
     }
   }
