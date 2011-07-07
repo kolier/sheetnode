@@ -264,6 +264,7 @@ function sheetnode_update($node) {
  */
 function sheetnode_nodeapi($node, $op) {
   if ($op == 'update index') {
+    // Update index for sheetnodes and sheetfields.
     if ($node->type == 'sheetnode') {
       return _sheetnode_update_index($node->sheetnode['value']);
     }
@@ -279,6 +280,12 @@ function sheetnode_nodeapi($node, $op) {
       }
       return $output;
     }
+  }
+  else if ($op == 'presave' && $node->type == 'sheetnode' && isset($node->devel_generate)) {
+    // Generate random spreadsheets for sheetnodes.
+    $node->sheetnode = array(
+      'template' => NULL,
+    ) + sheetnode_content_generate($node, NULL);
   }
 }
 
@@ -594,6 +601,39 @@ function sheetnode_content_is_empty($item, $field) {
 }
 
 /**
+* Implementation of hook_content_generate().
+*/
+function sheetnode_content_generate($node, $field) {
+  require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+
+  $sc = array(
+    'edit' => array(),
+    'audit' => array(),
+    'sheet' => array(),
+  );
+  for ($row = 1; $row < mt_rand(10, 50); $row++) {
+    $sc['sheet']['cells'][] = array(
+      'pos' => array(1, $row),
+      'datavalue' => devel_generate_word(mt_rand(6, 12)),
+      'datatype' => 't',
+      'valuetype' => 't',
+    );
+    $sc['sheet']['cells'][] = array(
+      'pos' => array(2, $row),
+      'datavalue' => _sheetnode_lcg_randf(-100, 100), 
+      'datatype' => 'v',
+      'valuetype' => 'n',
+    );
+  }
+  $sc['edit']['ecell']['coord'] = 'A1';
+  return array('value' => socialcalc_save($sc));
+}
+
+function _sheetnode_lcg_randf($min, $max) {
+  return $min + lcg_value() * abs($max - $min);
+}
+
+/**
  * Implementation of hook_field_formatter_info().
  */
 function sheetnode_field_formatter_info() {
@@ -647,13 +687,13 @@ function sheetnode_elements() {
       '#input' => TRUE,
       '#columns' => array('value'), 
       '#delta' => 0,
-      '#process' => array('sheetfield_spreadsheet_process'),
+      '#process' => array('_sheetfield_spreadsheet_process'),
       '#autocomplete_path' => FALSE,
     ),
   );
 }
 
-function sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
+function _sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $field_key = $element['#columns'][0];
   // TODO: Figure out this mess of values.
   $value = !empty($element['#value'][$field_key]) ? $element['#value'][$field_key] : (

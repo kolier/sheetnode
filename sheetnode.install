@@ -1,18 +1,62 @@
 <?php
 
+/**
+ * Implementation of hook_install().
+ */
 function sheetnode_install() {
   drupal_install_schema('sheetnode');
+  if (module_exists('content')) {
+    drupal_load('module', 'content');
+    content_notify('install', 'sheetnode');
+  }
 }
 
+/**
+ * Implementation of hook_uninstall().
+ */
 function sheetnode_uninstall() {
   drupal_uninstall_schema('sheetnode');
   db_query("DELETE FROM {variable} WHERE name LIKE 'sheetnode_%'");
+  if (module_exists('content')) {
+    drupal_load('module', 'content');
+    content_notify('uninstall', 'sheetnode');
+  }
 }
 
+/**
+ * Implementation of hook_enable().
+ *
+ * Notify content module when this module is enabled.
+ */
+function sheetnode_enable() {
+  if (module_exists('content')) {
+    drupal_load('module', 'content');
+    content_notify('enable', 'sheetnode');
+  }
+}
+
+/**
+ * Implementation of hook_disable().
+ *
+ * Notify content module when this module is disabled.
+ */
+function sheetnode_disable() {
+  if (module_exists('content')) {
+    drupal_load('module', 'content');
+    content_notify('disable', 'sheetnode');
+  }
+}
+
+/**
+ * Implementation of hook_schema().
+ */
 function sheetnode_schema() {
   return sheetnode_schema_6005();
 }
 
+/**
+ * Schema function.
+ */
 function sheetnode_schema_6001() {
   $schema['sheetnode'] = array(
     'fields' => array(
@@ -62,6 +106,9 @@ function sheetnode_schema_6001() {
   return $schema;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
 function sheetnode_update_6001(&$sandbox) {
   $ret = array();
   $schema = sheetnode_schema_6001();
@@ -70,6 +117,9 @@ function sheetnode_update_6001(&$sandbox) {
   return $ret;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
 function sheetnode_update_6002(&$sandbox) {
   drupal_load('module', 'sheetnode');
   require_once(drupal_get_path('module', 'sheetnode') .'/socialcalc.inc');
@@ -107,6 +157,9 @@ function sheetnode_update_6002(&$sandbox) {
   return $ret;
 }
 
+/**
+ * Schema function.
+ */
 function sheetnode_schema_6003() {
   $schema['sheetnode'] = array(
     'fields' => array(
@@ -165,6 +218,9 @@ function sheetnode_schema_6003() {
   return $schema;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
 function sheetnode_update_6003(&$sandbox) {
   $ret = array();
   $schema = sheetnode_schema_6003();
@@ -179,6 +235,9 @@ function sheetnode_update_6003(&$sandbox) {
   return $ret;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
 function sheetnode_update_6004(&$sandbox) {
   $ret = array();
   db_drop_unique_key($ret, 'sheetnode', 'nid');
@@ -187,6 +246,9 @@ function sheetnode_update_6004(&$sandbox) {
   return $ret;
 }
 
+/**
+ * Schema function.
+ */
 function sheetnode_schema_6005() {
   $schema['sheetnode'] = array(
     'fields' => array(
@@ -251,6 +313,9 @@ function sheetnode_schema_6005() {
   return $schema;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
 function sheetnode_update_6005(&$sandbox) {
   $ret = array();
   $schema = sheetnode_schema_6005();
@@ -258,12 +323,16 @@ function sheetnode_update_6005(&$sandbox) {
   return $ret;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
 function sheetnode_update_6006(&$sandbox) {
   return array();
 }
 
 /**
- * New file structure: inform user.
+ * Implementation of hook_update_N().
+ * Inform user of new file structure.
  */
 function sheetnode_update_6007(&$sandbox) {
   $files = array(
