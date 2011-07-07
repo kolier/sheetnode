@@ -263,30 +263,49 @@ function sheetnode_update($node) {
  * Implementation of hook_nodeapi().
  */
 function sheetnode_nodeapi($node, $op) {
-  if ($node->type != 'sheetnode') return;
-  switch ($op) {
-  case 'update index':
-    require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
-    $output = '<table>';
-    $socialcalc = socialcalc_parse($node->sheetnode['value']);
-    $sc = $socialcalc['sheet'];
-    $row = -1;
-    if (!empty($sc['cells'])) foreach ($sc['cells'] as $c) {
-      if ($c['pos'][1] > $row) { // new row?
-        if ($row != -1) {
-          $output .= '</tr>';
+  if ($op == 'update index') {
+    if ($node->type == 'sheetnode') {
+      return _sheetnode_update_index($node->sheetnode['value']);
+    }
+    else {
+      $cck_info = _content_type_info();
+      $output = '';
+      foreach ($cck_info['content types'][$node->type]['fields'] as $field_name => $field) {
+        if ($field['type'] == 'sheetfield') {
+          foreach ($node->$field_name as $item) {
+            $output .= _sheetnode_update_index($item['value']);
+          }
         }
-        $row = $c['pos'][1];
-        $output .= '<tr>';
       }
-      $output .= '<td>'. (isset($c['datavalue']) ? $c['datavalue'] : '&nbsp;') . (isset($c['comment']) ? ' ('. check_plain($c['comment']) .')' : '')  .'</td>';
+      return $output;
     }
-    if ($row != -1) {
-      $output .= '</tr>';
-    }
-    $output .= '</table>';
-    return $output;
   }
+}
+
+/**
+ * Helper function to return an indexable version of the spreadsheet.
+ */
+function _sheetnode_update_index($value) {
+  require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
+  $output = '<table>';
+  $socialcalc = socialcalc_parse($value);
+  $sc = $socialcalc['sheet'];
+  $row = -1;
+  if (!empty($sc['cells'])) foreach ($sc['cells'] as $c) {
+    if ($c['pos'][1] > $row) { // new row? - this assumes cells are ordered by col/row
+      if ($row != -1) {
+        $output .= '</tr>';
+      }
+      $row = $c['pos'][1];
+      $output .= '<tr>';
+    }
+    $output .= '<td>'. (isset($c['datavalue']) ? $c['datavalue'] : '&nbsp;') . (isset($c['comment']) ? ' ('. check_plain($c['comment']) .')' : '')  .'</td>';
+  }
+  if ($row != -1) {
+    $output .= '</tr>';
+  }
+  $output .= '</table>';
+  return $output;
 }
 
 /**
