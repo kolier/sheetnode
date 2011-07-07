@@ -35,7 +35,7 @@ class sheetnode_handler_field_range extends views_handler_field {
     for ($r=$start[1]; $r<=$end[1]; $r++) {
       for ($c=$start[0]; $c<=$end[0]; $c++) {
         $coord = socialcalc_cr_to_coord($c, $r);
-        $range[$coord] = isset($sc['cells'][$coord]) ? $sc['cells'][$coord]['datavalue'] : NULL;
+        $range[$coord] = !empty($sc['cells'][$coord]['datavalue']) ? $sc['cells'][$coord]['datavalue'] : NULL;
       }
     }
     return theme('sheetnode_range', $range);
