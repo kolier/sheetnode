@@ -188,11 +188,10 @@ function _sheetnode_content_field_edit_form_submit($form, &$form_state) {
   if (!empty($form_state['values']['sheetfield_template'])) {
     $template = _sheetnode_template_load($form_state['values']['sheetfield_template']);
     if (!empty($template)) {
-      $form_state['values']['default_value_widget'][ $form_state['values']['field_name'] ][0]['value'] = $template->value;
       $form_state['values']['default_value'][0]['value'] = $template->value;
-      variable_set('sheetfield_template_' . $form_state['values']['field_name'], $form_state['values']['sheetfield_template']);
     }
   }
+  variable_set('sheetfield_template_' . $form_state['values']['field_name'], $form_state['values']['sheetfield_template']);
 }
 
 function _sheetnode_inject($sheet_id, $value, $save_element, $context) {
