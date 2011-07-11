@@ -34,7 +34,6 @@ Drupal.sheetnode.prototype.functionsSetup = function() {
     oid = scf.OperandValueAndType(sheet, foperand);
     entity = scf.OperandValueAndType(sheet, foperand);
     if (isNaN(parseInt(oid.value))) {
-      console.log(sheet);
       oid.value = self.settings.context['oid'];
       entity.value = self.settings.context['entity-name'];
     }
@@ -109,6 +108,22 @@ Drupal.sheetnode.prototype.focusSetup = function() {
   });
 }
 
+Drupal.sheetnode.prototype.callbackSetup = function() {
+  var self = this;
+  if (this.settings.saveElement) {
+    this.spreadsheet.editor.StatusCallback.sheetnode = {
+      func: function(editor, status, arg, params) {
+        if (status == 'doneposcalc') {
+          window.setTimeout(function() {
+            $('#'+self.settings.saveElement, self.$form).val(self.spreadsheet.CreateSpreadsheetSave());
+          }, 0);
+        }
+      },
+      params: {}
+    };
+  }
+}
+
 Drupal.sheetnode.viewModes = {
   readOnly: 0,
   fiddleMode: 1,
@@ -146,9 +161,11 @@ Drupal.sheetnode.prototype.start = function() {
   this.$container.trigger('sheetnodeCreated', {spreadsheet: this.spreadsheet});
 
   // Read in data and recompute.
-  var parts = this.spreadsheet.DecodeSpreadsheetSave(this.settings.value);
-  if (parts && parts.sheet) {
-    this.spreadsheet.ParseSheetSave(this.settings.value.substring(parts.sheet.start, parts.sheet.end));
+  if (typeof(this.settings.value) == 'string') {
+    var parts = this.spreadsheet.DecodeSpreadsheetSave(this.settings.value);
+    if (parts && parts.sheet) {
+      this.spreadsheet.ParseSheetSave(this.settings.value.substring(parts.sheet.start, parts.sheet.end));
+    }
   }
   if (showEditor) {
     this.spreadsheet.InitializeSpreadsheetControl(this.settings.containerElement, 700, this.$container.width());
@@ -163,20 +180,11 @@ Drupal.sheetnode.prototype.start = function() {
     this.$container.html(SocialCalc.SpreadsheetViewerCreateSheetHTML(this.spreadsheet));
   }
 
-  // Special handling for Views AJAX.
-  try {
-    $('input[type=submit]', Drupal.settings.views.ajax.id).click(function() {
-      self.save();
-    });
-  }
-  catch (e) {
-    // Do nothing.
-  }
-
   // Call our setup functions.
   this.focusSetup();
   this.functionsSetup();
   this.loadsheetSetup();
+  this.callbackSetup();
 
   // DOM initialization.
   if (this.settings.saveElement) {
@@ -184,6 +192,15 @@ Drupal.sheetnode.prototype.start = function() {
       self.save();
       return true;
     });
+    // Special handling for Views AJAX.
+    try {
+      $('input[type=submit]', Drupal.settings.views.ajax.id).click(function() {
+        self.save();
+      });
+    }
+    catch (e) {
+      // Do nothing.
+    }
   }
   $(window).resize(function() {
     self.resize();

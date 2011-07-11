@@ -194,7 +194,7 @@ function _sheetnode_content_field_edit_form_submit($form, &$form_state) {
   variable_set('sheetfield_template_' . $form_state['values']['field_name'], $form_state['values']['sheetfield_template']);
 }
 
-function _sheetnode_inject($sheet_id, $value, $save_element, $context) {
+function _sheetnode_inject($sheet_id, $value, $save_element, $context, $ahah = FALSE) {
   $path = drupal_get_path('module', 'sheetnode');
   drupal_add_js($path . '/socialcalc/socialcalcconstants.js');
   drupal_add_js($path . '/socialcalc/socialcalc-3.js');
@@ -204,16 +204,15 @@ function _sheetnode_inject($sheet_id, $value, $save_element, $context) {
   drupal_add_js($path . '/socialcalc/socialcalcpopup.js');
   drupal_add_js($path . '/socialcalc/socialcalcspreadsheetcontrol.js');
   drupal_add_js($path . '/socialcalc/socialcalcviewer.js');
-  drupal_add_js($path . '/socialcalc/workerqueue.js');
   drupal_add_js($path . '/sheetnode.js');
   drupal_add_css($path . '/socialcalc/socialcalc.css');
   drupal_add_css($path . '/sheetnode.css');
 
-  module_invoke_all('sheetnode_plugins', $value, $save_element, $context);
+  module_invoke_all('sheetnode_plugins', $value, $save_element, $context, $ahah);
 
-  static $sheets = NULL;
-  if (!isset($sheets[$sheet_id])) {
-    drupal_add_js(array('sheetnode' => array($sheet_id => array(
+  if ($ahah) {
+    static $settings = NULL;
+    $settings['sheetnode'][$sheet_id] = array(
       'value' => $value, 
       'imagePrefix' => base_path() . $path . '/socialcalc/images/sc-',
       'containerElement' => $sheet_id,
@@ -224,10 +223,37 @@ function _sheetnode_inject($sheet_id, $value, $save_element, $context) {
         'edit sheetnode settings' => user_access('edit sheetnode settings'),
       ),
       'context' => $context,
-    ))), 'setting');
-    $sheets[$sheet_id] = TRUE;
+    );
+    $js_settings = drupal_to_js($settings);
+    return <<<EOS
+<script language="javascript" type="text/javascript">
+  Drupal.behaviors.sheetnodeAHAH = function(context) {
+    jQuery.extend(Drupal.settings, $js_settings);
+    Drupal.behaviors.sheetnode(context);
   }
-  return '<div class="sheetview" id="' . $sheet_id . '"></div>';
+</script>
+<div class="sheetview" id="$sheet_id"></div>
+EOS;
+  }
+  else {
+    static $sheets = NULL;
+    if (!isset($sheets[$sheet_id])) {
+      drupal_add_js(array('sheetnode' => array($sheet_id => array(
+        'value' => $value, 
+        'imagePrefix' => base_path() . $path . '/socialcalc/images/sc-',
+        'containerElement' => $sheet_id,
+        'saveElement' => $save_element,
+        'viewMode' => variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE),
+        'showToolbar' => variable_get('sheetnode_view_toolbar', FALSE),
+        'permissions' => array(
+          'edit sheetnode settings' => user_access('edit sheetnode settings'),
+        ),
+        'context' => $context,
+      ))), 'setting');
+      $sheets[$sheet_id] = TRUE;
+    }
+    return '<div class="sheetview" id="' . $sheet_id . '"></div>';
+  }
 }
 
 /**
@@ -353,9 +379,11 @@ function sheetnode_token_values($type, $object = NULL) {
         require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
         $item = $object->{$field['field_name']}[0]; // To act like other CCK fields
         $socialcalc = socialcalc_parse($item['value']);
-        $sc = $socialcalc['sheet'];
-        if (!empty($sc['cells'])) foreach ($sc['cells'] as $coord => $c) {
-          $tokens[$field['field_name'] . '-' . $coord] = isset($c['datavalue']) ? $c['datavalue'] : '';
+        if (!empty($socialcalc['sheet'])) {
+          $sc = $socialcalc['sheet'];
+          if (!empty($sc['cells'])) foreach ($sc['cells'] as $coord => $c) {
+            $tokens[$field['field_name'] . '-' . $coord] = isset($c['datavalue']) ? $c['datavalue'] : '';
+          }
         }
       }
     }
@@ -586,6 +614,7 @@ function sheetnode_field_settings($op, $field) {
     require_once(drupal_get_path('module', 'sheetnode') . '/sheetnode.install');
     $schema = sheetnode_schema();
     $columns['value'] = $schema['sheetnode']['fields']['value'];
+    $columns['value']['not null'] = FALSE;
     return $columns;
   }
 }
@@ -694,19 +723,16 @@ function sheetnode_elements() {
 
 function _sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
   $field_key = $element['#columns'][0];
-  // TODO: Figure out this mess of values.
-  $value = !empty($element['#value'][$field_key]) ? $element['#value'][$field_key] : (
-           !empty($element['#value']) ? $element['#value'] : (
-           !empty($element['#default_value'][$field_key]) ? $element['#default_value'][$field_key] : (
-           !empty($element['#default_value']) ? $element['#default_value'] : '')));
-  if (is_array($value)) {
-    $value = '';
-  }
+  $value = !empty($element['#value'][$field_key]) && is_string($element['#value'][$field_key]) ? $element['#value'][$field_key] : (
+           !empty($element['#value']) && is_string($element['#value']) ? $element['#value'] : (
+           !empty($element['#default_value'][$field_key]) && is_string($element['#default_value'][$field_key]) ? $element['#default_value'][$field_key] : (
+           !empty($element['#default_value']) && is_string($element['#default_value']) ? $element['#default_value'] : '')));
   $output = _sheetnode_inject(
     'sheetfield-' . $element['#id'], 
     $value, 
     $element['#id'] . '-' . $field_key, 
-    isset($form['#node']) ? array('entity-name' => 'node', 'oid' => @$form['#node']->nid) : NULL
+    isset($form['#node']) ? array('entity-name' => 'node', 'oid' => @$form['#node']->nid) : NULL,
+    !empty($form['#post']) && empty($form['#post']['op']) && !empty($form['#post'][ $element['#field_name'] . '_add_more' ])
   );
   $element['#tree'] = TRUE;
   $element['sheetview'] = array('#value' => $output, '#weight' => -1);
