@@ -133,7 +133,7 @@ function sheetnode_views_data_alter(&$data) {
       }
 
       // Add a cell and range field for each CCK sheet field.
-      if (!empty($field_info['field']['content_field_name']) && $cck_info['fields'][ $field_info['field']['content_field_name'] ]['type_name'] == 'sheetfield') {
+      if (!empty($field_info['field']['content_field_name']) && $cck_info['fields'][ $field_info['field']['content_field_name'] ]['type'] == 'sheetfield') {
         $field = $cck_info['fields'][ $field_info['field']['content_field_name'] ];
         $label_truncated = truncate_utf8(t($field['widget']['label']), 10, TRUE);
         $title = t('@label (!name)', array('@label' => t($field['widget']['label']), '!name' => $field['field_name']));
