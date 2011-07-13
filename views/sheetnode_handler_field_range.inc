@@ -4,6 +4,7 @@ class sheetnode_handler_field_range extends views_handler_field {
   function option_definition() {
     $options = parent::option_definition();
     $options['reference'] = array('default' => '');
+    $options['labels'] = array('default' => 3);
     return $options;
   }
 
@@ -14,6 +15,18 @@ class sheetnode_handler_field_range extends views_handler_field {
       '#title' => t('Range reference'),
       '#default_value' => $this->options['reference'],
       '#description' => t('Use the format A1:C4 for a cell range, A for whole column, 1 for whole row.'),
+    );
+    $form['labels'] = array(
+      '#type' => 'radios',
+      '#title' => t('Labels'),
+      '#options' => array(
+        0 => t('None'),
+        SHEETNODE_RANGE_LABELS_ROW => t('Rows only'),
+        SHEETNODE_RANGE_LABELS_COL => t('Columns only'),
+        SHEETNODE_RANGE_LABELS_ROW_COL => t('Rows and columns'),
+      ),
+      '#default_value' => $this->options['labels'],
+      '#description' => t('Select whether row or column labels should appear.'),
     );
   }
 
@@ -38,7 +51,7 @@ class sheetnode_handler_field_range extends views_handler_field {
         $range[$coord] = !empty($sc['cells'][$coord]['datavalue']) ? $sc['cells'][$coord]['datavalue'] : NULL;
       }
     }
-    return theme('sheetnode_range', $range);
+    return theme('sheetnode_range', $range, $this->options['labels']);
   }
 }
 

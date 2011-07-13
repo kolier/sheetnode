@@ -527,7 +527,7 @@ function sheetnode_views_api() {
 function sheetnode_theme($existing, $type, $theme, $path) {
   return array(
     'sheetnode_range' => array(
-      'arguments' => array('range' => NULL),
+      'arguments' => array('range' => NULL, 'labels' => NULL),
     ),
     'sheetfield_spreadsheet' => array(
       'arguments' => array('element' => NULL),
@@ -541,14 +541,22 @@ function sheetnode_theme($existing, $type, $theme, $path) {
   );
 }
 
-function theme_sheetnode_range($range) {
+define('SHEETNODE_RANGE_LABELS_ROW', 1);
+define('SHEETNODE_RANGE_LABELS_COL', 2);
+define('SHEETNODE_RANGE_LABELS_ROW_COL', 3);
+
+function theme_sheetnode_range($range, $labels = SHEETNODE_RANGE_LABELS_ROW_COL) {
   if (empty($range)) return '';
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   list($c, $r) = socialcalc_coord_to_cr(key($range));
   $row = array();
-  $row[] = array('data' => $r, 'header' => TRUE);
+  if ($labels & SHEETNODE_RANGE_LABELS_ROW) {
+    $row[] = array('data' => $r, 'header' => TRUE);
+  }
   $header = array();
-  $header[] = array();
+  if ($labels & SHEETNODE_RANGE_LABELS_ROW) {
+    $header[] = array();
+  }
   $rows = array();
   foreach ($range as $coord => $value) {
     $pos = socialcalc_coord_to_cr($coord);
@@ -556,7 +564,9 @@ function theme_sheetnode_range($range) {
       $rows[] = $row;
       $r = $pos[1];
       $row = array();
-      $row[] = array('data' => $r, 'header' => TRUE);
+      if ($labels & SHEETNODE_RANGE_LABELS_ROW) {
+        $row[] = array('data' => $r, 'header' => TRUE);
+      }
     }
     $row[] = $value;
     if (empty($rows)) {
@@ -565,7 +575,7 @@ function theme_sheetnode_range($range) {
     }
   }
   $rows[] = $row;
-  return theme('table', $header, $rows);
+  return theme('table', $labels & SHEETNODE_RANGE_LABELS_COL ? $header : NULL, $rows);
 }
 
 /**
