@@ -22,10 +22,12 @@ function sheetnode_html_import_form() {
     '#type' => 'textfield',
     '#title' => t('URL'),
     '#required' => TRUE,
+    '#description' => t('URL of the page to parse.'),
   );
   $form['querypath'] = array(
     '#type' => 'textfield',
     '#title' => t('QueryPath'),
+    '#description' => t('<a href="@qp">QueryPath expression</a> to find one or more tables to import into a single spreadsheet. For example: <code>table#flat-rates-table</code>.', array('@qp' => 'http://querypath.org/'))
   );
   $form['submit'] = array(
     '#type' => 'submit',
@@ -77,10 +79,10 @@ function sheetnode_html_import($url, $querypath, $options = array()) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   $doc = new DOMDocument('1.0');
   @$doc->loadHTMLFile($url);
-  $qp = qp($doc, NULL, array('ignore_parser_warnings' => TRUE));
-  $title = $qp->find('title')->text();
+  $qp = htmlqp($doc);
+  $title = $qp->top('title')->text();
   $sheet = array();
-  foreach ($qp->top($querypath)->find('table') as $table) {
+  foreach ($qp->top($querypath) as $table) {
     sheetnode_html_import_table($table, $sheet, $options);
   }
   $socialcalc = array(
@@ -99,7 +101,7 @@ function sheetnode_html_import_table($table, &$sheet, $options = array()) {
   $pos = $maxpos = array(1, @$sheet['attribs']['lastrow'] + 1); // col, row
   foreach ($table->find('tr') as $row) {
     $pos[0] = 1;
-    foreach ($row->find('td') as $element) {
+    foreach ($row->find('td,th') as $element) {
       while (isset($spans[socialcalc_cr_to_coord($pos[0], $pos[1])])) {
         $pos[0]++;
       }
