@@ -62,6 +62,9 @@ function sheetnode_views_handlers() {
       'sheetnode_handler_field_date' => array(
         'parent' => 'views_handler_field',
       ),
+      'sheetnode_handler_field_named_range' => array(
+        'parent' => 'views_handler_field',
+      ),
     ),
   );
 }
@@ -112,6 +115,16 @@ function sheetnode_views_data() {
     ),
   );
 
+  // Variable name.
+  $data['sheetnode']['named_range'] = array(
+    'title' => t('Named range'),
+    'help' => t('The cell or range values referred to by a named variable.'),
+    'field' => array(
+      'field' => 'value',
+      'handler' => 'sheetnode_handler_field_named_range',
+    ),
+  );
+
   return $data;
 }
 
@@ -132,7 +145,7 @@ function sheetnode_views_data_alter(&$data) {
         $data[$table_name][$field_name . '_socialcalc'] = $date;
       }
 
-      // Add a cell and range field for each CCK sheet field.
+      // Add sheetnode fields for each CCK sheet field.
       if (!empty($field_info['field']['content_field_name']) && $cck_info['fields'][ $field_info['field']['content_field_name'] ]['type'] == 'sheetfield') {
         $field = $cck_info['fields'][ $field_info['field']['content_field_name'] ];
         $label_truncated = truncate_utf8(t($field['widget']['label']), 10, TRUE);
@@ -160,6 +173,13 @@ function sheetnode_views_data_alter(&$data) {
         $range['help'] = t('Range reference - Appears in: @types', array('@types' => implode(', ', $types)));
         $range['field']['handler'] = 'sheetnode_handler_field_range';
         $data[$table_name][$field_name . '_range'] = $range;
+
+        $named_range = $cell;
+        $named_range['title'] = $title . ' - ' . t('named range');
+        $named_range['title short'] = $title_short . ' - ' . t('named range');
+        $named_range['help'] = t('Named range - Appears in: @types', array('@types' => implode(', ', $types)));
+        $named_range['field']['handler'] = 'sheetnode_handler_field_named_range';
+        $data[$table_name][$field_name . '_named_range'] = $named_range;
       }
     }
   }

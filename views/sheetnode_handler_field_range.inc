@@ -4,7 +4,7 @@ class sheetnode_handler_field_range extends views_handler_field {
   function option_definition() {
     $options = parent::option_definition();
     $options['reference'] = array('default' => '');
-    $options['labels'] = array('default' => 3);
+    $options['labels'] = array('default' => SHEETNODE_RANGE_LABELS_ROW_COL);
     return $options;
   }
 
@@ -37,7 +37,7 @@ class sheetnode_handler_field_range extends views_handler_field {
     $sc = socialcalc_parse_sheet($sheet);
 
     // Parse the range reference.
-    $range = preg_split('/:/', $this->options['reference']);
+    $range = preg_split('/:/', $this->options['reference'], 2);
     $start = socialcalc_coord_to_cr($range[0]);
     $end   = socialcalc_coord_to_cr(isset($range[1]) ? $range[1] : $range[0]);
     if (empty($end[0])) $end[0] = $sc['attribs']['lastcol'];
