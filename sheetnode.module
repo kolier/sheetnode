@@ -755,13 +755,16 @@ function theme_sheetfield_spreadsheet($element) {
 }
 
 function theme_sheetnode_formatter_default($element) {
+  $output = '';
   $value = $element['#item']['value'];
-  $output = _sheetnode_inject(
-    'sheetfield-' . str_replace('_', '-', $element['#field_name']) . '-' . $element['#item']['#delta'], 
-    $value, 
-    FALSE, 
-    isset($element['#node']) ? array('entity-name' => 'node', 'oid' => @$element['#node']->nid) : NULL
-  );
+  if (!empty($value)) {
+    $output = _sheetnode_inject(
+      'sheetfield-' . str_replace('_', '-', $element['#field_name']) . '-' . $element['#item']['#delta'], 
+      $value, 
+      FALSE, 
+      isset($element['#node']) ? array('entity-name' => 'node', 'oid' => @$element['#node']->nid) : NULL
+    );
+  }
   return $output;
 }
 
