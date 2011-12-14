@@ -23,6 +23,9 @@ Drupal.sheetnode = function(settings, container, context) {
 Drupal.sheetnode.sheetviews = [];
 
 Drupal.sheetnode.prototype.functionsSetup = function() {
+  // Abort if we were already here.
+  if (typeof(SocialCalc.Formula.FunctionList["ORG.DRUPAL.FIELD"]) != 'undefined') return;
+
   var self = this;
 
   // ORG.DRUPAL.FIELD server-side function.
@@ -56,7 +59,7 @@ Drupal.sheetnode.prototype.functionsSetup = function() {
   // ORG.DRUPAL.TOKEN server-side function.
   SocialCalc.Formula.FunctionList["ORG.DRUPAL.TOKEN"] = [function(fname, operand, foperand, sheet) {
     var scf = SocialCalc.Formula;
-    var oid, entity, field;
+    var oid, entity, token;
 
     token = scf.OperandValueAndType(sheet, foperand);
     oid = scf.OperandValueAndType(sheet, foperand);
@@ -80,6 +83,22 @@ Drupal.sheetnode.prototype.functionsSetup = function() {
   }, -1, "drupaltoken", "", "drupal"];
   SocialCalc.Constants["s_fdef_ORG.DRUPAL.TOKEN"] = 'Returns a token value from the specified Drupal entity (node, user, etc.)';
   SocialCalc.Constants.s_farg_drupaltoken = 'token, [oid, entity-name]';
+
+  // ORG.DRUPAL.URLQUERY client-side function.
+  SocialCalc.Formula.FunctionList["ORG.DRUPAL.PARSEURL"] = [function(fname, operand, foperand, sheet) {
+    var scf = SocialCalc.Formula;
+    var key = scf.OperandValueAndType(sheet, foperand);
+    var parse = parseUri(location.href);
+    var PushOperand = function(t, v) {operand.push({type: t, value: v});};
+    if (typeof(parse.queryKey[key.value]) == 'undefined') {
+      PushOperand("e#VALUE!", 0);
+    }
+    else {
+      PushOperand(isNaN(parseInt(parse.queryKey[key.value])) ? 't' : 'n', parse.queryKey[key.value]);
+    }
+  }, 1, "drupalparseurl", "", "drupal"];
+  SocialCalc.Constants["s_fdef_ORG.DRUPAL.PARSEURL"] = 'Returns the value of a key in the current URL query string.';
+  SocialCalc.Constants.s_farg_drupalparseurl = 'key';
 
   // Update function classes.
   SocialCalc.Constants.function_classlist.push('drupal');
@@ -291,4 +310,41 @@ Drupal.sheetnode.prototype.save = function() {
 
 // END jQuery
 })(jQuery);
+
+// parseUri 1.2.2
+// (c) Steven Levithan <stevenlevithan.com>
+// MIT License
+// http://blog.stevenlevithan.com/archives/parseuri
+
+// Sublicensed as GPL by infojunkie <karim.ratib@gmail.com>
+// http://programmers.stackexchange.com/questions/105912/can-you-change-code-distributed-under-the-mit-license-and-re-distribute-it-unde
+
+function parseUri (str) {
+  var o   = parseUri.options,
+    m   = o.parser[o.strictMode ? "strict" : "loose"].exec(str),
+    uri = {},
+    i   = 14;
+
+  while (i--) uri[o.key[i]] = m[i] || "";
+
+  uri[o.q.name] = {};
+  uri[o.key[12]].replace(o.q.parser, function ($0, $1, $2) {
+    if ($1) uri[o.q.name][$1] = $2;
+  });
+
+  return uri;
+};
+
+parseUri.options = {
+  strictMode: false,
+  key: ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"],
+  q:   {
+    name:   "queryKey",
+    parser: /(?:^|&)([^&=]*)=?([^&]*)/g
+  },
+  parser: {
+    strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
+    loose:  /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/)?((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/
+  }
+};
 
