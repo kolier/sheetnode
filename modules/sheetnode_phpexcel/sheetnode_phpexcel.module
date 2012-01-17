@@ -102,7 +102,7 @@ function _sheetnode_phpexcel_autoload($classname) {
  * Implementation of hook_link().
  */
 function sheetnode_phpexcel_link($type, $node = NULL, $teaser = FALSE) {
-  if ($type != 'node' || $node->type != 'sheetnode' || !variable_get('sheetnode_phpexcel_export_links', TRUE)) return array();
+  if ($type != 'node' || ($node->type != 'sheetnode' && !_sheetnode_get_sheetfields($node->type)) || !variable_get('sheetnode_phpexcel_export_links', TRUE)) return array();
 
   foreach (sheetnode_phpexcel_get_plugins('output') as $format => $plugin) {
     $links[$format] = array(
@@ -156,6 +156,9 @@ function sheetnode_phpexcel_menu() {
   return $items;
 }
 
+/**
+ * Form function for admin/settings/sheetnode/phpexcel.
+ */
 function _sheetnode_phpexcel_settings() {
   $form['sheetnode_phpexcel_library_path'] = array(
     '#type' => 'textfield',
@@ -173,6 +176,9 @@ function _sheetnode_phpexcel_settings() {
   return system_settings_form($form);
 }
 
+/**
+ * Validate function for _sheetnode_phpexcel_settings form.
+ */
 function _sheetnode_phpexcel_settings_validate($form, $form_state) {
   $path = rtrim($form_state['values']['sheetnode_phpexcel_library_path'], '/');
   if (!is_dir($path) || !is_file($path . '/Classes/PHPExcel.php')) {

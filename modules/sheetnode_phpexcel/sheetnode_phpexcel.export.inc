@@ -1,11 +1,24 @@
 <?php
 
+/**
+ * Helper function to export a node using PHPExcel.
+ */
 function _sheetnode_phpexcel_export($format, $node) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
-  if (!$node || $node->type != 'sheetnode') return drupal_not_found();
-  return _sheetnode_phpexcel_export_do($format, $node->title, socialcalc_parse($node->sheetnode['value']));
+  if (!$node || ($node->type != 'sheetnode' && !($sheetfields = _sheetnode_get_sheetfields($node->type)))) return drupal_not_found();
+  if ($node->type == 'sheetnode') {
+    $value = $node->sheetnode['value'];
+  }
+  else {
+    // TODO: Create a workbook with multiple worksheets from all CCK fields.
+    $value = $node->{$sheetfields[0]['field_name']}[0]['value'];
+  }
+  return _sheetnode_phpexcel_export_do($format, $node->title, socialcalc_parse($value));
 }
 
+/**
+ * Helper function to export a single spreadsheet.
+ */
 function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
   require_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel.php');
 
@@ -205,6 +218,9 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
   exit;
 }
 
+/**
+ * Helper function to export a cell.
+ */
 function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $worksheet) {
   // Taken from socialcalc-3.js:SocialCalc.FormatValueForDisplay().
   $cell = $worksheet->getCell($coord);
@@ -508,6 +524,9 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $style
   }
 }
 
+/**
+ * Helper function to sanitize a filename.
+ */
 function _sheetnode_phpexcel_sanitize_filename($string) {
   $string = htmlentities($string, ENT_QUOTES, 'UTF-8');
   $string = preg_replace('/&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);/i', '$1', $string);
