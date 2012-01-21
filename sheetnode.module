@@ -826,36 +826,50 @@ function theme_sheetnode_formatter_socialcalc_date($element) {
 function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
 
+  // Parse the sheetname which might contain extra args separated by forward-slash.
   if (empty($sheetname)) $sheetname = $_REQUEST['sheetname'];
+  $args = explode('/', $sheetname);
+  $sheetname = array_shift($args);
 
-  // Try to find a sheetnode.
+  // No value found by default.
+  $value = NULL;
+
+  // Try to find a node.
+  $node = NULL;
   if (is_numeric($sheetname)) {
-    $value = db_result(db_query("SELECT value FROM {sheetnode} WHERE nid=%d ORDER BY vid DESC LIMIT 1", intval($sheetname)));
+    $node = node_load(intval($sheetname));
   }
   else {
-    $value = db_result(db_query("SELECT value FROM {sheetnode} s INNER JOIN {node} n ON s.nid=n.nid WHERE UCASE(n.title)='%s' ORDER BY s.vid DESC LIMIT 1", db_escape_string(strtoupper($sheetname))));
+    $nid = db_result(db_query("SELECT nid FROM {node} WHERE UCASE(title) = '%s' LIMIT 1", db_escape_string(strtoupper($sheetname))));
+    if ($nid) {
+      $node = node_load($nid);
+    }
   }
 
-  // Try to find a sheetfield.
-  // TODO: Extend syntax to handle multiple values.
-  if (!$value && module_exists('content')) {
-    if (is_numeric($sheetname)) {
-      $node = node_load(intval($sheetname));
-      if ($node) {
-        $type = content_types($node->type);
-        foreach ($type['fields'] as $field_name => $field_info) {
-          if ($field_info['type'] == 'sheetfield' && isset($node->$field_name)) {
-            $value = $node->{$field_name}[0]['value'];
-          }
-        }
+  // Is it a sheetnode?
+  if ($node && $node->type == 'sheetnode') {
+    $value = $node->sheetnode['value'];
+  }
+
+  // Is it a sheetfield?
+  if (!$value && $node && module_exists('content')) {
+    $target_field = empty($args[0]) ? FALSE : $args[0];
+    $target_delta = empty($args[1]) ? 0 : intval($args[1]);
+    $type = content_types($node->type);
+    foreach ($type['fields'] as $field_name => $field_info) {
+      if (
+        $field_info['type'] == 'sheetfield' && 
+        (!$target_field || 0 == strcasecmp($target_field, $field_name) || 0 == strcasecmp($target_field, $field_info['widget']['label'])) &&
+        isset($node->$field_name) && 
+        isset($node->{$field_name}[$target_delta])
+      ) {
+        $value = $node->{$field_name}[$target_delta]['value'];
       }
     }
   }
 
-  // Try to find a sheetview.
+  // Is it a sheetview?
   if (!$value && module_exists('views')) { // Try a view feed with our SocialCalc output plugin style
-    $args = explode('/', $sheetname);
-    $sheetname = array_shift($args);
     $view = views_get_view($sheetname);
     if ($view) foreach (array_keys($view->display) as $display_name) {
       $display = $view->display[$display_name];
