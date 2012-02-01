@@ -58,9 +58,6 @@ function sheetnode_load($node) {
       'vid' => $node->vid,
     );
   }
-  else if (!empty($data->sheetnode['value'])) {
-    $data->sheetnode['value'] = unserialize($data->sheetnode['value']);
-  }
   return $data;
 }
 
@@ -981,7 +978,7 @@ function _sheetnode_ajax_field($oid = NULL, $entity = NULL, $field = NULL) {
  */
 function _sheetnode_save($nid, $vid, $value) {
   db_query("DELETE FROM {sheetnode} WHERE vid=%d", $vid);
-  db_query("INSERT INTO {sheetnode} (nid, vid, value) VALUES (%d, %d, '%s')", $nid, $vid, serialize($value));
+  db_query("INSERT INTO {sheetnode} (nid, vid, value) VALUES (%d, %d, '%s')", $nid, $vid, $value);
 }
 
 /**
@@ -1000,9 +997,6 @@ function _sheetnode_template_save($vid, $name, $value) {
  */
 function _sheetnode_template_load($tid) {
   $template = db_fetch_object(db_query("SELECT * FROM {sheetnode_template} WHERE tid=%d", $tid));
-  if ($template) {
-    $template->value = unserialize($template->value);
-  }
   return $template;
 }
 
