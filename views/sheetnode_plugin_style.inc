@@ -414,6 +414,7 @@ EOS;
     foreach ($this->view->field as $field => $info) {
       if ($info->field_alias == $field_name) return $field;
       if (strcasecmp($info->label(), $field_name) == 0) return $field;
+      if (method_exists($info, 'ui_name') && strcasecmp($info->ui_name(), $field_name) == 0) return $field;
     }
     return FALSE;
   }
