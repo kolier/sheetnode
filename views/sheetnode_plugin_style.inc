@@ -62,7 +62,7 @@ class sheetnode_plugin_style extends views_plugin_style {
         $matches = array();
         if (isset($cell['datavalue']) && $cell['datatype'] == 't') {
           if (preg_match('/^\${(.*?)\}$/', $cell['datavalue'], $matches)) {
-            $field_name = $this->get_real_field_name($matches[1]);
+            $field_name = $this->find_field($matches[1]);
             if ($field_name && !$this->view->field[$field_name]->options['exclude']) { // it's a field expansion
               $fields[$field_name] = array(
                 'coord' => $coord,
@@ -94,18 +94,36 @@ class sheetnode_plugin_style extends views_plugin_style {
       if (!empty($fields)) foreach ($fields as $field_name => $field) {
         unset($socialcalc['sheet']['cells'][$field['coord']]);
         $newcell = $field['cell'];
-        $pos = $newcell['pos'];
+        $pos = $maxpos = $newcell['pos'];
         foreach ($this->view->result as $result) {
-          $newcell['pos'] = $pos;
           $value = $field['info']->theme($result);
-          $newcell['datavalue'] = $value;
-          $newcell['datatype'] = is_numeric($value) ? 'v' : 't';
-          $newcell['valuetype'] = is_numeric($value) ? 'n' : 'th';
-          $newcells[socialcalc_cr_to_coord($pos[0], $pos[1])] = $newcell;
+          if (is_array($value)) {
+            // Expand an array of values into consecutive cells.
+            $itempos = $pos;
+            foreach ($value as $item) {
+              $itemcell = $newcell;
+              $itemcell['pos'] = $itempos;
+              $itemcell['datavalue'] = $item;
+              $itemcell['datatype'] = is_numeric($item) ? 'v' : 't';
+              $itemcell['valuetype'] = is_numeric($item) ? 'n' : 'th';
+              $newcells[socialcalc_cr_to_coord($itempos[0], $itempos[1])] = $itemcell;
+              $itempos[$tangent]++;
+              $maxpos[$tangent] = max($maxpos[$tangent], $itempos[$tangent]);
+            }
+          }
+          else {
+            // Expand a single value into the current cell.
+            $newcell['pos'] = $pos;
+            $newcell['datavalue'] = $value;
+            $newcell['datatype'] = is_numeric($value) ? 'v' : 't';
+            $newcell['valuetype'] = is_numeric($value) ? 'n' : 'th';
+            $newcells[socialcalc_cr_to_coord($pos[0], $pos[1])] = $newcell;
+          }
           $pos[$normal]++;
         }
-        $fields[$field_name]['endpos'] = array($pos[0]-$tangent_increment[$tangent], $pos[1]-$tangent_increment[$normal]);
-        $lastpos = array(max($lastpos[0], $pos[0]), max($lastpos[1], $pos[1]));
+        $maxpos[$normal] = $pos[$normal];
+        $fields[$field_name]['endpos'] = array($maxpos[0]-$tangent_increment[$tangent], $maxpos[1]-$tangent_increment[$normal]);
+        $lastpos = array(max($lastpos[0], $maxpos[0]), max($lastpos[1], $maxpos[1]));
       }
 
       // Replace formula expansions with actual values.
@@ -121,7 +139,7 @@ class sheetnode_plugin_style extends views_plugin_style {
           for ($i=0; $i<$count; $i++) {
             $replace = NULL;
             $match = !empty($matches[1][$i]) ? $matches[1][$i] : $matches[2][$i];
-            $field_name = $this->get_real_field_name($match);
+            $field_name = $this->find_field($match);
             if (!$field_name) {
               // Not a field: try a cell coordinate.
               if (preg_match('/^\$?\w\w?\$?\d+$/', $match)) {
@@ -171,7 +189,7 @@ class sheetnode_plugin_style extends views_plugin_style {
         $matches = array();
         $count = (int)preg_match_all('/@(.*?)@/', $expression, $matches);
         for ($i=0; $i<$count; $i++) {
-          $field_name = $this->get_real_field_name($matches[1][$i]);
+          $field_name = $this->find_field($matches[1][$i]);
           if (!$field_name || !isset($fields[$field_name])) { 
             // Not a field: try a cell coordinate.
             if (preg_match('/^\$?\w\w?\$?\d+$/', $matches[1][$i])) {
@@ -272,7 +290,7 @@ class sheetnode_plugin_style extends views_plugin_style {
             $delta = max($delta, $field['endpos'][$normal] - $field['cell']['pos'][$normal]); 
           }
         }
-        if (@$ecell_changed) {
+        if (!empty($ecell_changed)) {
           $socialcalc['edit'][$panes][$i]['first'] += $delta;
           $socialcalc['edit'][$panes][$i]['last']  += $delta;
         }
@@ -296,14 +314,25 @@ class sheetnode_plugin_style extends views_plugin_style {
         $pos[$tangent] = 1;
         foreach ($this->view->field as $field => $info) {
           if ($info->options['exclude']) continue;
-          $cell['pos'] = $pos;
           $value = $info->theme($result);
-          $cell['datavalue'] = $value;
-          $cell['datatype'] = is_numeric($value) ? 'v' : 't';
-          $cell['valuetype'] = is_numeric($value) ? 'n' : 'th';
-
-          $sheet['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
-          $pos[$tangent]++;
+          if (is_array($value)) {
+            foreach ($value as $item) {
+              $cell['pos'] = $pos;
+              $cell['datavalue'] = $item;
+              $cell['datatype'] = is_numeric($item) ? 'v' : 't';
+              $cell['valuetype'] = is_numeric($item) ? 'n' : 'th';
+              $sheet['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
+              $pos[$tangent]++;
+            }
+          }
+          else {
+            $cell['pos'] = $pos;
+            $cell['datavalue'] = $value;
+            $cell['datatype'] = is_numeric($value) ? 'v' : 't';
+            $cell['valuetype'] = is_numeric($value) ? 'n' : 'th';
+            $sheet['cells'][socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
+            $pos[$tangent]++;
+          }
         }
         $pos[$normal]++;
       }
@@ -409,7 +438,7 @@ EOS;
     return '<div class="sheetview" id="' . $sheet_id . '"></div>';
   }
 
-  function get_real_field_name($field_name) {
+  function find_field($field_name) {
     if (isset($this->view->field[$field_name])) return $field_name;
     foreach ($this->view->field as $field => $info) {
       if ($info->field_alias == $field_name) return $field;

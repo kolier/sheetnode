@@ -5,6 +5,7 @@ class sheetnode_handler_field_range extends views_handler_field {
     $options = parent::option_definition();
     $options['reference'] = array('default' => '');
     $options['labels'] = array('default' => SHEETNODE_RANGE_LABELS_ROW_COL);
+    $options['raw'] = array('default' => FALSE);
     return $options;
   }
 
@@ -27,6 +28,12 @@ class sheetnode_handler_field_range extends views_handler_field {
       ),
       '#default_value' => $this->options['labels'],
       '#description' => t('Select whether row or column labels should appear.'),
+    );
+    $form['raw'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Raw value'),
+      '#default_value' => $this->options['raw'],
+      '#description' => t('Return raw PHP cell array instead of themed value. Useful for inserting into an output spreadsheet.')
     );
   }
 
@@ -51,7 +58,9 @@ class sheetnode_handler_field_range extends views_handler_field {
         $range[$coord] = !empty($sc['cells'][$coord]['datavalue']) ? $sc['cells'][$coord]['datavalue'] : NULL;
       }
     }
-    return theme('sheetnode_range', $range, $this->options['labels']);
+
+    // Return themed or raw values.
+    return $this->options['raw'] ? $range : theme('sheetnode_range', $range, $this->options['labels']);
   }
 }
 
