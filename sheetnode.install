@@ -434,7 +434,7 @@ function sheetnode_update_6008(&$sandbox) {
     $sandbox['sheetnode_current'] = 0;
     $sandbox['sheetnode_max'] = db_result(db_query("SELECT COUNT(vid) FROM {sheetnode}")) + 0;
     $sandbox['template_current'] = 0;
-    $sandbox['template_max'] = db_result(db_query("SELECT COUNT(vid) FROM {sheetnode}")) + 0;
+    $sandbox['template_max'] = db_result(db_query("SELECT COUNT(tid) FROM {sheetnode_template}")) + 0;
     $sandbox['max'] = $sandbox['sheetnode_max'] + $sandbox['template_max'];
   }
   if ($sandbox['progress'] < $sandbox['sheetnode_max']) {
