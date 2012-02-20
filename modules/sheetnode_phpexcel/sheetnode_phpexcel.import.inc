@@ -199,6 +199,7 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
   }
 
   // Cell merges
+  // TODO: Not working in Excel 5 import.
   foreach ($sheet->getMergeCells() as $range) {
     list($first, $last) = explode(':', $range);
     if (!isset($sc['cells'][$first])) continue;

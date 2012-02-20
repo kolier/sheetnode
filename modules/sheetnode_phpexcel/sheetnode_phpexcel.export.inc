@@ -292,7 +292,16 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
 
     // Set the value.
     if ($c['datatype'] == 'f') {
-      $cell->setValue('='. $c['formula']);
+      if (strpos($c['formula'], '!') !== FALSE) {
+        // If an external reference, just ignore it.
+        // TODO: Should really load up the referenced sheet and include it in the workbook.
+        $cell->setValueExplicit($c['datavalue'], PHPExcel_Cell_DataType::TYPE_STRING);
+        $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $c['formula']));
+        $worksheet->getComment($coord)->getText()->createTextRun($comment);
+      }
+      else {
+        $cell->setValue('='. $c['formula']);
+      }
     }
     else switch ($valueformat) {
     case 'text-plain':
@@ -407,7 +416,16 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
 
     // Set the value.
     if ($c['datatype'] == 'f') {
-      $cell->setValue('='. $c['formula']);
+      if (strpos($c['formula'], '!') !== FALSE) {
+        // If an external reference, just ignore it.
+        // TODO: Should really load up the referenced sheet and include it in the workbook.
+        $cell->setValueExplicit($c['datavalue'], PHPExcel_Cell_DataType::TYPE_NUMERIC);
+        $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $c['formula']));
+        $worksheet->getComment($coord)->getText()->createTextRun($comment);
+      }
+      else {
+        $cell->setValue('='. $c['formula']);
+      }
     }
     else if ($valueformat == 'logical') {
       $displayvalue = empty($displayvalue) ? SocialCalc_Constants::$defaultDisplayFALSE : SocialCalc_Constants::$defaultDisplayTRUE;
