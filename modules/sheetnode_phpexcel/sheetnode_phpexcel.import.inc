@@ -222,8 +222,8 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
     }
   }
   
-  // Reset caches.
-  _sheetnode_phpexcel_get_cached_styles(TRUE);
+  // Reset style cache.
+  $styles = array();
 
   $socialcalc = array(
     'sheet' => $sc,
@@ -314,12 +314,15 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
   // Comment
   $comment = $sheet->getComment($cell->getCoordinate());
   if (!empty($comment)) {
-    $c['comment'] = $comment->getText()->getPlainText();
+    $text = $comment->getText()->getPlainText();
+    if (!empty($text)) {
+      $c['comment'] = $comment->getText()->getPlainText();
+    }
   }
 
   // Style
+  static $styles = array();
   $style = $sheet->getStyle($cell->getCoordinate());
-  $styles = _sheetnode_phpexcel_get_cached_styles();
   $hash = $style->getHashCode();
   if (empty($styles[$hash])) {
     // Font
@@ -377,14 +380,6 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
   $c += $styles[$hash]; // merge the cached styles into the cell directly.
 
   $sc['cells'][$cell->getCoordinate()] = $c;
-}
-
-function _sheetnode_phpexcel_get_cached_styles($reset = FALSE) {
-  static $styles = array();
-  if ($reset) {
-    $styles = array();
-  }
-  return $styles;
 }
 
 /**
@@ -507,7 +502,6 @@ function _sheetnode_phpexcel_get_layout($style) {
 function _sheetnode_phpexcel_get_valueformat($numberformat) {
   $valueformat = $numberformat->getFormatCode();
   if (strtolower($valueformat) == 'general') return FALSE;
-  $valueformat = str_replace(';@', '', $valueformat);
   return $valueformat;
 }
 
