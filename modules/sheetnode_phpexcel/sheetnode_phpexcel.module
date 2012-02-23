@@ -91,7 +91,7 @@ function sheetnode_phpexcel_batch_export($sheets, $filename, $format, $destinati
   $batch += array(
     'finished' => '_sheetnode_phpexcel_batch_export_finished',
     'title' => t('Exporting spreadsheets'),
-    'init_message' => t('Export process is starting.'),
+    'init_message' => t('Export process is starting. This can take a long time for large sheets...'),
     'progress_message' => t('Exported @current out of @total sheets.'),
     'error_message' => t('Export process has encountered an error.'),
     'file' => drupal_get_path('module', 'sheetnode_phpexcel') . '/sheetnode_phpexcel.export.inc',
