@@ -107,7 +107,10 @@ function sheetnode_phpexcel_batch_export($sheets, $filename, $format, $destinati
  * Implementation of hook_init().
  */
 function sheetnode_phpexcel_init() {
-  spl_autoload_register('_sheetnode_phpexcel_autoload');
+  $path = variable_get('sheetnode_phpexcel_library_path', '');
+  if (is_dir($path)) {
+    spl_autoload_register('_sheetnode_phpexcel_autoload');
+  }
 }
 
 /**
@@ -115,6 +118,7 @@ function sheetnode_phpexcel_init() {
  */
 function _sheetnode_phpexcel_autoload($classname) {
   include_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel.php');
+  include_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel/Shared/PDF/tcpdf.php');
 }
 
 /**
