@@ -5,31 +5,158 @@
  */
 function _sheetnode_phpexcel_export($format, $node) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
-  if (!$node || ($node->type != 'sheetnode' && !($sheetfields = _sheetnode_get_sheetfields($node->type)))) return drupal_not_found();
+  if (empty($node)) return drupal_not_found();
+
+  $sheets = array(); 
   if ($node->type == 'sheetnode') {
-    $value = $node->sheetnode['value'];
+    $sheets[$node->title] = socialcalc_parse($node->sheetnode['value']);
   }
-  else {
-    // TODO: Create a workbook with multiple worksheets from all CCK fields.
-    $value = $node->{$sheetfields[0]['field_name']}[0]['value'];
+  $sheetfields = sheetnode_get_sheetfields($node->type);
+  if (!empty($sheetfields)) foreach ($sheetfields as $sheetfield) {
+    foreach ($node->{$sheetfield['field_name']} as $delta => $item) {
+      $sheets[$sheetfield['widget']['label'] .' '. ($delta+1)] = socialcalc_parse($item['value']);
+    }
   }
-  return _sheetnode_phpexcel_export_do($format, $node->title, socialcalc_parse($value));
+  if (empty($sheets)) return drupal_not_found();
+
+  sheetnode_phpexcel_batch_export($sheets, $node->title, $format);
 }
 
 /**
+ * Batch API callback to export a single sheet to PHPExcel.
+ */
+function _sheetnode_phpexcel_batch_export_sheet($title, $socialcalc, $filename, $format, $destination, &$context) {
+  require_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel.php');
+
+  if (empty($context['results']['workbook'])) {
+    $workbook = $context['results']['workbook'] = new PHPExcel();
+    $worksheet = $workbook->getActiveSheet();
+    $context['results'] += array(
+      'filename' => $filename,
+      'format' => $format,
+      'destination' => $destination,
+    );
+  }
+  else {
+    $workbook = $context['results']['workbook'];
+    $worksheet = $workbook->createSheet($workbook->getSheetCount());
+  }
+
+  _sheetnode_phpexcel_export_sheet($worksheet, $title, $socialcalc);
+
+  $context['message'] = t('Processed sheet %sheet.', array('%sheet' => $worksheet->getTitle()));
+}
+
+/**
+ * Batch API callback upon export completion.
+ */
+function _sheetnode_phpexcel_batch_export_finished($success, $results, $operations) {
+  require_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel.php');
+
+  if ($success) {
+    // Save to temporary file.
+    $plugins = sheetnode_phpexcel_get_plugins();
+    $plugin = $plugins[$results['format']];
+    $writer = PHPExcel_IOFactory::createWriter($results['workbook'], $plugin['php-excel-type']);
+    $tempname = tempnam(file_directory_temp(), 'sheetnode_phpexcel_');
+    $writer->save($tempname);
+
+    // Save information for download link.
+    $_SESSION['sheetnode_phpexcel_download'] = array(
+      'tempname' => $tempname,
+      'filename' => _sheetnode_phpexcel_sanitize_filename($results['filename']) . '.' . $results['format'],
+      'format' => $results['format'],
+      'destination' => $results['destination'],
+    );
+  }
+}
+
+/**
+ * Template preprocessor for theme('sheetnode_phpexcel_export_ready').
+ */
+function sheetnode_phpexcel_preprocess_sheetnode_phpexcel_export_ready(&$vars) {
+  if (empty($_SESSION['sheetnode_phpexcel_download'])) drupal_not_found();
+  $download = $_SESSION['sheetnode_phpexcel_download'];
+
+  $vars['download'] = url('sheetnode/export/download');
+  $vars['filename'] = $download['filename'];
+  $vars['destination'] = $download['destination'];
+
+  // Set the page to automatically redirect to download file after 3 seconds.
+  drupal_set_html_head('<meta http-equiv="refresh" content="3;url='. check_plain($vars['download']) . '" />');
+}
+
+/**
+ * Page callback for 'sheetnode/export/download'.
+ */
+function _sheetnode_phpexcel_export_download() {
+  if (empty($_SESSION['sheetnode_phpexcel_download'])) drupal_not_found();
+  $download = $_SESSION['sheetnode_phpexcel_download'];
+
+  $plugins = sheetnode_phpexcel_get_plugins();
+  $plugin = $plugins[$download['format']];
+  $source = $download['tempname'];
+  $headers = array(
+    'Content-Type: ' . $plugin['content-type'],
+    'Content-Disposition: attachment; filename="' . $download['filename'] . '"',
+    'Cache-Control: max-age=0',
+  );
+
+  // Copy of file_transfer() because we need to unlink the file at the end.
+  // @see file_transfer()
+  if (ob_get_level()) {
+    ob_end_clean();
+  }
+
+  // IE cannot download private files because it cannot store files downloaded
+  // over https in the browser cache. The problem can be solved by sending
+  // custom headers to IE. See http://support.microsoft.com/kb/323308/en-us
+  if (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on')) {
+    drupal_set_header('Cache-Control: private');
+    drupal_set_header('Pragma: private');
+  }
+
+  foreach ($headers as $header) {
+    // To prevent HTTP header injection, we delete new lines that are
+    // not followed by a space or a tab.
+    // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+    $header = preg_replace('/\r?\n(?!\t| )/', '', $header);
+    drupal_set_header($header);
+  }
+
+  $source = file_create_path($source);
+
+  // Transfer file in 1024 byte chunks to save memory usage.
+  if ($fd = fopen($source, 'rb')) {
+    while (!feof($fd)) {
+      print fread($fd, 1024);
+    }
+    fclose($fd);
+  }
+  else {
+    drupal_not_found();
+  }
+
+  // Clean up after we're done.
+  unlink($download['tempname']);
+  unset($_SESSION['sheetnode_phpexcel_download']);
+
+  exit();
+}
+ 
+/**
  * Helper function to export a single spreadsheet.
  */
-function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
-  require_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel.php');
+function _sheetnode_phpexcel_export_sheet($worksheet, $title, $socialcalc) {
+  require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   @set_time_limit(0);
 
-  // Create new PHPExcel object
   $sc = $socialcalc['sheet'];
-  $workbook = new PHPExcel();
+  $workbook = $worksheet->getParent();
 
   // Title
   try {
-    $workbook->getActiveSheet()->SetTitle($title);
+    $worksheet->SetTitle($title);
   }
   catch (Exception $e) {
     watchdog('sheetnode_phpexcel', 'Error setting worksheet title to "!title": @error', array('!title' => $title, '@error' => $e->getMessage()), WATCHDOG_WARNING);
@@ -41,7 +168,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
     @list($sheetref, $cellref) = explode('!', $definition, 2);
     if (empty($cellref)) {
       $cellref = $definition;
-      $sheetrefobj = $workbook->getActiveSheet();
+      $sheetrefobj = $worksheet;
     }
     else {
       $sheetrefobj = $workbook->getSheetByName($sheetref);
@@ -82,11 +209,11 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
     }
 
     // Value and format
-    _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $workbook->getActiveSheet(), $style); 
+    _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $worksheet, $style); 
 
     // Comment
     if (!empty($c['comment'])) {
-      $workbook->getActiveSheet()->getComment($coord)->getText()->createTextRun($c['comment']);
+      $worksheet->getComment($coord)->getText()->createTextRun($c['comment']);
     }
     
     if (!empty($style)) {
@@ -183,29 +310,29 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
         }
       }
     }
-    $workbook->getActiveSheet()->duplicateStyle($styles[$hash], $coord);
+    $worksheet->duplicateStyle($styles[$hash], $coord);
  
     // Merged regions
     if (@$c['colspan'] > 1 || @$c['rowspan'] > 1) {
       $coord2 = socialcalc_cr_to_coord($c['pos'][0]+max(@$c['colspan']-1, 0), $c['pos'][1]+max(@$c['rowspan']-1, 0));
-      $workbook->getActiveSheet()->mergeCells($coord .':'. $coord2);
+      $worksheet->mergeCells($coord .':'. $coord2);
     }
   }
 
   // Columns
-  $font = $workbook->getActiveSheet()->getDefaultStyle()->getFont();
+  $font = $worksheet->getDefaultStyle()->getFont();
   if (!empty($sc['colattribs']['width'])) foreach($sc['colattribs']['width'] as $c => $width) {
-    $workbook->getActiveSheet()->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($c-1))->setWidth(PHPExcel_Shared_Drawing::pixelsToCellDimension($width, $font));
+    $worksheet->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($c-1))->setWidth(PHPExcel_Shared_Drawing::pixelsToCellDimension($width, $font));
   }
 
   // Rows
   if (!empty($sc['rowattribs']['height'])) foreach($sc['rowattribs']['height'] as $r => $height) {
-    $workbook->getActiveSheet()->getRowDimension($r)->setRowHeight($height);
+    $worksheet->getRowDimension($r)->setRowHeight($height);
   }
 
   // Test formulas and replace with calculated value upon failure.
-  foreach ($workbook->getActiveSheet()->getCellCollection() as $cellID) {
-    $cell = $workbook->getActiveSheet()->getCell($cellID);
+  foreach ($worksheet->getCellCollection() as $cellID) {
+    $cell = $worksheet->getCell($cellID);
     if ($cell->getDatatype() == PHPExcel_Cell_DataType::TYPE_FORMULA) {
       try {
         $cell->getCalculatedValue(); // don't care about return value
@@ -214,24 +341,13 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
         $coord = $cell->getCoordinate();
         $cell->setValue($sc['cells'][$coord]['datavalue']);
         $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $sc['cells'][$coord]['formula']));
-        $workbook->getActiveSheet()->getComment($coord)->getText()->createTextRun($comment);
+        $worksheet->getComment($coord)->getText()->createTextRun($comment);
       }
     }
   }
 
   // Reset style cache.
   unset($styles);
-
-  // Redirect output to a client’s web browser.
-  $plugins = sheetnode_phpexcel_get_plugins();
-  $plugin = $plugins[$format];
-  header('Content-Type: ' . $plugin['content-type']);
-  header('Content-Disposition: attachment;filename="' . _sheetnode_phpexcel_sanitize_filename($title) . '.' . $format . '"');
-  header('Cache-Control: max-age=0');
-
-  $writer = PHPExcel_IOFactory::createWriter($workbook, $plugin['php-excel-type']);
-  $writer->save('php://output');
-  exit;
 }
 
 /**
@@ -239,7 +355,7 @@ function _sheetnode_phpexcel_export_do($format, $title, $socialcalc) {
  */
 function _sheetnode_phpexcel_export_get_style_hash($c) {
   $styles = array();
-  foreach (array('font', 'color', 'bgcolor', 'cellformat', 'alignvert', 'bt', 'bb', 'bl', 'br', 'textvalueformat', 'nontextvalueformat') as $attrib) {
+  foreach (array('font', 'color', 'bgcolor', 'cellformat', 'alignvert', 'bt', 'bb', 'bl', 'br', 'nontextvalueformat') as $attrib) {
     if (!empty($c[$attrib])) {
       $styles[] = $attrib . ':' . $c[$attrib];
     }
@@ -565,15 +681,5 @@ function sheetnode_phpexcel_sheetnode_phpexcel_html2richtext($run, $cell, $entry
     // TODO: Text runs don't support background colors.
     break; 
   }
-}
-
-/**
- * Helper function to sanitize a filename.
- */
-function _sheetnode_phpexcel_sanitize_filename($string) {
-  $string = htmlentities($string, ENT_QUOTES, 'UTF-8');
-  $string = preg_replace('/&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);/i', '$1', $string);
-  $string = preg_replace('/[^0-9a-z-_]/i', '-', $string);
-  return trim($string, '-');
 }
 

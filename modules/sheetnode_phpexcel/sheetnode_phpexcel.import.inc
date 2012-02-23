@@ -145,7 +145,7 @@ function _sheetnode_phpexcel_batch_import_file($filename, $callback, $params, &$
 }
 
 function _sheetnode_phpexcel_batch_import_finished($success, $results, $operations) {
-  $batch = & batch_get();
+  $batch =& batch_get();
   if (empty($batch['redirect']) && !empty($results)) {
     drupal_goto('node/' . $results[0]);
   }

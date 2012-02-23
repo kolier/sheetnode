@@ -1018,9 +1018,9 @@ function _sheetnode_load_entity($entity, $oid) {
 }
 
 /**
- * Helper function to get all sheetfields of a node type.
+ * API function to get all sheetfields of a node type.
  */
-function _sheetnode_get_sheetfields($type) {
+function sheetnode_get_sheetfields($type) {
   if (!module_exists('content')) return FALSE;
 
   $sheetfields = array();
