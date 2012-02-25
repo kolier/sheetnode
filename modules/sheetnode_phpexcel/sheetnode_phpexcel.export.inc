@@ -136,33 +136,42 @@ function _sheetnode_phpexcel_export_sheet($worksheet, $title, $socialcalc) {
   // Names
   if (!empty($sc['names'])) foreach ($sc['names'] as $name => $info) {
     $definition = ltrim($info['definition'], '=');
-    @list($sheetref, $cellref) = explode('!', $definition, 2);
-    if (empty($cellref)) {
-      $cellref = $definition;
-      $sheetrefobj = $worksheet;
+    @list($sheetname, $reference) = explode('!', $definition, 2);
+    if (empty($reference)) {
+      $reference = $definition;
+      $external = $worksheet;
     }
     else {
-      $sheetrefobj = $workbook->getSheetByName($sheetref);
+      $sheetname = trim($sheetname, '"\'');
+      list($value, $title2) = sheetnode_find_sheet($sheetname);
+      if ($value) {
+        $external = $workbook->getSheetByName($title2);
+        if (!$external) {
+          $external = $workbook->createSheet($workbook->getSheetCount());
+          $socialcalc2 = socialcalc_parse($value);
+          _sheetnode_phpexcel_export_sheet($external, $title2, $socialcalc2);
+        }
+      }
     }
     // TODO: PHPExcel does not support non-range names.
     try {
-      $range = PHPExcel_Cell::rangeBoundaries($cellref);
+      $range = PHPExcel_Cell::rangeBoundaries($reference);
     }
     catch (Exception $e) {
-      watchdog('sheetnode_phpexcel', 'Could not export name %name with value %definition because non-range name are not yet supported.', array(
+      watchdog('sheetnode_phpexcel', 'Could not export name %name with value %definition because non-range names are not yet supported.', array(
         '%name' => $name,
         '%definition' => $definition,
       ));
       continue;
     }
-    if (!empty($sheetrefobj)) {
-      $workbook->addNamedRange(new PHPExcel_NamedRange($name, $sheetrefobj, $cellref));
+    if (!empty($external)) {
+      $workbook->addNamedRange(new PHPExcel_NamedRange($name, $external, $reference));
     }
     else {
-      watchdog('sheetnode_phpexcel', 'Could not export name %name with value %definition because %sheetref was not found.', array(
+      watchdog('sheetnode_phpexcel', 'Could not export name %name with value %definition because %sheetname was not found.', array(
         '%name' => $name,
         '%definition' => $definition,
-        '%sheetref' => $sheetref,
+        '%sheetname' => $sheetname,
       ));
     }
   }
@@ -543,11 +552,11 @@ function _sheetnode_phpexcel_export_reference($c, $cell, $worksheet) {
   $sheetname = trim($sheetname, '"\'');
   list($value, $title) = sheetnode_find_sheet($sheetname);
   if ($value) {
-    $socialcalc = socialcalc_parse($value);
     $workbook = $worksheet->getParent();
     $external = $workbook->getSheetByName($title);
     if (!$external) {
       $external = $workbook->createSheet($workbook->getSheetCount());
+      $socialcalc = socialcalc_parse($value);
       _sheetnode_phpexcel_export_sheet($external, $title, $socialcalc);
     }
     $cell->setValue('=\'' . $title . '\'!' . $reference);
