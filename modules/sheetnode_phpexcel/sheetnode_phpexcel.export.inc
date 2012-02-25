@@ -20,6 +20,17 @@ function _sheetnode_phpexcel_export($format, $node) {
   if (empty($sheets)) return drupal_not_found();
 
   sheetnode_phpexcel_batch_export($sheets, $node->title, $format);
+  /* DEBUGGING
+   * Simulate Batch API with sequential processing for easier debugging.
+   */
+  /*
+  $context = array();
+  $operations = array();
+  foreach ($sheets as $title => $socialcalc) {
+    _sheetnode_phpexcel_batch_export_sheet($title, $socialcalc, 'test', 'xls', '', $context);
+  }
+  return '';
+  */
 }
 
 /**
@@ -52,6 +63,7 @@ function _sheetnode_phpexcel_batch_export_sheet($title, $socialcalc, $filename, 
  */
 function _sheetnode_phpexcel_batch_export_finished($success, $results, $operations) {
   require_once(variable_get('sheetnode_phpexcel_library_path', '') . '/Classes/PHPExcel.php');
+  @set_time_limit(0);
 
   if ($success) {
     // Save to temporary file.
@@ -83,7 +95,7 @@ function sheetnode_phpexcel_preprocess_sheetnode_phpexcel_export_ready(&$vars) {
   $vars['destination'] = $download['destination'];
 
   // Set the page to automatically redirect to download file after 3 seconds.
-  drupal_set_html_head('<meta http-equiv="refresh" content="3;url='. check_plain($vars['download']) . '" />');
+  drupal_set_html_head('<meta http-equiv="refresh" content="3;url=' . check_plain($vars['download']) . '" />');
 }
 
 /**
@@ -95,53 +107,12 @@ function _sheetnode_phpexcel_export_download() {
 
   $plugins = sheetnode_phpexcel_get_plugins();
   $plugin = $plugins[$download['format']];
-  $source = $download['tempname'];
   $headers = array(
     'Content-Type: ' . $plugin['content-type'],
     'Content-Disposition: attachment; filename="' . $download['filename'] . '"',
     'Cache-Control: max-age=0',
   );
-
-  // Copy of file_transfer() because we need to unlink the file at the end.
-  // @see file_transfer()
-  if (ob_get_level()) {
-    ob_end_clean();
-  }
-
-  // IE cannot download private files because it cannot store files downloaded
-  // over https in the browser cache. The problem can be solved by sending
-  // custom headers to IE. See http://support.microsoft.com/kb/323308/en-us
-  if (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on')) {
-    drupal_set_header('Cache-Control: private');
-    drupal_set_header('Pragma: private');
-  }
-
-  foreach ($headers as $header) {
-    // To prevent HTTP header injection, we delete new lines that are
-    // not followed by a space or a tab.
-    // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-    $header = preg_replace('/\r?\n(?!\t| )/', '', $header);
-    drupal_set_header($header);
-  }
-
-  $source = file_create_path($source);
-
-  // Transfer file in 1024 byte chunks to save memory usage.
-  if ($fd = fopen($source, 'rb')) {
-    while (!feof($fd)) {
-      print fread($fd, 1024);
-    }
-    fclose($fd);
-  }
-  else {
-    drupal_not_found();
-  }
-
-  // Clean up after we're done.
-  unlink($download['tempname']);
-  unset($_SESSION['sheetnode_phpexcel_download']);
-
-  exit();
+  file_transfer($download['tempname'], $headers);
 }
  
 /**
@@ -409,11 +380,7 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
     // Set the value.
     if ($c['datatype'] == 'f') {
       if (strpos($c['formula'], '!') !== FALSE) {
-        // If an external reference, just ignore it.
-        // TODO: Should really load up the referenced sheet and include it in the workbook.
-        $cell->setValueExplicit($c['datavalue'], PHPExcel_Cell_DataType::TYPE_STRING);
-        $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $c['formula']));
-        $worksheet->getComment($coord)->getText()->createTextRun($comment);
+        _sheetnode_phpexcel_export_reference($c, $cell, $worksheet);
       }
       else {
         $cell->setValue('='. $c['formula']);
@@ -533,11 +500,7 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
     // Set the value.
     if ($c['datatype'] == 'f') {
       if (strpos($c['formula'], '!') !== FALSE) {
-        // If an external reference, just ignore it.
-        // TODO: Should really load up the referenced sheet and include it in the workbook.
-        $cell->setValueExplicit($c['datavalue'], PHPExcel_Cell_DataType::TYPE_NUMERIC);
-        $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $c['formula']));
-        $worksheet->getComment($coord)->getText()->createTextRun($comment);
+        _sheetnode_phpexcel_export_reference($c, $cell, $worksheet);
       }
       else {
         $cell->setValue('='. $c['formula']);
@@ -569,6 +532,30 @@ function _sheetnode_phpexcel_export_cell_value_and_format($c, $coord, $sc, $work
   // Unknown.
   else {
     $cell->setValueExplicit('', PHPExcel_Cell_DataType::TYPE_NULL);
+  }
+}
+
+/**
+ * Helper to export referenced sheet.
+ */
+function _sheetnode_phpexcel_export_reference($c, $cell, $worksheet) {
+  list($sheetname, $reference) = explode('!', $c['formula'], 2);
+  $sheetname = trim($sheetname, '"\'');
+  list($value, $title) = sheetnode_find_sheet($sheetname);
+  if ($value) {
+    $socialcalc = socialcalc_parse($value);
+    $workbook = $worksheet->getParent();
+    $external = $workbook->getSheetByName($title);
+    if (!$external) {
+      $external = $workbook->createSheet($workbook->getSheetCount());
+      _sheetnode_phpexcel_export_sheet($external, $title, $socialcalc);
+    }
+    $cell->setValue('=\'' . $title . '\'!' . $reference);
+  }
+  else {
+    $cell->setValue($c['datavalue']);
+    $comment = t(variable_get('sheetnode_phpexcel_bad_formula', 'Could not export formula !formula.'), array('!formula' => $c['formula']));
+    $worksheet->getComment($cell->getCoordinate())->getText()->createTextRun($comment);
   }
 }
 

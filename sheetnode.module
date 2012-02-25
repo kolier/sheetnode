@@ -818,18 +818,17 @@ function theme_sheetnode_formatter_socialcalc_date($element) {
 }
 
 /**
- * AJAX function to return a sheet value. 
+ * API function to return a sheet given a name.
  */
-function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
+function sheetnode_find_sheet($sheetname) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
 
-  // Parse the sheetname which might contain extra args separated by forward-slash.
-  if (empty($sheetname)) $sheetname = $_REQUEST['sheetname'];
   $args = explode('/', $sheetname);
   $sheetname = array_shift($args);
 
   // No value found by default.
   $value = NULL;
+  $title = NULL;
 
   // Try to find a node.
   $node = NULL;
@@ -846,6 +845,7 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
   // Is it a sheetnode?
   if ($node && $node->type == 'sheetnode') {
     $value = $node->sheetnode['value'];
+    $title = $node->title;
   }
 
   // Is it a sheetfield?
@@ -861,6 +861,8 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
         isset($node->{$field_name}[$target_delta])
       ) {
         $value = $node->{$field_name}[$target_delta]['value'];
+        $title = trim(sprintf("%s %s %s", $node->title, $field_info['widget']['label'], $target_delta ? strval($target_delta) : ''));
+        break;
       }
     }
   }
@@ -875,10 +877,24 @@ function _sheetnode_ajax_load($sheetname = NULL, $vid = NULL) {
           $view->set_arguments($args);
         }
         $value = $view->render($display->id);
+        $title = $display->get_option('title');
         header('Content-type: text/html'); // Our style plugin sets this to text/plain
       } 
     }
   }
+
+  return array($value, $title);
+}
+
+/**
+ * AJAX function to return a sheet value. 
+ */
+function _sheetnode_ajax_load($sheetname = NULL) {
+  // Parse the sheetname which might contain extra args separated by forward-slash.
+  if (empty($sheetname)) $sheetname = $_REQUEST['sheetname'];
+
+  // Look for the sheet.
+  list($value, $title) = sheetnode_find_sheet($sheetname);
 
   // Found a spreadsheet: return it.
   if ($value) {
