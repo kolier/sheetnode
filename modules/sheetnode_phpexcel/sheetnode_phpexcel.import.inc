@@ -154,6 +154,7 @@ function _sheetnode_phpexcel_batch_import_finished($success, $results, $operatio
 function _sheetnode_phpexcel_import_do($workbook, $sheet) {
   require_once(drupal_get_path('module', 'sheetnode') . '/socialcalc.inc');
   $sc = array(); // SocialCalc array structure
+  $styles = array(); // Styles cache
 
   // Default values.
   $font = $sheet->getDefaultStyle()->getFont();
@@ -194,7 +195,7 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
         $sc['colattribs']['hide'][$c] = TRUE;
       }
       
-      _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, $sc);
+      _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, $sc, $styles);
     }
   }
 
@@ -222,9 +223,6 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
     }
   }
   
-  // Reset style cache.
-  $styles = array();
-
   $socialcalc = array(
     'sheet' => $sc,
     'edit' => socialcalc_default_edit($sc),
@@ -233,7 +231,7 @@ function _sheetnode_phpexcel_import_do($workbook, $sheet) {
   return socialcalc_save($socialcalc);
 }
 
-function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
+function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc, &$styles) {
   $c = array(); // output cell
   
   // Position
@@ -321,7 +319,6 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc) {
   }
 
   // Style
-  static $styles = array();
   $style = $sheet->getStyle($cell->getCoordinate());
   $hash = $style->getHashCode();
   if (empty($styles[$hash])) {
