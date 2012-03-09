@@ -91,11 +91,11 @@ function sheetnode_delete(&$node) {
 /**
  * Implementation of hook_form().
  */
-function sheetnode_form(&$node) {
+function sheetnode_form(&$node, $form_state) {
   $type = node_get_types('type', $node);
 
   // Generate the default title and body.
-  $form = node_content_form($node, NULL);
+  $form = node_content_form($node, $form_state);
  
   // SocialCalc sheet.
   if (!empty($node->nid)) {
