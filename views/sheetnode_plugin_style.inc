@@ -449,7 +449,7 @@ EOS;
   }
 
   function attach_to($display_id, $path, $title) {
-    $url_options = array('html' => true);
+    $url_options = array('html' => TRUE);
     $input = $this->view->get_exposed_input();
     if ($input) {
       $url_options['query'] = $input;

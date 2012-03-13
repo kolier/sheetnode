@@ -8,7 +8,7 @@ class sheetnode_raw_plugin_style extends sheetnode_feed_plugin_style {
 
   function render() {
     $this->inherit_options();
-    header('Content-type: text/plain');
+    drupal_set_header('Content-type: text/plain; charset=utf-8');
     return socialcalc_save(parent::render_sheet());
   }
 };
