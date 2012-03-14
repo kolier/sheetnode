@@ -145,7 +145,7 @@ function sheetnode_views_data_alter(&$data) {
         $data[$table_name][$field_name . '_socialcalc'] = $date;
       }
 
-      // Add sheetnode fields for each CCK sheet field.
+      // Add sheetnode handlers for each sheet field.
       if (!empty($field_info['field']['content_field_name']) && $cck_info['fields'][ $field_info['field']['content_field_name'] ]['type'] == 'sheetfield') {
         $field = $cck_info['fields'][ $field_info['field']['content_field_name'] ];
         $label_truncated = truncate_utf8(t($field['widget']['label']), 10, TRUE);
