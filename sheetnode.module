@@ -293,12 +293,12 @@ function sheetnode_update($node) {
 function sheetnode_nodeapi($node, $op) {
   if ($op == 'update index') {
     // Update index for sheetnodes and sheetfields.
+    $output = '';
     if ($node->type == 'sheetnode') {
-      return _sheetnode_update_index($node->sheetnode['value']);
+      $output .= _sheetnode_update_index($node->sheetnode['value']);
     }
-    else {
+    if (module_exists('content')) {
       $cck_info = _content_type_info();
-      $output = '';
       foreach ($cck_info['content types'][$node->type]['fields'] as $field_name => $field) {
         if ($field['type'] == 'sheetfield') {
           foreach ($node->$field_name as $item) {
@@ -306,8 +306,8 @@ function sheetnode_nodeapi($node, $op) {
           }
         }
       }
-      return $output;
     }
+    return $output;
   }
   else if ($op == 'presave' && $node->type == 'sheetnode' && isset($node->devel_generate)) {
     // Generate random spreadsheets for sheetnodes.
