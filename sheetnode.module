@@ -297,14 +297,9 @@ function sheetnode_nodeapi($node, $op) {
     if ($node->type == 'sheetnode') {
       $output .= _sheetnode_update_index($node->sheetnode['value']);
     }
-    if (module_exists('content')) {
-      $cck_info = _content_type_info();
-      foreach ($cck_info['content types'][$node->type]['fields'] as $field_name => $field) {
-        if ($field['type'] == 'sheetfield') {
-          foreach ($node->$field_name as $item) {
-            $output .= _sheetnode_update_index($item['value']);
-          }
-        }
+    foreach (sheetnode_get_sheetfields($node->type) as $field_name => $field) {
+      foreach ($node->$field_name as $item) {
+        $output .= _sheetnode_update_index($item['value']);
       }
     }
     return $output;
@@ -842,32 +837,37 @@ function sheetnode_find_sheet($sheetname) {
     $node = node_load(intval($sheetname));
   }
   else {
-    $nid = db_result(db_query("SELECT nid FROM {node} WHERE UCASE(title) = '%s' LIMIT 1", db_escape_string(strtoupper($sheetname))));
+    $nid = db_result(db_query("SELECT nid FROM {node} WHERE title = '%s' LIMIT 1", 
+      db_escape_string($sheetname)
+    ));
     if ($nid) {
       $node = node_load($nid);
     }
   }
 
   // Is it a sheetnode?
-  if ($node && $node->type == 'sheetnode') {
+  if ($node && $node->type == 'sheetnode' && empty($args[0])) {
     $value = $node->sheetnode['value'];
     $title = $node->title;
   }
 
   // Is it a sheetfield?
-  if (!$value && $node && module_exists('content')) {
+  if (!$value && $node) {
     $target_field = empty($args[0]) ? FALSE : $args[0];
     $target_delta = empty($args[1]) ? 0 : intval($args[1]);
-    $type = content_types($node->type);
-    foreach ($type['fields'] as $field_name => $field_info) {
-      if (
-        $field_info['type'] == 'sheetfield' && 
-        (!$target_field || 0 == strcasecmp($target_field, $field_name) || 0 == strcasecmp($target_field, $field_info['widget']['label'])) &&
-        isset($node->$field_name) && 
-        isset($node->{$field_name}[$target_delta])
+    foreach (sheetnode_get_sheetfields($node->type) as $field_name => $field_info) {
+      if ((!$target_field || 
+           0 == strcasecmp($target_field, $field_name) || 
+           0 == strcasecmp($target_field, $field_info['widget']['label'])
+          ) &&
+          !empty($node->{$field_name}[$target_delta])
       ) {
         $value = $node->{$field_name}[$target_delta]['value'];
-        $title = trim(sprintf("%s %s %s", $node->title, $field_info['widget']['label'], $target_delta ? strval($target_delta) : ''));
+        $title = trim(sprintf("%s %s %s", 
+          $node->title, 
+          $field_info['widget']['label'], 
+          $target_delta ? strval($target_delta) : ''
+        ));
         break;
       }
     }
@@ -883,8 +883,8 @@ function sheetnode_find_sheet($sheetname) {
           $view->set_arguments($args);
         }
         $value = $view->render($display->id);
-        $title = $display->get_option('title');
-        header('Content-type: text/html'); // Our style plugin sets this to text/plain
+        $title = $display->handler->get_option('title');
+        drupal_set_header('Content-type: text/html; charset=utf-8'); // Our style plugin sets this to text/plain
       } 
     }
   }
@@ -1043,13 +1043,13 @@ function _sheetnode_load_entity($entity, $oid) {
  * API function to get all sheetfields of a node type.
  */
 function sheetnode_get_sheetfields($type) {
-  if (!module_exists('content')) return FALSE;
+  if (!module_exists('content')) return array();
 
   $sheetfields = array();
   $type_info = content_types($type);
-  foreach ($type_info['fields'] as $field) {
+  foreach ($type_info['fields'] as $field_name => $field) {
     if ($field['type'] == 'sheetfield') {
-      $sheetfields[] = $field;
+      $sheetfields[$field_name] = $field;
     }
   }
   return $sheetfields;
