@@ -540,7 +540,7 @@ function sheetnode_views_api() {
  * Implementation of hook_theme().
  */
 function sheetnode_theme($existing, $type, $theme, $path) {
-  return array(
+  $hooks = array(
     'sheetnode_range' => array(
       'arguments' => array('range' => NULL, 'labels' => NULL),
     ),
@@ -550,10 +550,13 @@ function sheetnode_theme($existing, $type, $theme, $path) {
     'sheetnode_formatter_default' => array(
       'arguments' => array('element' => NULL),
     ),
-    'sheetnode_formatter_socialcalc_date' => array(
-      'arguments' => array('element' => NULL),
-    ),
   );
+  if (module_exists('date')) {
+    $hooks['sheetnode_formatter_socialcalc_date'] = array(
+      'arguments' => array('element' => NULL),
+    );
+  }
+  return $hooks;
 }
 
 define('SHEETNODE_RANGE_LABELS_ROW', 1);
@@ -696,18 +699,21 @@ function _sheetnode_lcg_randf($min, $max) {
  * Implementation of hook_field_formatter_info().
  */
 function sheetnode_field_formatter_info() {
-  return array(
+  $formatters = array(
     'default' => array(
       'label' => t('Default'),
       'field types' => array('sheetfield'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
-    'socialcalc_date' => array(
+  );
+  if (module_exists('date')) {
+    $formatters['socialcalc_date'] = array(
       'label' => t('SocialCalc'),
       'field types' => array('date', 'datetime', 'datestamp'),
       'multiple values' => CONTENT_HANDLE_CORE,
-    ),
-  );
+    );
+  }
+  return $formatters;
 }
 
 /**
