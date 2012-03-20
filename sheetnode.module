@@ -85,7 +85,7 @@ function sheetnode_view($node, $teaser = FALSE, $page = FALSE) {
  * Implementation of hook_delete().
  */
 function sheetnode_delete(&$node) {
-  db_query('DELETE FROM {sheetnode} WHERE nid=%d', $node->nid);
+  db_query("DELETE FROM {sheetnode} WHERE nid=%d", $node->nid);
 }
 
 /**
@@ -280,7 +280,9 @@ function sheetnode_update($node) {
   }
   else if (!empty($node->revision)) {
     // reverting a revision
-    db_query('INSERT INTO {sheetnode} (nid, vid, value) SELECT old.nid, %d, old.value FROM sheetnode AS old WHERE old.vid=%d', array($node->vid, $node->old_vid));
+    db_query("INSERT INTO {sheetnode} (nid, vid, value) 
+              SELECT old.nid, %d, old.value 
+              FROM sheetnode AS old WHERE old.vid=%d", array($node->vid, $node->old_vid));
   }
   if (!empty($node->sheetnode['template']) && user_access('create sheetnode template')) {
     _sheetnode_template_save($node->vid, $node->sheetnode['template'], $node->sheetnode['value']);
@@ -309,6 +311,9 @@ function sheetnode_nodeapi($node, $op) {
     $node->sheetnode = array(
       'template' => NULL,
     ) + sheetnode_content_generate($node, NULL);
+  }
+  else if ($op == 'delete revision' && $node->type == 'sheetnode') {
+    db_query("DELETE FROM {sheetnode} WHERE vid=%d", $node->vid);
   }
 }
 
