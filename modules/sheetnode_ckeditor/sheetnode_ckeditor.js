@@ -68,10 +68,10 @@ Drupal.sheetnodeCK.DoMultiline = function() {
    main.style.position = "absolute";
 
    var vp = SocialCalc.GetViewportInfo();
-   var editor = spreadsheet.editor;
+   var pos = SocialCalc.GetElementPositionWithScroll(spreadsheet.spreadsheetDiv);
          
-   main.style.top = vp.verticalScroll-editor.relativeoffset.top+(vp.height/4)+"px";
-   main.style.left = vp.horizontalScroll-editor.relativeoffset.left+(vp.width/4)+"px";
+   main.style.top = ((vp.height/4)-pos.top)+"px";
+   main.style.left = ((vp.width/4)-pos.left)+"px";
    main.style.zIndex = 100;
    main.style.backgroundColor = "#FFF";
    main.style.border = "1px solid black";
@@ -86,7 +86,8 @@ Drupal.sheetnodeCK.DoMultiline = function() {
 
    SocialCalc.DragRegister(main.firstChild.firstChild.firstChild.firstChild, true, true, {MouseDown: SocialCalc.DragFunctionStart, MouseMove: SocialCalc.DragFunctionPosition,
                   MouseUp: SocialCalc.DragFunctionPosition,
-                  Disabled: null, positionobj: main});
+                  Disabled: null, positionobj: main},
+                  spreadsheet.spreadsheetDiv);
 
    spreadsheet.spreadsheetDiv.appendChild(main);
 
