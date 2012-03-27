@@ -21,6 +21,7 @@ function sheetnode_phpexcel_sheetnode_phpexcel_plugins() {
       'output' => TRUE,
       'short-name' => t('XLS'),
       'long-name' => t('Microsoft Excel 5 (XLS)'),
+      'format' => 'xls',
     ),
     'xlsx' => array(
       'content-type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -29,6 +30,7 @@ function sheetnode_phpexcel_sheetnode_phpexcel_plugins() {
       'output' => TRUE,
       'short-name' => t('XLSX'),
       'long-name' => t('Microsoft Excel 2007 (XLSX)'),
+      'format' => 'xlsx',
     ),
     'ods' => array(
       'content-type' => 'application/vnd.oasis.opendocument.spreadsheet',
@@ -37,6 +39,7 @@ function sheetnode_phpexcel_sheetnode_phpexcel_plugins() {
       'output' => FALSE,
       'short-name' => t('ODS'),
       'long-name' => t('OpenOffice.org Calc (ODS)'),
+      'format' => 'ods',
     ),
     'pdf' => array(
       'content-type' => 'application/pdf',
@@ -45,6 +48,7 @@ function sheetnode_phpexcel_sheetnode_phpexcel_plugins() {
       'output' => TRUE,
       'short-name' => t('PDF'),
       'long-name' => t('Adobe Acrobat (PDF)'),
+      'format' => 'pdf',
     ),
   );
 }

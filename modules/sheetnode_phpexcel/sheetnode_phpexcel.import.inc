@@ -53,8 +53,10 @@ function _sheetnode_phpexcel_import_form_validate($form, &$form_state) {
 }
 
 function _sheetnode_phpexcel_import_form_submit($form, &$form_state) {
-  $file = file_save_upload('import');
-  sheetnode_phpexcel_batch_import(array($file->filepath), NULL, '_sheetnode_phpexcel_import_callback');
+  $file = file_save_upload('import', array('file_validate_extensions' => array($form['#plugin']['format'])));
+  if ($file) {
+    sheetnode_phpexcel_batch_import(array($file->filepath), NULL, '_sheetnode_phpexcel_import_callback');
+  }
 }
 
 function _sheetnode_phpexcel_import_callback($node, $params, &$context) {
@@ -298,7 +300,7 @@ function _sheetnode_phpexcel_import_cell($workbook, $sheet, $cell, &$sc, &$style
         '!title' => $sheet->getTitle(),
         '!formula' => $c['formula'], 
         '!coord' => $cell->getCoordinate()
-      ), 'warning');
+      ), WATCHDOG_WARNING);
     }
     $c['valuetype'] = is_numeric($c['datavalue']) ? 'n' : 't';
     break;
