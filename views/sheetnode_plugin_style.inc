@@ -161,7 +161,7 @@ class sheetnode_plugin_style extends views_plugin_style {
               );
             }
             else if ($matches[0][$i][0] == '$') {
-              $replace = $this->view->field[$field_name]->theme($result);
+              $replace = $result->{$this->view->field[$field_name]->field_alias};
             }
             if (!empty($replace)) {
               $expression = str_replace($matches[0][$i], $replace, $expression);
