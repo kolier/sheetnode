@@ -774,7 +774,7 @@ function _sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
            !empty($element['#default_value']) && is_string($element['#default_value']) ? $element['#default_value'] : '')));
   $output = _sheetnode_inject(
     'sheetfield-' . $element['#id'], 
-    str_replace('_', '-', $element['#field_name']) . '/' . $element['#delta'],
+    $element['#field_name'] . '/' . $element['#delta'],
     $value, 
     $element['#id'] . '-' . $field_key, 
     isset($form['#node']) ? array('entity-name' => 'node', 'oid' => @$form['#node']->nid) : NULL,
@@ -802,7 +802,7 @@ function theme_sheetnode_formatter_default($element) {
   if (!empty($value)) {
     $output = _sheetnode_inject(
       'sheetfield-' . str_replace('_', '-', $element['#field_name']) . '-' . $element['#item']['#delta'], 
-      str_replace('_', '-', $element['#field_name']) . '/' . $element['#item']['#delta'],
+      $element['#field_name'] . '/' . $element['#item']['#delta'],
       $value, 
       FALSE, 
       isset($element['#node']) ? array('entity-name' => 'node', 'oid' => @$element['#node']->nid) : NULL
