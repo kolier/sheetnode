@@ -387,7 +387,7 @@ class sheetnode_plugin_style extends views_plugin_style {
       $sheet_id .= '-preview';
     }
     $settings = drupal_to_js(array('sheetnode' => array($sheet_id => array(
-      'name' => str_replace('_', '-', $this->view->name),
+      'name' => $this->view->name,
       'value' => $value,
       'imagePrefix' => base_path() . drupal_get_path('module', 'sheetnode') . '/socialcalc/images/sc-',
       'containerElement' => $sheet_id,
@@ -435,7 +435,7 @@ EOS;
 
     $sheet_id = 'sheetview-' . str_replace('_', '-', $this->view->name);
     drupal_add_js(array('sheetnode' => array($sheet_id => array(
-      'name' => str_replace('_', '-', $this->view->name),
+      'name' => $this->view->name,
       'value' => $value,
       'imagePrefix' => base_path() . $path . '/socialcalc/images/sc-',
       'containerElement' => $sheet_id,
