@@ -651,6 +651,11 @@ function sheetnode_field_settings($op, $field) {
     $schema = sheetnode_schema();
     $columns['value'] = $schema['sheetnode']['fields']['value'];
     $columns['value']['not null'] = FALSE;
+    $columns['name'] = array(
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => FALSE,
+    );
     return $columns;
   }
 }
@@ -755,7 +760,7 @@ function sheetnode_elements() {
   return array(
     'sheetfield_spreadsheet' => array(
       '#input' => TRUE,
-      '#columns' => array('value'), 
+      '#columns' => array('value', 'name'), 
       '#delta' => 0,
       '#process' => array('_sheetfield_spreadsheet_process'),
       '#autocomplete_path' => FALSE,
@@ -767,22 +772,24 @@ function sheetnode_elements() {
  * Process function for sheetfield_spreadsheet element.
  */
 function _sheetfield_spreadsheet_process($element, $edit, $form_state, $form) {
-  $field_key = $element['#columns'][0];
-  $value = !empty($element['#value'][$field_key]) && is_string($element['#value'][$field_key]) ? $element['#value'][$field_key] : (
-           !empty($element['#value']) && is_string($element['#value']) ? $element['#value'] : (
-           !empty($element['#default_value'][$field_key]) && is_string($element['#default_value'][$field_key]) ? $element['#default_value'][$field_key] : (
-           !empty($element['#default_value']) && is_string($element['#default_value']) ? $element['#default_value'] : '')));
+  $defaults = $element['#value'];
   $output = _sheetnode_inject(
     'sheetfield-' . $element['#id'], 
     $element['#field_name'] . '/' . $element['#delta'],
-    $value, 
-    $element['#id'] . '-' . $field_key, 
+    @$defaults['value'], 
+    $element['#id'] . '-' . 'value', 
     isset($form['#node']) ? array('entity-name' => 'node', 'oid' => @$form['#node']->nid) : NULL,
     !empty($form['#post']) && empty($form['#post']['op']) && !empty($form['#post'][ $element['#field_name'] . '_add_more' ])
   );
   $element['#tree'] = TRUE;
   $element['sheetview'] = array('#value' => $output, '#weight' => -1);
-  $element[$field_key] = array('#type' => 'hidden');
+  $element['value'] = array('#type' => 'hidden');
+  $element['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#default_value' => @$defaults['name'],
+    '#weight' => -2,
+  );
   return $element;
 }
 
@@ -798,12 +805,14 @@ function theme_sheetfield_spreadsheet($element) {
  */
 function theme_sheetnode_formatter_default($element) {
   $output = '';
-  $value = $element['#item']['value'];
-  if (!empty($value)) {
-    $output = _sheetnode_inject(
+  if (!empty($element['#item']['value'])) {
+    if (!empty($element['#item']['name'])) {
+      $output .= '<div class="sheetfield-title">' . $element['#item']['name'] . '</div>';
+    }
+    $output .= _sheetnode_inject(
       'sheetfield-' . str_replace('_', '-', $element['#field_name']) . '-' . $element['#item']['#delta'], 
       $element['#field_name'] . '/' . $element['#item']['#delta'],
-      $value, 
+      $element['#item']['value'], 
       FALSE, 
       isset($element['#node']) ? array('entity-name' => 'node', 'oid' => @$element['#node']->nid) : NULL
     );
