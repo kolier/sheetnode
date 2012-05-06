@@ -161,16 +161,21 @@ class sheetnode_plugin_style extends views_plugin_style {
               );
             }
             else if ($matches[0][$i][0] == '$') {
-              $replace = $result->{$this->view->field[$field_name]->field_alias};
+              if (!isset($result->{$this->view->field[$field_name]->field_alias})) {
+                $replace = NULL;
+              }
+              else {
+                $replace = $result->{$this->view->field[$field_name]->field_alias};
+              }
             }
-            if (!empty($replace)) {
+            if (!is_null($replace)) {
               $expression = str_replace($matches[0][$i], $replace, $expression);
             }
             else {
               $expression = NULL;
             }
           }
-          if (!empty($expression)) {
+          if (!is_null($expression)) {
             $newcell['formula'] = $expression;
             $newcell['datatype'] = 'f';
             $newcell['valuetype'] = 'n';
@@ -209,14 +214,14 @@ class sheetnode_plugin_style extends views_plugin_style {
             $field = $fields[$field_name];
             $replace = socialcalc_cr_to_coord($field['cell']['pos'][0], $field['cell']['pos'][1]) .':'. socialcalc_cr_to_coord($field['endpos'][0], $field['endpos'][1]);
           }
-          if (!empty($replace)) {
+          if (!is_null($replace)) {
             $expression = str_replace($matches[0][$i], $replace, $expression);
           }
           else {
             $expression = NULL;
           }
         }
-        if (!empty($expression)) {
+        if (!is_null($expression)) {
           $newcell['formula'] = $expression;
           $newcell['datatype'] = 'f';
           $newcell['valuetype'] = 'n';
