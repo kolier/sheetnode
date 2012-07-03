@@ -2,5 +2,4 @@ name = Sheetnode EtherCalc
 description = <a href="http://www.ethercalc.org/">EtherCalc</a> integration for multi-user editing.
 package = Sheetnode
 dependencies[] = sheetnode
-core = 7.x
-configure = admin/config/content/sheetnode/ethercalc
+core = 6.x
