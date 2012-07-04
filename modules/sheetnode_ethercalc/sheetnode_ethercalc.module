@@ -1,11 +1,16 @@
 <?php
 
+define('SHEETNODE_ETHERCALC_EDIT_ONLY', 1);
+define('SHEETNODE_ETHERCALC_EDIT_FIDDLE', 2);
+
 /**
  * Implementation of hook_sheetnode_plugins().
  */
 function sheetnode_ethercalc_sheetnode_plugins($value, $save_element, $context) {
   // Only turn on Ethercalc if we're editing the node.
-  if (!empty($save_element)) {
+  if (!empty($save_element) || 
+      (variable_get('sheetnode_ethercalc_mode', SHEETNODE_ETHERCALC_EDIT_ONLY) == SHEETNODE_ETHERCALC_EDIT_FIDDLE && variable_get('sheetnode_view_mode', SHEETNODE_VIEW_FIDDLE) == SHEETNODE_VIEW_FIDDLE)
+  ) {
     $ethercalc_host = variable_get('sheetnode_ethercalc_host', '');
     $ethercalc_port = variable_get('sheetnode_ethercalc_port', '8000');
 
@@ -63,6 +68,15 @@ function _sheetnode_ethercalc_settings(&$form_state) {
     '#title' => t('EtherCalc port'),
     '#description' => t('Enter the port of the EtherCalc server.'),
     '#default_value' => variable_get('sheetnode_ethercalc_port', '8000'),
+  );
+  $form['sheetnode_ethercalc_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Activate EtherCalc on'),
+    '#options' => array(
+      SHEETNODE_ETHERCALC_EDIT_ONLY => t('Edit mode only'),
+      SHEETNODE_ETHERCALC_EDIT_FIDDLE => t('Edit and fiddle modes'),
+    ),
+    '#default_value' => variable_get('sheetnode_ethercalc_mode', SHEETNODE_ETHERCALC_EDIT_ONLY),
   );
   return system_settings_form($form);
 }
