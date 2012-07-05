@@ -3,5 +3,6 @@ description = Provides PHPExcel integration with Sheetnode.
 package = Sheetnode
 dependencies[] = sheetnode 
 core = 7.x
+configure = admin/config/content/sheetnode/phpexcel
 
 files[] = sheetnode_phpexcel_plugin_style.inc

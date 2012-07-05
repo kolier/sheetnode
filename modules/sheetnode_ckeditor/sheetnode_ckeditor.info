@@ -2,4 +2,5 @@ name = Sheetnode CKEditor
 description = Adds CKEditor button to Sheetnode toolbar.
 package = Sheetnode
 dependencies[] = sheetnode
+configure = admin/config/content/sheetnode/ckeditor
 core = 7.x
