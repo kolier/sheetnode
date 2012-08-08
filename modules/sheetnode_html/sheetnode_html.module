@@ -102,10 +102,12 @@ function sheetnode_html_import($url, $querypath, $options = array()) {
 function sheetnode_html_import_table($table, &$sheet, $options = array()) {
   $cell = $cells = $spans = array();
   $pos = $maxpos = array(1, @$sheet['attribs']['lastrow'] + 1); // col, row
+  $rin = $pos[1]; // input row
   foreach ($table->find('tr') as $row) {
     $pos[0] = 1;
+    $found_value = FALSE;
     foreach ($row->find('td,th') as $element) {
-      while (isset($spans[socialcalc_cr_to_coord($pos[0], $pos[1])])) {
+      while (isset($spans[socialcalc_cr_to_coord($pos[0], $rin)])) {
         $pos[0]++;
       }
       $value = _sheetnode_html_import_value($element->text());
@@ -125,9 +127,10 @@ function sheetnode_html_import_table($table, &$sheet, $options = array()) {
         if (empty($options['ignore_spans'])) $cell['rowspan'] = $rowspan;
       }
       if (!empty($value)) {
+        $found_value = TRUE;
         $cells[socialcalc_cr_to_coord($pos[0], $pos[1])] = $cell;
       }
-      for ($r = $pos[1]; $r < $pos[1]+$rowspan; $r++) {
+      for ($r = $rin+1; $r < $rin+$rowspan; $r++) {
         $spans[socialcalc_cr_to_coord($pos[0], $r)] = TRUE;
       }
       $pos[0] += $colspan;
@@ -135,8 +138,11 @@ function sheetnode_html_import_table($table, &$sheet, $options = array()) {
     }
 
     // Advance to next row.
-    if ($pos[0] > 1) $pos[1]++;
-    $maxpos[1] = max($maxpos[1], $pos[1]);
+    $rin++;
+    if ($found_value || empty($options['skip_empty_rows'])) {
+      $pos[1]++;
+      $maxpos[1] = max($maxpos[1], $pos[1]);
+    }
   }
 
   $sheet['cells'] = isset($sheet['cells']) ? $sheet['cells'] + $cells : $cells;
