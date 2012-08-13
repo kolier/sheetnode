@@ -1,0 +1,3 @@
+[submodule "socialcalc"]
+	path = socialcalc
+	url = https://github.com/infojunkie/socialcalc.git
