@@ -134,6 +134,8 @@ function sheetnode_views_data_alter(&$data) {
   $fieldapi_info = field_info_fields();
   foreach ($data as $table_name => $table_info) {
     foreach ($table_info as $field_name => $field_info) {
+      // Fix undefined index 'title short'.
+      $field_info += array('title short' => '');
       // Add a SocialCalc date converter for each date field.
       if (!empty($field_info['field']['handler']) && $field_info['field']['handler'] == 'views_handler_field_date') {
         $date = $field_info;
