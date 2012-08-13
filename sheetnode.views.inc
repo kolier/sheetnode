@@ -134,8 +134,6 @@ function sheetnode_views_data_alter(&$data) {
   $fieldapi_info = field_info_fields();
   foreach ($data as $table_name => $table_info) {
     foreach ($table_info as $field_name => $field_info) {
-      // Fix undefined index 'title short'.
-      $field_info += array('title short' => '');
       // Add a SocialCalc date converter for each date field.
       if (!empty($field_info['field']['handler']) && $field_info['field']['handler'] == 'views_handler_field_date') {
         $date = $field_info;
@@ -148,6 +146,8 @@ function sheetnode_views_data_alter(&$data) {
 
       // Add sheetnode handlers for each sheet field.
       if (!empty($field_info['field']['field_name']) && $fieldapi_info[ $field_info['field']['field_name'] ]['type'] == 'sheetfield') {
+        // Fix undefined index 'title short'.
+        $field_info += array('title short' => '');
         $cell = $field_info;
         $cell['title'] = $field_info['title'] . ' (' . $field_name . ':' . t('cell') . ')';
         $cell['title short'] = $field_info['title short'] . ':' . t('cell');
